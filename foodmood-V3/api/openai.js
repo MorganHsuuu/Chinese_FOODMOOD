@@ -6,7 +6,11 @@
 const formatOpenAIError = (status, data) => {
   const msg = data?.error?.message || '';
   if (status === 429) return 'OpenAI 請求過於頻繁或額度不足，請稍後再試';
-  if (status === 401) return 'OPENAI_API_KEY 無效';
+  if (status === 401) {
+    return msg
+      ? `OPENAI_API_KEY 無效：${msg}`
+      : 'OPENAI_API_KEY 無效（請確認為 platform.openai.com 建立的 sk- 開頭金鑰，且帳戶已開通計費）';
+  }
   return msg || `OpenAI HTTP ${status}`;
 };
 
