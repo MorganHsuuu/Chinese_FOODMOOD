@@ -1,0 +1,2107 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>食緒曆 FoodMood</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+TC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            jade:      '#95d3c3',
+            ink:       '#2C2623',
+            clay:      '#C04A3B',
+            crimson:   '#85291b',
+            sand:      '#c8b88a',
+            amber:     '#D98A5B',
+            forest:    '#4A6B5D',
+            muted:     '#c8b88a',
+            parchment: '#201d12',
+            stroke:    '#3a3020',
+            paper:     '#252016',
+            night:     '#1b1200',
+            cream:     '#f5e0bb',
+            mist:      '#a8c5bf',
+            blush:     '#ffb4a7',
+            deep:      '#120c00',
+          },
+          fontFamily: {
+            sans: ['Inter','Noto Sans TC','ui-sans-serif','system-ui','sans-serif'],
+            serif: ['Noto Serif TC','serif'],
+            mono: ['JetBrains Mono','ui-monospace','SFMono-Regular','monospace'],
+          },
+          boxShadow: { card: '0 8px 30px rgba(135,123,115,0.08)' }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --jade:     #95d3c3;
+      --ink:      #2C2623;
+      --clay:     #C04A3B;
+      --crimson:  #85291b;
+      --sand:     #c8b88a;
+      --amber:    #D98A5B;
+      --forest:   #4A6B5D;
+      --muted:    #c8b88a;
+      --parchment:#201d12;
+      --stroke:   #3a3020;
+      --paper:    #252016;
+      --night:    #1b1200;
+      --cream:    #f5e0bb;
+      --mist:     #a8c5bf;
+      --blush:    #ffb4a7;
+      --deep:     #120c00;
+      --r:        5px;
+    }
+    @media (min-width: 768px) { html { overflow-y: scroll; } }
+    body { background-color: var(--night); color: var(--cream); font-family: 'Noto Serif TC', serif; overflow-x: hidden; }
+    ::selection { background-color: var(--clay); color: white; }
+    .paper-texture {
+      background-image: radial-gradient(#877B73 0.5px, transparent 0.5px);
+      background-size: 24px 24px;
+      opacity: 0.05;
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    .seal {
+      display: inline-block;
+      border: 2px solid var(--clay);
+      color: var(--clay);
+      padding: 2px 4px;
+      font-size: 10px;
+      font-weight: 900;
+      transform: rotate(-8deg);
+      margin-left: 8px;
+      border-radius: 2px;
+      font-family: 'Noto Serif TC', serif;
+      text-transform: uppercase;
+      letter-spacing: -0.05em;
+    }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    /* Dark-theme overrides: force white/light utility classes to dark equivalents */
+    .bg-white { background-color: #252016 !important; }
+    .text-ink  { color: #f5e0bb !important; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spin-slow { animation: spin 15s linear infinite; border-top: 4px solid var(--clay); border-radius: 9999px; position: absolute; inset: 0; opacity: 0.6; }
+    .spin-loading { animation: spin 2s linear infinite; display: inline-block; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+    .animate-pulse { animation: pulse 2s cubic-bezier(0.4,0,0.6,1) infinite; }
+    @keyframes fadeSlideIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+    .fade-in { animation: fadeSlideIn 0.3s ease-out; }
+    @keyframes onboardFadeIn { from{opacity:0} to{opacity:1} }
+    .onboard-in { animation: onboardFadeIn 1s ease-out; }
+    @keyframes onboardSlideUp { from{opacity:0;transform:translateY(40px)} to{opacity:1;transform:translateY(0)} }
+    .onboard-text-in { animation: onboardSlideUp 0.8s ease-out 0.5s both; }
+    .onboard-btn-in { animation: onboardSlideUp 0.8s ease-out 0.9s both; }
+    @keyframes floatGlow { 0%,100%{transform:translateY(0);filter:brightness(1)} 50%{transform:translateY(-6px);filter:brightness(1.2)} }
+    .float-glow { animation: floatGlow 3s ease-in-out infinite; }
+    @keyframes fadeOut { from{opacity:1} to{opacity:0} }
+    .fade-out { animation: fadeOut 0.6s ease-out forwards; }
+    @keyframes modalSlideUp { from{opacity:0;transform:translateY(30px) scale(0.95)} to{opacity:1;transform:translateY(0) scale(1)} }
+    .modal-up { animation: modalSlideUp 0.35s cubic-bezier(0.34,1.56,0.64,1); }
+    @keyframes sheetSlideUp { from{opacity:0;transform:translateY(100%)} to{opacity:1;transform:translateY(0)} }
+    .sheet-up { animation: sheetSlideUp 0.35s cubic-bezier(0.34,1.56,0.64,1); }
+    @keyframes progressBar { from{width:0} to{width:20%} }
+    .progress-bar { animation: progressBar 1s ease-out forwards; }
+    .hover-scale { transition: transform 0.2s; }
+    .hover-scale:hover { transform: scale(1.02); }
+    .hover-scale:active { transform: scale(0.98); }
+    @keyframes slide-up-fade { from{opacity:0;transform:translateY(20px) scale(0.95)} to{opacity:1;transform:translateY(0) scale(1)} }
+    @keyframes aura-breathe { 0%,100%{opacity:0.25} 50%{opacity:0.9} }
+    @keyframes mist-dissipate { 0%{opacity:1;transform:scale(1);filter:blur(0px)} 60%{opacity:0.6;transform:scale(1.15);filter:blur(6px)} 100%{opacity:0;transform:scale(1.35);filter:blur(16px)} }
+    @keyframes red-flash { 0%{opacity:0} 25%{opacity:1} 75%{opacity:0.8} 100%{opacity:0} }
+    @keyframes gold-border-pulse { 0%,100%{opacity:0.25} 50%{opacity:1} }
+    @keyframes merit-bounce { 0%{transform:scale(0) rotate(-10deg);opacity:0} 60%{transform:scale(1.2) rotate(3deg);opacity:1} 80%{transform:scale(0.92) rotate(-2deg)} 100%{transform:scale(1) rotate(0);opacity:1} }
+    @keyframes merit-shimmer { 0%,100%{text-shadow:0 0 6px rgba(255,215,0,0.5)} 50%{text-shadow:0 0 16px rgba(255,215,0,0.9),0 0 32px rgba(255,215,0,0.4)} }
+    @keyframes shichen-in { from{opacity:0;transform:translateX(12px)} to{opacity:1;transform:translateX(0)} }
+    .shichen-content { animation: shichen-in 0.28s cubic-bezier(0.2,0.8,0.2,1) both; }
+    .fortune-card { position:relative; width:100%; max-width:300px; margin:0 auto; animation:slide-up-fade 0.5s 0.2s cubic-bezier(0.2,0.8,0.2,1) both; }
+    .fortune-card::before { content:''; position:absolute; inset:-3px; border-radius:12px; background:linear-gradient(45deg,#2a2108,#d4a843,#5a3e08,#d4a843,#2a2108); z-index:-1; animation:aura-breathe 3.5s 1.4s ease-in-out infinite; }
+    .merit-badge { animation:merit-bounce 0.6s cubic-bezier(0.34,1.56,0.64,1) 1.6s both, merit-shimmer 2s ease-in-out 2.2s infinite; }
+    .spectral-slider { -webkit-appearance:none; appearance:none; width:100%; height:6px; border-radius:3px; outline:none; cursor:pointer; }
+    .spectral-slider::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:20px; height:20px; border-radius:50%; background:rgba(255,255,255,0.95); border:2px solid rgba(255,255,255,0.35); box-shadow:0 2px 8px rgba(0,0,0,0.5),0 0 0 3px rgba(255,255,255,0.08); cursor:pointer; }
+    .spectral-slider::-moz-range-thumb { width:20px; height:20px; border-radius:50%; background:rgba(255,255,255,0.95); border:none; box-shadow:0 2px 8px rgba(0,0,0,0.5); cursor:pointer; }
+    .inject-btn { transition: box-shadow 0.3s, background 0.3s; }
+    .inject-btn:hover:not(:disabled) { box-shadow: 0 0 32px rgba(212,168,67,0.2), 0 4px 24px rgba(0,0,0,0.4); }
+    .inject-btn:active:not(:disabled) { transform: scale(0.98); }
+  </style>
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useMemo, useEffect } = React;
+
+    // ── Gemini API Key (填入你的 key 即可啟用 AI 解籤) ──
+    const GEMINI_API_KEY = '';
+
+    // ── Constants ──
+    const MBEI_TYPES = {
+      MNHR: { code:'MNHR', name:'玄武 (The Guardian)', creature:'玄武', description:'北方守護神，龜蛇一體，象徵沉穩與長壽。作息規律如鐵，偏好紮實厚重的原型肉食燉品，以飲食秩序建立內在安定感。氣場沉穩磐石，是最懂用三餐錨定生命節奏的存在。', insight:'規律吃紮實原型肉食，以飲食秩序錨定內在穩定。', emoji:'🐢' },
+      MNHV: { code:'MNHV', name:'麒麟 (The Sacred Beast)', creature:'麒麟', description:'仁義瑞獸，不履生蟲，不折生草，自帶療癒之光。飲食完全由情緒主導，心情好或疲憊時會隨性大啖豐盛原型珍饈。一餐的生理負擔雖重，卻能帶來極大的靈魂修復。', insight:'情緒驅動，隨性享用豐盛原型大餐，大吃一頓就是最好的療癒。', emoji:'🦒' },
+      MNLR: { code:'MNLR', name:'白澤 (The Wise Seer)', creature:'白澤', description:'崑崙山上的全知聖獸，渾身雪白，通達萬物，能辟除一切邪氣。全圖鑑最健康平衡的存在。準時在胃經最旺之時攝取純淨原型食物，身輕心清，是最懂現代生活避險的均衡大師。', insight:'準時吃清淡原型食物，神魂清澈，圖鑑中最健康的均衡大師。', emoji:'🦄' },
+      MNLV: { code:'MNLV', name:'九尾 (The Spirit Fox)', creature:'九尾', description:'青丘之山的幻化之狐，九尾象徵無盡靈動與魅惑。靠心情決定三餐，不拘時間，隨性攝取自然花果與輕盈原型食物。身輕如雲，飲食節奏與性格一樣飄忽難測，極具靈性。', insight:'靠心情決定三餐，隨性吃自然輕食，飄忽靈動難以捉摸。', emoji:'🦊' },
+      MPHR: { code:'MPHR', name:'金烏 (The Sun-Bird)', creature:'金烏', description:'三足神鳥，司掌太陽之精，每日規律從東方升起。為維持高強度的情緒與工作能量，有極度規律的飲食習慣，卻依賴精緻加工甜食與高能量食品作為「火精補給」，日積月累，體內陽煞過旺。', insight:'規律依賴精緻加工食品補充能量，循天時但陽煞積聚。', emoji:'🦅' },
+      MPHV: { code:'MPHV', name:'饕餮 (The Devourer)', creature:'饕餮', description:'傳說中羊身人面的貪食凶獸，能吞噬萬物。極度焦慮或情緒空虛時，發起補償性暴食，在無規律的時間吞噬大量高負擔加工食品，以填補心靈黑洞。濁煞極重，出沒無常。', insight:'焦慮空虛時暴食加工重食，以無盡吞噬填補心靈黑洞。', emoji:'👺' },
+      MPLR: { code:'MPLR', name:'織女 (The Weaver)', creature:'織女', description:'天帝之女，在銀河邊日夜編織雲彩霓裳，工法細膩且極度規律。對飲食有美學堅持，定時定量，偏好精緻但低負擔的輕盈加工膳食（分子料理、精緻沙拉、無糖燕麥）。透過飲食的秩序感維持情緒的細膩穩定。', insight:'定時吃精緻輕盈加工食，以飲食的秩序感維持情緒穩定。', emoji:'🧵' },
+      MPLV: { code:'MPLV', name:'夢貘 (The Dream Eater)', creature:'夢貘', description:'深夜出沒、以人類夢境為食的幻獸，能將惡夢吃盡。沒有固定進食時鐘，常在深夜因情緒波動攝取代餐、微糖手搖或功能性果凍，游離於飽腹感與精神幻覺之間，以咀嚼安撫情緒。', insight:'深夜情緒波動下的代餐族，在虛實之間咀嚼孤獨。', emoji:'🐘' },
+      BNHR: { code:'BNHR', name:'當康 (The Harvest Boar)', creature:'當康', description:'其鳴自叫，見則天下大豐收，象徵大地的豐饒與力量。極度重視正餐規律，習慣攝取大量紮實的原型在地糧食、根莖類與大塊肉類。攝取量大，常有沉重的飽足感，但肉體機能強健充沛。', insight:'規律大量吃原型紮實食物，強健如豐收，常有飽重的大地能量。', emoji:'🐗' },
+      BNHV: { code:'BNHV', name:'朱厭 (The War Omen)', creature:'朱厭', description:'猿身紅足，見則大兵，象徵爆發性的力量與衝突。追求純粹的肌肉爆發力，進食時間完全隨性，常在運動前後大量攝取原型蛋白質（烤肉、原型牛排）。力量強大，但體內火煞過旺，常處發炎臨界。', insight:'隨性暴攝原型蛋白質，爆發力強大但火煞旺盛、易發炎。', emoji:'🐒' },
+      BNLR: { code:'BNLR', name:'夔 (The Thunder Beast)', creature:'夔', description:'東海獨足神牛，出入必伴風雨雷鳴，氣息強大。純粹的自然功能主義者，為了維持肉體機能，嚴格堅守原野清淡之食，作息如雷打不動，順應天時。身體素質極高，但飲食生活毫無社交樂趣。', insight:'規律吃清淡原型食，身強氣壯，但孤傲冷冽，無社交飲食。', emoji:'🐃' },
+      BNLV: { code:'BNLV', name:'夫諸 (The Water Deer)', creature:'夫諸', description:'白鹿四角，帶來水靈清滌、化解燥熱的溫柔神獸。完全聽從身體直覺，不被生理時鐘框架。口渴就喝清泉，餓了就隨性攝取原野草木瓜果。體質清透如洗，性情隨遇而安，生理循環極佳。', insight:'完全聽從直覺吃清淡原型食，體質清透、隨遇而安。', emoji:'🦌' },
+      BPHR: { code:'BPHR', name:'混沌 (The Primal Chaos)', creature:'混沌', description:'其狀如黃囊無面目，象徵天地未開時的混沌沉重。三餐雖然定時，但極度偏好沉重的高碳水精緻澱粉與加工肉品。雖進食有時，但肉身缺乏流動性，如沒有孔竅的混沌，難以有效代謝清化。', insight:'定時吃重澱粉加工食，肉身混濁、缺乏孔竅，難以有效代謝。', emoji:'🌀' },
+      BPHV: { code:'BPHV', name:'魃 (The Drought Bringer)', creature:'魃', description:'黃帝之女，所居之處天大旱，寸草不生。將食物視為單純燃料，因忙碌或隨性，高頻攝取超商微波食品、高鈉乾糧與炸物。體內水分逐漸枯竭，濁氣淤塞，生理代謝嚴重紊亂。', insight:'以食物為燃料，高頻吃加工焦炸食，體內枯竭、代謝紊亂。', emoji:'🏜️' },
+      BPLR: { code:'BPLR', name:'精衛 (The Persistent Bird)', creature:'精衛', description:'日夜銜西山木石以湮東海的堅毅之鳥，意志不達目的不罷休。典型的嚴格健身減脂族，為了達成特定生理目標，以非人意志力規律攝取極低負擔的人工煉化補給（雞胸肉、乳清蛋白）。堅毅，但飲食生活極度枯燥。', insight:'規律吃低負擔人工補給，意志堅毅如銜石填海，但生活極度枯燥。', emoji:'🐦' },
+      BPLV: { code:'BPLV', name:'影 (The Shadow Runner)', creature:'影', description:'依附光而生、隨風而動的無形之魅，沒有固定形態。飲食只是「為了活著而應付」，沒有固定用餐時間，常隨手抓超商麵包或代餐棒應付。雖無重油重鹹負擔，但缺乏真食物滋養，生理存在感極其薄弱。', insight:'隨手抓加工輕食應付過活，「為活著而吃」的邊緣存在。', emoji:'👤' },
+    };
+
+    const CREATURE_IMG = {
+      MNHR:'openspec/asset/png/7.png',  MNHV:'openspec/asset/png/8.png',
+      MNLR:'openspec/asset/png/3.png',  MNLV:'openspec/asset/png/4.png',
+      MPHR:'openspec/asset/png/2.png',  MPHV:'openspec/asset/png/1.png',
+      MPLR:'openspec/asset/png/5.png',  MPLV:'openspec/asset/png/6.png',
+      BNHR:'openspec/asset/png/11.png', BNHV:'openspec/asset/png/13.png',
+      BNLR:'openspec/asset/png/12.png', BNLV:'openspec/asset/png/15.png',
+      BPHR:'openspec/asset/png/16.png', BPHV:'openspec/asset/png/10.png',
+      BPLR:'openspec/asset/png/14.png', BPLV:'openspec/asset/png/9.png',
+    };
+
+    // hLevel: 0=極輕盈 1=舒適 2=略沉 3=沉重 4=強烈不適
+    const BODY_FEELING_OPTIONS = [
+      { label:'輕盈自在', emoji:'🌿', n:true,  hLevel:0 },
+      { label:'活力充沛', emoji:'⚡', n:true,  hLevel:0 },
+      { label:'暖心飽足', emoji:'🥰', n:false, hLevel:1 },
+      { label:'昏沉想睡', emoji:'💤', n:false, hLevel:2 },
+      { label:'頭昏腦脹', emoji:'🌀', n:false, hLevel:3 },
+      { label:'腸胃不適', emoji:'😣', n:false, hLevel:4 },
+    ];
+    const BODY_FEELING_DESC = ['身體極輕盈，能量充沛', '身體舒適，無明顯負擔', '身體略沉，有些倦意', '明顯沉重，腦袋混沌', '強烈不適，消化困難'];
+    const MOTIVATION_OPTIONS = [
+      { label:'情緒驅動', emoji:'💭', desc:'需要安慰、獎勵、排解情緒', mbei:'M' },
+      { label:'身體需要', emoji:'💪', desc:'真的餓、補充體力、維持機能', mbei:'B' },
+    ];
+    const MOOD_SCORE_LABELS = {1:'很糟', 2:'不太好', 3:'普通', 4:'還不錯', 5:'很爽'};
+    const EARTHLY_BRANCHES = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+    const getEarthlyBranch = (timeStr) => {
+      const h = parseInt((timeStr || '12:00').split(':')[0]);
+      return h === 23 ? '子' : EARTHLY_BRANCHES[Math.floor((h + 1) / 2)];
+    };
+    const calcMeritTotal = (records) => records.reduce((sum, r) => {
+      const m = r.fortune?.merit_point?.match(/\+(\d+)/);
+      return sum + (m ? parseInt(m[1]) : 0);
+    }, 0);
+    const calcStreak = (records) => {
+      if (!records.length) return 0;
+      const toStr = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      const dateSet = new Set(records.map(r => r.date));
+      let streak = 0, d = new Date();
+      while (dateSet.has(toStr(d))) { streak++; d.setDate(d.getDate() - 1); }
+      return streak;
+    };
+    const MOOD_SCORE_EMOJIS = {1:'😫', 2:'😕', 3:'😐', 4:'😊', 5:'😄'};
+
+    const FORTUNES = [
+      { id:'f1', title:'業障初現，警示之兆', verse:['精製加工堆積體脂','動物油脂纏繞血管','纖維雖在難以抵擋','轉運需從明日做起'], advice:['宜 飯後步行20分鐘','晚餐選清蒸食物','補充膳食纖維'], fortuneType:'warning' },
+      { id:'f2', title:'法脈圓通，修行之時', verse:['清淡蔬食滋養神魂','五穀雜糧穩固根基','不假外求身心自如','福報已在腸胃之間'], advice:['宜 持續今日餐單','多飲溫潤山泉','靜坐片刻安神'], fortuneType:'blessing' },
+      { id:'f3', title:'情執深重，心緒之結', verse:['以食止痛愁上加愁','甜膩入口百苦不解','胃納雖滿心神仍缺','暫歇外物尋回本心'], advice:['宜 遠離電子訊號','忌 深夜情緒進食','補充優質蛋白'], fortuneType:'warning' },
+      { id:'f4', title:'天時有序，節律之美', verse:['準時進食陰陽平衡','不躁不急脾胃悠歸','日常點滴皆是修行','長此以往百病不侵'], advice:['宜 睡覺前四小時禁食','忌 暴飲暴食','早起飲一杯暖水'], fortuneType:'blessing' },
+      { id:'f5', title:'燥火上升，急功近利', verse:['重口油膩灼燒內府','雖得瞬息感官之愉','難換久長生理之安','此乃透支身體之兆'], advice:['宜 搭配涼性蔬果','忌 辛辣刺激','飲用微溫淡茶'], fortuneType:'warning' },
+      { id:'f6', title:'氣形合一，神清氣爽', verse:['輕盈入口通達經絡','不偏不倚適可而止','今日所食皆為良藥','行住坐臥自在無礙'], advice:['宜 維持目前頻率','宜 分享快樂食緒','深呼吸納入真氣'], fortuneType:'blessing' },
+      { id:'f7', title:'陰霾未散，空洞之困', verse:['求不得中執著外象','味同嚼蠟神魂缺位','此餐非食乃是抗爭','接受脆弱方得圓滿'], advice:['宜 尋找摯友傾訴','忌 獨自進食宵夜','聽清香古琴之音'], fortuneType:'warning' },
+      { id:'f8', title:'繁瑣過境，簡約之道', verse:['雜亂無度損耗元神','速成之物缺法自然','向內觀照簡化日常','自有一番天地氣量'], advice:['宜 簡化料理流程','宜 慢速細嚼三十下','忌 狼吞虎嚥'], fortuneType:'normal' },
+    ];
+
+    const LEADERBOARD_DATA = [
+      { rank:1, name:'子安', points:4520, code:'MNHR' },
+      { rank:2, name:'JOSH', points:3880, code:'MNLV' },
+      { rank:3, name:'琳琳', points:3150, code:'MPHR' },
+      { rank:4, name:'BILLY', points:2890, code:'MNLR' },
+      { rank:5, name:'小薇', points:2460, code:'MNHV' },
+    ];
+
+    // ── Utils ──
+    const cn = (...classes) => classes.filter(Boolean).join(' ');
+    const ACTIVE_USER_KEY = 'foodmood_active_user';
+    const PROFILES_KEY = 'foodmood_profiles';
+    const normalizeEmail = (email) => email.trim().toLowerCase();
+    const loadProfiles = () => { try { const r = localStorage.getItem(PROFILES_KEY); return r ? JSON.parse(r) : {}; } catch { return {}; } };
+    const saveProfiles = (p) => localStorage.setItem(PROFILES_KEY, JSON.stringify(p));
+
+    // ── Gemini Service ──
+    const getMockFortune = (recordData) => {
+      const food = recordData?.foodEmoji || '這一餐';
+      const mbei = recordData?.mbeiCode || 'MPLR';
+      const isEmotional = mbei[0] === 'M';
+      const isProcessed = mbei[1] === 'P';
+      const isHeavy = mbei[2] === 'H';
+      const isIrregular = mbei[3] === 'V';
+      const hasContext = !!(recordData?.context && recordData.context.trim());
+      const mythNames = { M:'神魂慰藉膳', P:'凡軀機能膳', MH:'濁氣渡劫餚', NL:'靈氣修仙饌' };
+      const mythKey = isEmotional && isHeavy ? 'MH' : (!isProcessed && !isHeavy) ? 'NL' : isEmotional ? 'M' : 'P';
+      return {
+        id: `mock-${Date.now()}`,
+        calculated_mbei: mbei,
+        merit_point: hasContext ? '+2 功德' : '+1 功德',
+        mythical_food_name: mythNames[mythKey],
+        original_food_name: `（原：${food}）`,
+        main_title: isHeavy && isProcessed ? '業障初現，警示之兆' :
+                    !isHeavy && !isProcessed ? '靈氣修仙，清淨之道' :
+                    isEmotional ? '神魂入定，撫慰有功' : '凡軀補給，機能復甦',
+        poem: `${food}化能量，注入孵化池\n${isProcessed?'人工煉化物':'大地原野氣'}${isHeavy?'沉沉壓蛋殼':'輕盈繞蛋身'}\n${isEmotional?'神魂得撫慰':'凡軀得補給'}，靈獸胎動微\n${isIrregular?'逆天時而食':'順天時而食'}，各有其天命`,
+        explanation: `神解：本次注入了${isEmotional?'神魂修復':'肉體機能'}×${isProcessed?'煉化':'自然'}能量，孵化池${isHeavy?'濁波泛起，蛋殼沾染煞氣':'清波蕩漾，蛋殼微微透光'}。`,
+        do: isHeavy ? '宜：飯後緩步百步，助蛋殼排濁' : '宜：保持此修行之道，靈氣持續注入',
+        next_meal: isHeavy && isProcessed ? '下餐宜：攝取原野輕盈之食，幫孵化池去油解膩' :
+                   isProcessed ? '下餐宜：嘗試原型食物，讓孵化池的自然靈氣更純淨' :
+                   isHeavy ? '下餐宜：選輕盈清淡之食，給蛋殼一個喘息機會' :
+                   '下餐宜：維持此道，孵化池能量趨於平衡，靈獸胎動漸強',
+      };
+    };
+
+    const generateAIFortune = async (recordData) => {
+      if (!GEMINI_API_KEY) return getMockFortune(recordData);
+      const { mealType, mood, bodyFeeling, foodEmoji, mealTime, context } = recordData;
+      const moodText = typeof mood === 'number' ? MOOD_SCORE_LABELS[mood] : (mood || '普通');
+      const prompt = `你是掌管靈獸孵化池的「賽博玄學解籤師」。使用者會輸入最直白的飲食紀錄，你需要「自動推算 MBEI 屬性」、「賜予玄幻菜名」，並生成「能量觀測詩籤」。
+
+## 本次進食資料
+- 食物：${foodEmoji}
+- 爽度與身體感受：${moodText}、${bodyFeeling}（${(() => { const o = BODY_FEELING_OPTIONS.find(x=>x.label===bodyFeeling); return o ? BODY_FEELING_DESC[o.hLevel] : ''; })()}）
+- 情境與執念：${context && context.trim() ? context.trim() : '（未填）'}
+- 進食時間：${mealTime} ${mealType}
+
+## MBEI 推算規則（你必須自行推算）
+1. M/B（驅動力）：情境有強烈情緒/壓力/解饞，或爽度高且非規律正餐 → M；否則 → B
+2. N/P（食源性）：根據食物名稱常識。自然原型食材為主 → N；零食/高度加工/速食 → P
+3. H/L（身體負荷）：油膩/高碳/身體感受沉重 → H；清淡/蔬果/感受輕盈 → L
+4. R/V（規律性）：正餐時間 → R；宵夜/下午茶/隨性進食 → V
+
+## 御膳賜名
+提取食物核心，轉為修真/宮廷風格（例：雞肉飯 → 玉粒白羽膳；洋芋片 → 煉火金磚）。
+
+## 規則
+1. 絕不暴雷具體神獸名稱，只描繪「蛋的狀態」或「孵化池波動」
+2. 吃垃圾食物寫成「渡劫」「獻祭」，吃健康寫成「修仙」
+3. 不用現代營養學詞彙（卡路里、碳水等）
+4. 僅輸出 JSON
+
+## 輸出格式（Strict JSON）
+{"calculated_mbei":"四個字母(例:MNHR)","merit_point":"若情境與執念有填寫輸出'+2 功德'，否則輸出'+1 功德'","mythical_food_name":"四到六字的玄幻菜名","original_food_name":"（原：使用者輸入的食物）","main_title":"七字對聯","poem":"四句詩（五言或七言，結合食物與情緒帶點幽默吐槽）","explanation":"神解：一句話吐槽結合MBEI屬性與使用者情境","do":"宜：結合當下情境的幽默建議","next_meal":"下餐宜：為了靈獸蛋的健康給予下一餐玄學建議"}`;
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents:[{ parts:[{ text: prompt }] }], generationConfig:{ responseMimeType:'application/json' } })
+        });
+        const data = await res.json();
+        const parsed = JSON.parse(data.candidates[0].content.parts[0].text);
+        return { id:`ai-${Date.now()}`, ...parsed };
+      } catch (e) {
+        console.error('Gemini error:', e);
+        return getMockFortune(recordData);
+      }
+    };
+
+    // ── SVG Icons ──
+    const HomeIcon = ({ size=20 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>;
+    const CalendarIcon = ({ size=20 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>;
+    const PlusIcon = ({ size=20 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>;
+    const BarChartIcon = ({ size=20 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>;
+    const UserIcon = ({ size=20 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
+    const XIcon = ({ size=20 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>;
+    const ChevronRightIcon = ({ size=14 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>;
+    const ChevronLeftIcon  = ({ size=14 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>;
+    const InfoIcon = ({ size=20 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>;
+    const AwardIcon = ({ size=20 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>;
+    const ZapIcon = ({ size=18 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>;
+    const CoffeeIcon = ({ size=12 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/></svg>;
+
+    // ── Small shared components ──
+    function SidebarButton({ icon: Icon, label, active, onClick }) {
+      return (
+        <button onClick={onClick} className={cn("w-full flex items-center gap-4 px-6 py-4 rounded-xl transition-all duration-300 group", active ? "bg-ink text-white shadow-lg" : "text-muted hover:bg-parchment hover:text-ink")}>
+          <Icon size={22} className={cn("transition-transform group-hover:scale-110", active ? "text-clay" : "")} />
+          <span className="font-bold tracking-tight">{label}</span>
+          {active && <div className="ml-auto w-1.5 h-1.5 bg-clay rounded-full" />}
+        </button>
+      );
+    }
+
+    function TabButton({ icon: Icon, label, active, onClick, dark }) {
+      return (
+        <button onClick={onClick} className="flex flex-col items-center gap-1 transition-all">
+          <Icon size={20} className={active ? "text-clay" : (dark ? "text-white/60" : "text-muted")} />
+          <span className={cn("text-[9px] font-bold uppercase tracking-widest", active ? "text-clay" : (dark ? "text-white/40" : "text-muted"))}>{label}</span>
+        </button>
+      );
+    }
+
+    function PillSelector({ options, value, onChange }) {
+      return (
+        <div className="flex flex-wrap gap-2">
+          {options.map(opt => {
+            const label = typeof opt === 'string' ? opt : opt.label;
+            const val = typeof opt === 'string' ? opt : opt.value;
+            return (
+              <button key={val} onClick={() => onChange(val)} className={cn("px-4 py-2 rounded-full text-xs font-bold border transition-all", value === val ? "bg-ink text-white border-ink" : "bg-white text-muted border-stroke")}>
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
+
+    function IconGrid({ options, value, onChange }) {
+      return (
+        <div className="grid grid-cols-3 gap-3">
+          {options.map(opt => (
+            <button key={opt.label} onClick={() => onChange(opt.label)}
+              className={cn("flex flex-col items-center gap-2 py-4 px-2 rounded-2xl border transition-all", value === opt.label ? "bg-ink text-white border-ink shadow-md" : "bg-white text-muted border-stroke")}>
+              <span className="text-3xl">{opt.emoji}</span>
+              <span className="text-xs font-bold tracking-tight leading-tight text-center">{opt.label}</span>
+            </button>
+          ))}
+        </div>
+      );
+    }
+
+    function RecordSection({ title, children }) {
+      return (
+        <div className="space-y-4">
+          <h4 className="text-sm font-bold flex items-center gap-2"><span className="w-1.5 h-4 bg-clay rounded-full" />{title}</h4>
+          {children}
+        </div>
+      );
+    }
+
+    function Bar({ height, label, active }) {
+      return (
+        <div className="flex flex-col items-center gap-2">
+          <div className={cn("w-3 rounded-full", active ? "bg-clay" : "bg-stroke")} style={{ height }} />
+          <span className="text-[10px] text-muted">{label}</span>
+        </div>
+      );
+    }
+
+    function GroupCard({ title, content, trend }) {
+      return (
+        <div className="bg-white rounded-[5px] p-4 shadow-sm border border-stroke space-y-2">
+          <div className="flex justify-between items-center">
+            <h4 className="text-sm font-bold">{title}</h4>
+            <span className={cn("text-[10px] font-mono", trend === '上升' ? "text-clay" : "text-forest")}>{trend}</span>
+          </div>
+          <p className="text-xs text-ink leading-relaxed opacity-80">{content}</p>
+        </div>
+      );
+    }
+
+    function BadgeBox({ label, emoji, enabled, date }) {
+      return (
+        <div className="bg-white p-6 rounded-[5px] border border-stroke flex flex-col items-center gap-4 shadow-sm hover:scale-105 transition-all duration-300 relative overflow-hidden cursor-pointer">
+          <div className={cn("w-20 h-20 rounded-[5px] flex items-center justify-center text-4xl shadow-inner border-2 transition-all", enabled ? "bg-parchment border-stroke" : "bg-gray-50 border-gray-100 grayscale opacity-40")}>{emoji}</div>
+          <div className="text-center space-y-1">
+            <span className="text-[11px] font-black tracking-tight text-ink block">{label}</span>
+            {date && <span className="text-[9px] font-bold text-muted uppercase tracking-widest">{date}</span>}
+          </div>
+          {enabled && <div className="absolute top-2 right-2 w-2 h-2 bg-clay rounded-full animate-pulse" />}
+        </div>
+      );
+    }
+
+    function InsightMetric({ icon: Icon, label, value }) {
+      return (
+        <div className="space-y-1">
+          <div className="flex items-center gap-1 text-muted"><Icon size={12} /><span className="text-[10px]">{label}</span></div>
+          <p className="text-sm font-bold">{value}</p>
+        </div>
+      );
+    }
+
+    // ── Views ──
+    function GenderSelect({ value, onChange }) {
+      const [open, setOpen] = React.useState(false);
+      const ref = React.useRef(null);
+      const options = ['不透露', '女性', '男性', '非二元'];
+      React.useEffect(() => {
+        const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener('mousedown', close);
+        return () => document.removeEventListener('mousedown', close);
+      }, []);
+      const base = { width:'100%', background:'rgba(27,18,0,0.55)', borderRadius:5, padding:'12px 16px',
+        fontSize:14, fontFamily:"'Noto Serif TC', serif", outline:'none' };
+      return (
+        <div ref={ref} style={{ position:'relative' }}>
+          <button type="button" onClick={() => setOpen(o => !o)} style={{ ...base,
+            display:'flex', justifyContent:'space-between', alignItems:'center', cursor:'pointer',
+            border: open ? '1px solid rgba(149,211,195,0.5)' : '1px solid rgba(149,211,195,0.2)',
+            color: value ? 'var(--cream)' : 'rgba(200,184,138,0.35)' }}>
+            <span>{value || '請選擇'}</span>
+            <span style={{ fontSize:9, opacity:0.5 }}>{open ? '▲' : '▼'}</span>
+          </button>
+          {open && (
+            <div style={{ position:'absolute', top:'calc(100% + 4px)', left:0, right:0, zIndex:300,
+              background:'rgba(15,9,0,0.97)', backdropFilter:'blur(24px)',
+              border:'1px solid rgba(149,211,195,0.2)', borderRadius:5,
+              boxShadow:'0 12px 40px rgba(0,0,0,0.7)', overflow:'hidden' }}>
+              {options.map((opt, i) => (
+                <button key={opt} type="button" onClick={() => { onChange(opt); setOpen(false); }}
+                  style={{ width:'100%', padding:'12px 16px', textAlign:'left', cursor:'pointer',
+                    background: value === opt ? 'rgba(149,211,195,0.08)' : 'none', border:'none',
+                    borderBottom: i < options.length-1 ? '1px solid rgba(149,211,195,0.07)' : 'none',
+                    color: value === opt ? 'var(--jade)' : 'var(--cream)',
+                    fontSize:14, fontFamily:"'Noto Serif TC', serif", letterSpacing:'0.05em' }}>
+                  {opt}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function LoginGate({ onLogin, existingProfile = null }) {
+      const [step, setStep] = useState('splash'); // 'splash' | 'leaving' | 'form'
+      const [form, setForm] = useState({ email:'', nickname:'', gender:'', age:'' });
+      const isDesktop = window.innerWidth >= 768;
+      const splashImg = isDesktop ? 'openspec/asset/png/login_desktop.jpg' : 'openspec/asset/png/onboarding_v2.jpg';
+      const submit = (e) => { e.preventDefault(); if (!form.email||!form.nickname||!form.gender||!form.age) return; onLogin(form); };
+
+      const goToForm = () => {
+        setStep('leaving');
+        setTimeout(() => setStep('form'), 600);
+      };
+
+      const inputStyle = {
+        width:'100%', background:'rgba(27,18,0,0.55)', border:'1px solid rgba(149,211,195,0.2)',
+        borderRadius:12, padding:'12px 16px', color:'var(--cream)', fontSize:14,
+        outline:'none', fontFamily:"'Noto Serif TC', serif"
+      };
+      const labelStyle = { fontSize:13, fontWeight:700, letterSpacing:'0.15em', color:'var(--mist)', textTransform:'uppercase', display:'block', marginBottom:6 };
+
+      if (step === 'splash' || step === 'leaving') return (
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, zIndex:200, background:'var(--night)',
+          animation: step === 'leaving' ? 'fadeOut 0.6s ease-in forwards' : 'onboardFadeIn 1s ease-out' }}>
+          {/* 滿版壁畫 */}
+          <img src={splashImg} alt="食緒壁畫"
+            style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center' }} />
+
+          {/* 底部漸層 */}
+          <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, background:'linear-gradient(180deg, rgba(27,18,0,0.2) 0%, rgba(27,18,0,0) 35%, rgba(27,18,0,0) 50%, rgba(27,18,0,0.85) 80%, rgba(27,18,0,0.97) 100%)' }} />
+
+          {/* 角落金線 */}
+          <div style={{ position:'absolute', top:32, left:32, width:40, height:40, borderTop:'1px solid rgba(149,211,195,0.75)', borderLeft:'1px solid rgba(149,211,195,0.75)', pointerEvents:'none' }} />
+          <div style={{ position:'absolute', top:32, right:32, width:40, height:40, borderTop:'1px solid rgba(149,211,195,0.75)', borderRight:'1px solid rgba(149,211,195,0.75)', pointerEvents:'none' }} />
+
+          {/* 底部內容 */}
+          <div style={{ position:'absolute', bottom:0, left:0, right:0, display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center', padding:'0 24px 56px',
+            animation:'onboardSlideUp 0.8s ease-out 0.5s both' }}>
+            <h1 style={{ fontSize:36, fontFamily:"'Noto Serif TC', serif", fontWeight:900, color:'var(--jade)', letterSpacing:'0.3em', textShadow:'0 2px 20px rgba(27,18,0,0.9)', marginBottom:16 }}>食緒曆</h1>
+            <p style={{ fontSize:15, lineHeight:2, letterSpacing:'0.04em', color:'var(--cream)', fontFamily:"'Noto Serif TC', serif", maxWidth:360, textShadow:'0 1px 8px rgba(0,0,0,0.8)', marginBottom:36 }}>
+              每一餐都是一場神聖的儀式，<br/>
+              在口腹之欲與心靈覺察之間，<br/>
+              共築屬於你的動態圖鑑。
+            </p>
+
+            {existingProfile ? (
+              <button onClick={() => { setStep('leaving'); setTimeout(() => onLogin(existingProfile), 600); }}
+                style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:12, background:'none', border:'none', cursor:'pointer' }}>
+                <div style={{ width:96, height:96, background:'var(--forest)', borderRadius:'50%', border:'4px solid rgba(149,211,195,0.25)',
+                  boxShadow:'0 0 0 8px rgba(74,107,93,0.15), 0 12px 40px rgba(74,107,93,0.6)',
+                  display:'flex', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden' }}>
+                  <div style={{ position:'absolute', inset:0, background:'radial-gradient(circle at 40% 35%, rgba(149,211,195,0.35), transparent 65%)' }} />
+                  <span style={{ color:'var(--jade)', fontSize:14, fontFamily:"'Noto Serif TC', serif", fontWeight:900, letterSpacing:'0.05em', lineHeight:1.6, position:'relative', zIndex:1, textAlign:'center' }}>
+                    歡迎回來<br/>{existingProfile.nickname || ''}
+                  </span>
+                </div>
+                <span style={{ fontSize:13, fontWeight:700, letterSpacing:'0.18em', color:'var(--jade)', fontFamily:"'Noto Serif TC', serif", textTransform:'uppercase' }}>
+                  Continue Journey
+                </span>
+              </button>
+            ) : (
+              <button onClick={goToForm} className="wax-seal-active"
+                style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:12, background:'none', border:'none', cursor:'pointer' }}>
+                <div style={{ width:96, height:96, background:'var(--crimson)', borderRadius:'50%', border:'4px solid rgba(255,180,160,0.25)',
+                  boxShadow:'0 0 0 8px rgba(133,41,27,0.15), 0 12px 40px rgba(133,41,27,0.6)',
+                  display:'flex', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden' }}>
+                  <div style={{ position:'absolute', inset:0, background:'radial-gradient(circle at 40% 35%, rgba(255,180,160,0.35), transparent 65%)' }} />
+                  <span style={{ color:'var(--blush)', fontSize:20, fontFamily:"'Noto Serif TC', serif", fontWeight:900, letterSpacing:'-0.02em', lineHeight:1.2, position:'relative', zIndex:1 }}>
+                    開始<br/>修行
+                  </span>
+                </div>
+                <span style={{ fontSize:13, fontWeight:700, letterSpacing:'0.18em', color:'var(--jade)', fontFamily:"'Noto Serif TC', serif", textTransform:'uppercase' }}>
+                  Commence Journey
+                </span>
+              </button>
+            )}
+          </div>
+        </div>
+      );
+
+      return (
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'var(--night)', animation:'onboardFadeIn 0.8s ease-out' }}>
+          {/* 壁畫背景（淡化） */}
+          <img src={splashImg} alt=""
+            style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center', opacity:0.45 }} />
+          <div style={{ position:'absolute', inset:0, background:'rgba(27,18,0,0.72)' }} />
+
+          {/* 登入面板：置中 */}
+          <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', padding:'24px' }}>
+            <div style={{ width:'100%', maxWidth:440, background:'rgba(21,13,0,0.88)', backdropFilter:'blur(20px)', border:'1px solid rgba(149,211,195,0.15)', borderRadius:5, padding:'40px 36px', position:'relative' }}>
+
+              {/* 角落金線 */}
+              <div style={{ position:'absolute', top:20, left:20, width:28, height:28, borderTop:'1px solid rgba(149,211,195,0.65)', borderLeft:'1px solid rgba(149,211,195,0.65)' }} />
+              <div style={{ position:'absolute', bottom:20, right:20, width:28, height:28, borderBottom:'1px solid rgba(149,211,195,0.65)', borderRight:'1px solid rgba(149,211,195,0.65)' }} />
+
+              {/* 標題 */}
+              <div style={{ marginBottom:28, textAlign:'center' }}>
+                <p style={{ fontSize:13, letterSpacing:'0.25em', color:'var(--mist)', textTransform:'uppercase', fontFamily:"'Noto Serif TC', serif", marginBottom:10 }}>食緒曆 · FoodMood</p>
+                <h1 style={{ fontSize:24, fontFamily:"'Noto Serif TC', serif", fontWeight:900, color:'var(--jade)', letterSpacing:'0.1em', lineHeight:1.4, margin:0 }}>建立你的食緒檔案</h1>
+                <p style={{ marginTop:8, fontSize:13, color:'var(--sand)', fontFamily:"'Noto Serif TC', serif" }}>無需密碼，無需 Google</p>
+              </div>
+
+              <div style={{ height:1, background:'linear-gradient(to right, transparent, rgba(149,211,195,0.2), transparent)', marginBottom:24 }} />
+
+              {/* 表單 */}
+              <form onSubmit={submit} style={{ display:'flex', flexDirection:'column', gap:14 }}>
+                <div>
+                  <label style={labelStyle}>Email</label>
+                  <input style={inputStyle} type="email" placeholder="your@email.com" required
+                    value={form.email} onChange={e => setForm({...form,email:e.target.value})} />
+                </div>
+                <div>
+                  <label style={labelStyle}>暱稱</label>
+                  <input style={inputStyle} type="text" placeholder="你的稱號" required
+                    value={form.nickname} onChange={e => setForm({...form,nickname:e.target.value})} />
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                  <div>
+                    <label style={labelStyle}>性別</label>
+                    <GenderSelect value={form.gender} onChange={v => setForm({...form,gender:v})} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>年齡</label>
+                    <input style={inputStyle} type="number" min={1} max={120} placeholder="歲" required
+                      value={form.age} onChange={e => setForm({...form,age:e.target.value})} />
+                  </div>
+                </div>
+                <button type="submit" className="wax-seal-active"
+                  style={{ marginTop:6, width:'100%', background:'var(--crimson)', border:'2px solid rgba(255,180,160,0.2)',
+                    borderRadius:12, padding:'14px 0', color:'var(--blush)', fontSize:13, fontWeight:800,
+                    letterSpacing:'0.2em', fontFamily:"'Noto Serif TC', serif", cursor:'pointer',
+                    boxShadow:'0 0 0 6px rgba(133,41,27,0.12), 0 8px 32px rgba(133,41,27,0.5)' }}>
+                  進入食緒曆
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const SHICHEN_DATA = [
+      { branch:'子', keyword:'養膽', time:'23:00 – 01:00', meridian:'膽經', advice:'宜安睡以養陰血' },
+      { branch:'丑', keyword:'養肝', time:'01:00 – 03:00', meridian:'肝經', advice:'深睡以疏肝排毒' },
+      { branch:'寅', keyword:'養肺', time:'03:00 – 05:00', meridian:'肺經', advice:'深呼吸以清肺氣' },
+      { branch:'卯', keyword:'養腸', time:'05:00 – 07:00', meridian:'大腸經', advice:'排便以清宿便' },
+      { branch:'辰', keyword:'健脾', time:'07:00 – 09:00', meridian:'胃經', advice:'進食早餐以養氣' },
+      { branch:'巳', keyword:'強脾', time:'09:00 – 11:00', meridian:'脾經', advice:'工作學習以健脾' },
+      { branch:'午', keyword:'養心', time:'11:00 – 13:00', meridian:'心經', advice:'小憩片刻以養神' },
+      { branch:'未', keyword:'助消', time:'13:00 – 15:00', meridian:'小腸經', advice:'午休以助消化' },
+      { branch:'申', keyword:'排毒', time:'15:00 – 17:00', meridian:'膀胱經', advice:'補水以利排毒' },
+      { branch:'酉', keyword:'養腎', time:'17:00 – 19:00', meridian:'腎經', advice:'適度活動以強身' },
+      { branch:'戌', keyword:'舒心', time:'19:00 – 21:00', meridian:'心包經', advice:'散步放鬆以舒心' },
+      { branch:'亥', keyword:'備眠', time:'21:00 – 23:00', meridian:'三焦經', advice:'靜心備眠以養氣' },
+    ];
+
+    function MBEIBars({ mbeiCode }) {
+      const DIMS = [
+        { left:'M', leftLabel:'魂', right:'B', rightLabel:'魄' },
+        { left:'N', leftLabel:'野', right:'P', rightLabel:'煉' },
+        { left:'L', leftLabel:'靈', right:'H', rightLabel:'煞' },
+        { left:'R', leftLabel:'曆', right:'V', rightLabel:'幻' },
+      ];
+      return (
+        <div style={{ marginTop:10, paddingTop:10, borderTop:'1px solid rgba(149,211,195,0.08)', display:'flex', flexDirection:'column', gap:8 }}>
+          {DIMS.map((d, i) => {
+            const code = mbeiCode?.[i];
+            const isRight = code === d.right;
+            return (
+              <div key={i} style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <span style={{ fontSize:10, width:16, textAlign:'right', fontWeight:900, color: !isRight ? 'var(--jade)' : 'rgba(149,211,195,0.2)', fontFamily:"'Noto Serif TC',serif", flexShrink:0, transition:'color 0.3s' }}>{d.leftLabel}</span>
+                <div style={{ flex:1, position:'relative', height:3, borderRadius:2, background:'rgba(255,255,255,0.06)' }}>
+                  <div style={{ position:'absolute', left: isRight ? 'calc(85% - 5px)' : 'calc(15% - 5px)', top:'50%', marginTop:-5, width:10, height:10, borderRadius:'50%',
+                    background: isRight ? 'var(--amber)' : 'var(--jade)',
+                    boxShadow: isRight ? '0 0 8px rgba(200,160,80,0.6)' : '0 0 8px rgba(149,211,195,0.6)',
+                    transition:'left 0.35s cubic-bezier(0.4,0,0.2,1)' }} />
+                </div>
+                <span style={{ fontSize:10, width:16, fontWeight:900, color: isRight ? 'var(--amber)' : 'rgba(200,184,138,0.2)', fontFamily:"'Noto Serif TC',serif", flexShrink:0, transition:'color 0.3s' }}>{d.rightLabel}</span>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    function HomeView({ records, loginProfile }) {
+      const latestType = records[0] ? MBEI_TYPES[records[0].mbeiCode] : MBEI_TYPES['MPLR'];
+      const isUnlocked = records.length >= 10;
+      const card = { background:'#252016', border:'1px solid #3a3020', borderRadius:5, padding:'28px 24px', position:'relative', boxShadow:'0 8px 30px rgba(135,123,115,0.08)' };
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2,'0');
+      const mm = String(now.getMinutes()).padStart(2,'0');
+      const branch = getEarthlyBranch(`${hh}:${mm}`);
+      const defaultIdx = Math.max(0, EARTHLY_BRANCHES.indexOf(branch));
+      const [shichenIdx, setShichenIdx] = React.useState(defaultIdx);
+      const [expandedRecordId, setExpandedRecordId] = React.useState(null);
+      const shichenTouchX = React.useRef(null);
+      const shichen = SHICHEN_DATA[shichenIdx];
+      const group = Math.floor(shichenIdx / 3); // 0–3
+
+      return (
+        <div style={{ display:'flex', flexDirection:'column', gap:24, fontFamily:"'Noto Serif TC', serif", animation:'onboardFadeIn 0.6s ease-out' }}>
+          {/* 頁首 */}
+          <header style={{ paddingBottom:16, borderBottom:'1px solid rgba(149,211,195,0.1)' }}>
+            <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', gap:12 }}>
+              <h1 style={{ fontSize:32, fontFamily:"'Noto Serif TC', serif", fontWeight:900, color:'var(--jade)', letterSpacing:'0.15em', margin:0 }}>今日食緒</h1>
+              <div style={{ display:'flex', alignItems:'baseline', gap:6, flexShrink:0 }}>
+                <span style={{ fontSize:30, fontFamily:"'JetBrains Mono',monospace", fontWeight:600, color:'var(--jade)', letterSpacing:'0.02em', lineHeight:1 }}>{hh}:{mm}</span>
+                <span style={{ fontSize:22, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color:'var(--amber)', letterSpacing:'0.12em', lineHeight:1 }}>{branch}</span>
+              </div>
+            </div>
+          </header>
+
+          {/* 修行者卡（全寬） */}
+          <section style={{ ...card, padding:'24px 24px' }}>
+            <div style={{ display:'flex', gap:20, alignItems:'center' }}>
+              <div style={{ width:110, height:138, borderRadius:8, overflow:'hidden', border:'2px solid rgba(149,211,195,0.25)', flexShrink:0, background:'var(--paper)', boxShadow:'0 6px 24px rgba(0,0,0,0.35)' }}>
+                <img src={CREATURE_IMG[latestType.code]} alt={latestType.creature} style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />
+              </div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <p style={{ fontSize:11, color:'var(--mist)', letterSpacing:'0.2em', marginBottom:4, fontWeight:500 }}>今日食修者</p>
+                <h3 style={{ fontSize:20, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color:'white', margin:'0 0 8px', letterSpacing:'0.05em' }}>{loginProfile?.nickname || '修行者'}</h3>
+                <div style={{ display:'inline-block', background:'rgba(149,211,195,0.08)', border:'1px solid rgba(149,211,195,0.15)', borderRadius:10, padding:'3px 12px', fontSize:11, color:'var(--sand)', marginBottom:14 }}>{latestType.name}</div>
+                <div style={{ display:'flex', gap:20 }}>
+                  <div>
+                    <p style={{ fontSize:9, color:'var(--mist)', letterSpacing:'0.15em', marginBottom:3, fontWeight:700, textTransform:'uppercase' }}>累積功德</p>
+                    <p style={{ fontSize:18, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color:'var(--sand)', margin:0 }}>{calcMeritTotal(records)}</p>
+                  </div>
+                  <div>
+                    <p style={{ fontSize:9, color:'var(--mist)', letterSpacing:'0.15em', marginBottom:3, fontWeight:700, textTransform:'uppercase' }}>連續紀錄</p>
+                    <p style={{ fontSize:18, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color:'var(--sand)', margin:0 }}>{calcStreak(records)}<span style={{fontSize:12, marginLeft:3}}>天</span></p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* 時辰養生建議卡（可左右滑動） */}
+          <section style={{ ...card, padding:'24px', cursor:'grab', userSelect:'none', overflow:'hidden' }}
+            onTouchStart={e => { shichenTouchX.current = e.touches[0].clientX; }}
+            onTouchEnd={e => {
+              const dx = e.changedTouches[0].clientX - shichenTouchX.current;
+              if (Math.abs(dx) > 40) setShichenIdx((shichenIdx + (dx < 0 ? 1 : -1) + 12) % 12);
+            }}>
+            {/* 標題列 */}
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                <span style={{ fontSize:20, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color:'white', letterSpacing:'0.1em' }}>
+                  {shichen.branch}時{shichen.keyword}
+                </span>
+                <span style={{ fontSize:9, fontWeight:900, color:'var(--clay)', border:'1px solid rgba(192,74,59,0.6)', borderRadius:2, padding:'2px 7px', letterSpacing:'0.15em' }}>養生</span>
+              </div>
+              <div style={{ display:'flex', gap:4 }}>
+                <button onClick={() => setShichenIdx((shichenIdx - 1 + 12) % 12)}
+                  style={{ width:36, height:36, borderRadius:'50%', background:'rgba(149,211,195,0.15)', border:'1.5px solid rgba(149,211,195,0.4)', color:'var(--jade)', fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.15s ease', fontWeight:700 }}>‹</button>
+                <button onClick={() => setShichenIdx((shichenIdx + 1) % 12)}
+                  style={{ width:36, height:36, borderRadius:'50%', background:'rgba(149,211,195,0.15)', border:'1.5px solid rgba(149,211,195,0.4)', color:'var(--jade)', fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.15s ease', fontWeight:700 }}>›</button>
+              </div>
+            </div>
+            {/* 切換時顯示動畫內容 */}
+            <div key={shichenIdx} className="shichen-content">
+              {/* 時間 */}
+              <p style={{ fontSize:13, color:'var(--amber)', letterSpacing:'0.15em', marginBottom:12, fontFamily:"'JetBrains Mono',monospace" }}>{shichen.time}</p>
+              {/* 建議文字 */}
+              <p style={{ fontSize:16, color:'var(--sand)', lineHeight:2, margin:0 }}>
+                {shichen.meridian}當令，{shichen.advice}
+              </p>
+            </div>
+            {/* 12地支索引 */}
+            <div style={{ display:'flex', justifyContent:'space-between', marginTop:20, gap:2 }}>
+              {['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'].map((branch, i) => (
+                <div key={i} onClick={() => setShichenIdx(i)}
+                  style={{ flex:1, textAlign:'center', cursor:'pointer', fontSize: i === shichenIdx ? 11 : 10,
+                    fontWeight: i === shichenIdx ? 900 : 400,
+                    color: i === shichenIdx ? 'var(--amber)' : 'rgba(200,184,138,0.3)',
+                    letterSpacing:0, transition:'all 0.2s ease',
+                    paddingBottom:4, borderBottom: i === shichenIdx ? '1.5px solid var(--amber)' : '1px solid rgba(200,184,138,0.12)' }}>
+                  {branch}
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* 型格卡（已解鎖時顯示） */}
+          {isUnlocked && (
+            <section style={card}>
+              <div style={{ display:'flex', gap:20, alignItems:'center' }}>
+                <div style={{ width:72, height:90, borderRadius:5, overflow:'hidden', border:'1px solid rgba(149,211,195,0.2)', flexShrink:0 }}>
+                  <img src={CREATURE_IMG[latestType.code]} alt={latestType.creature} style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />
+                </div>
+                <div style={{ flex:1 }}>
+                  <p style={{ fontSize:13, color:'var(--mist)', letterSpacing:'0.15em', marginBottom:6, fontWeight:500 }}>已照見 · 型格</p>
+                  <div style={{ display:'inline-block', background:'rgba(149,211,195,0.08)', border:'1px solid rgba(149,211,195,0.15)', borderRadius:10, padding:'2px 10px', fontSize:13, color:'var(--sand)', marginBottom:8, fontWeight:500 }}>{latestType.creature}</div>
+                  <h3 style={{ fontSize:20, fontFamily:"'Noto Serif TC', serif", fontWeight:900, color:'var(--jade)', letterSpacing:'0.05em', margin:'0 0 10px' }}>{latestType.code}｜{latestType.name}</h3>
+                  <p style={{ fontSize:15, color:'var(--sand)', lineHeight:1.8, borderLeft:'3px solid rgba(217,138,91,0.5)', paddingLeft:12 }}>「{latestType.insight}」</p>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* 下排：今日時間軸 + 詩簽收藏 */}
+          {(() => {
+            const _t = new Date(); const todayStr = `${_t.getFullYear()}-${String(_t.getMonth()+1).padStart(2,'0')}-${String(_t.getDate()).padStart(2,'0')}`;
+            const todayRecords = records.filter(r => r.date === todayStr);
+            const fortuneRecords = records.filter(r => r.fortune).slice(0, 3);
+            const moodColor = { '平靜':'var(--jade)', '有精神':'var(--mist)', '焦慮':'var(--blush)', '煩躁':'var(--blush)', '空虛':'var(--sand)', '被安撫':'var(--amber)' };
+            return (
+              <div style={{ display:'grid', gridTemplateColumns:'1fr', gap:16 }}>
+                {/* 今日時間軸 */}
+                <section style={card}>
+                  <p style={{ fontSize:13, color:'var(--mist)', letterSpacing:'0.2em', marginBottom:20, fontWeight:500 }}>今日食緒軌跡</p>
+                  {todayRecords.length === 0 ? (
+                    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:10, padding:'20px 0', textAlign:'center' }}>
+                      <span style={{ fontSize:28 }}>🍽</span>
+                      <p style={{ fontSize:15, color:'var(--sand)', margin:0 }}>今日尚無記錄</p>
+                      <p style={{ fontSize:13, color:'var(--mist)', margin:0 }}>記下第一餐，開始覺察</p>
+                    </div>
+                  ) : (
+                    <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
+                      {todayRecords.map((r, i) => (
+                        <div key={r.id} style={{ display:'flex', gap:14, alignItems:'stretch' }}>
+                          {/* 時間軸線 */}
+                          <div style={{ display:'flex', flexDirection:'column', alignItems:'center', flexShrink:0, width:48 }}>
+                            <span style={{ fontSize:11, color:'var(--mist)', fontFamily:"'JetBrains Mono', monospace", lineHeight:1, paddingTop:12 }}>{r.time}</span>
+                            <span style={{ fontSize:10, color:'var(--jade)', fontFamily:"'Noto Serif TC',serif", lineHeight:1, marginTop:2, opacity:0.7 }}>{getEarthlyBranch(r.time)}</span>
+                            {i < todayRecords.length - 1 && <div style={{ flex:1, width:1, background:'rgba(149,211,195,0.12)', margin:'6px 0' }} />}
+                          </div>
+                          {/* 卡片 */}
+                          <div onClick={() => setExpandedRecordId(expandedRecordId === r.id ? null : r.id)}
+                            style={{ flex:1, background:'rgba(149,211,195,0.04)', border:'1px solid rgba(149,211,195,0.1)', borderRadius:5, padding:'12px 14px', marginBottom: i < todayRecords.length - 1 ? 8 : 0, cursor:'pointer' }}>
+                            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+                              <span style={{ fontSize:22, lineHeight:1 }}>{r.foodEmoji || '🍽'}</span>
+                              <span style={{ fontSize:13, color:'var(--cream)', fontWeight:700 }}>{r.mealType}</span>
+                            </div>
+                            <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                              <span style={{ fontSize:12, color: moodColor[r.mood] || 'var(--sand)', background:'rgba(149,211,195,0.07)', border:'1px solid rgba(149,211,195,0.12)', borderRadius:20, padding:'2px 10px' }}>{r.mood}</span>
+                              <span style={{ fontSize:12, color:'var(--sand)', background:'rgba(200,184,138,0.08)', border:'1px solid rgba(200,184,138,0.15)', borderRadius:20, padding:'2px 10px' }}>{r.bodyFeeling}</span>
+                              {r.context && <span style={{ fontSize:12, color:'var(--mist)', background:'rgba(168,197,191,0.06)', border:'1px solid rgba(168,197,191,0.1)', borderRadius:20, padding:'2px 10px' }}>{r.context}</span>}
+                            </div>
+                            {expandedRecordId === r.id && <MBEIBars mbeiCode={r.mbeiCode} />}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+
+                {/* 詩簽收藏 */}
+                <section style={card}>
+                  <p style={{ fontSize:13, color:'var(--mist)', letterSpacing:'0.2em', marginBottom:20, fontWeight:500 }}>詩簽收藏</p>
+                  {fortuneRecords.length === 0 ? (
+                    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:10, padding:'20px 0', textAlign:'center' }}>
+                      <span style={{ fontSize:28 }}>🧧</span>
+                      <p style={{ fontSize:15, color:'var(--sand)', margin:0 }}>尚無詩簽</p>
+                      <p style={{ fontSize:13, color:'var(--mist)', margin:0 }}>記錄後由 AI 為你解出食緒籤文</p>
+                    </div>
+                  ) : (
+                    <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                      {fortuneRecords.map(r => (
+                        <div key={r.id} style={{ display:'flex', gap:12, alignItems:'flex-start', background:'rgba(133,41,27,0.1)', border:'1px solid rgba(255,180,160,0.1)', borderRadius:5, padding:'12px 16px' }}>
+                          <div style={{ width:3, alignSelf:'stretch', background:'rgba(192,74,59,0.5)', borderRadius:2, flexShrink:0 }} />
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <p style={{ fontSize:13, color:'var(--blush)', fontWeight:700, margin:'0 0 4px', letterSpacing:'0.1em' }}>{r.fortune.main_title}</p>
+                            <p style={{ fontSize:14, color:'var(--cream)', lineHeight:1.8, margin:'0 0 6px' }}>{(r.fortune.poem || '').split('\n')[0]}</p>
+                            <p style={{ fontSize:11, color:'var(--mist)', margin:0 }}>{r.date} · {r.mealType} · {r.foodEmoji}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              </div>
+            );
+          })()}
+
+          {/* 靈光凝練中（未解鎖時置底） */}
+          {!isUnlocked && (
+            <section style={{ ...card, padding:'36px 24px 40px' }}>
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center', gap:18 }}>
+                <div style={{ width:80, height:80, borderRadius:'50%', border:'1px solid rgba(149,211,195,0.25)', display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(149,211,195,0.04)' }}>
+                  <span style={{ fontSize:19, fontFamily:"'Noto Serif TC', serif", fontWeight:900, color:'var(--jade)' }}>{records.length}<span style={{ opacity:0.3 }}>/</span>10</span>
+                </div>
+                <div>
+                  <h3 style={{ fontSize:18, fontFamily:"'Noto Serif TC', serif", fontWeight:900, color:'var(--jade)', letterSpacing:'0.1em', marginBottom:10 }}>靈光凝練中</h3>
+                  <p style={{ fontSize:14, color:'var(--sand)', lineHeight:2, opacity:0.8 }}>尚需 {10 - records.length} 次食緒紀錄<br />即可照見你的食緒型格</p>
+                </div>
+              </div>
+            </section>
+          )}
+        </div>
+      );
+    }
+
+    function AlmanacView({ records }) {
+      const toStr = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      const today = new Date();
+      const todayStr = toStr(today);
+      const [expanded, setExpanded] = useState(false);
+      const [selectedDate, setSelectedDate] = useState(todayStr);
+      const [weekOffset, setWeekOffset] = useState(0);
+      const [expandedRecordId, setExpandedRecordId] = useState(null);
+      const [viewMonth, setViewMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+
+      // date → records[] map
+      const byDate = useMemo(() => {
+        const m = {};
+        records.forEach(r => { if (!m[r.date]) m[r.date] = []; m[r.date].push(r); });
+        return m;
+      }, [records]);
+
+      // week days (Sun–Sat) offset from this week
+      const weekDays = useMemo(() => {
+        const base = new Date(today);
+        base.setDate(today.getDate() - today.getDay() + weekOffset * 7);
+        return Array.from({length:7}, (_,i) => { const d = new Date(base); d.setDate(base.getDate()+i); return d; });
+      }, [weekOffset]);
+
+      // month grid
+      const monthData = useMemo(() => {
+        const y = viewMonth.getFullYear(), mo = viewMonth.getMonth();
+        return { y, mo, firstDay: new Date(y,mo,1).getDay(), total: new Date(y,mo+1,0).getDate() };
+      }, [viewMonth]);
+
+      const fmtDate = s => { const [y,m,d] = s.split('-'); return `${parseInt(m)}月${parseInt(d)}日`; };
+      const dayNames = ['日','一','二','三','四','五','六'];
+      const monthNames = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
+
+      const DayCell = ({ date, large }) => {
+        const ds = toStr(date);
+        const recs = byDate[ds] || [];
+        const isToday = ds === todayStr;
+        const isSel = ds === selectedDate;
+        const dots = recs.slice(0,3).map(r => r.mbeiCode?.[1]==='N' ? 'bg-forest' : 'bg-clay');
+        return (
+          <button onClick={() => setSelectedDate(ds)}
+            className={cn('relative flex flex-col items-center justify-center rounded-2xl transition-all',
+              large ? 'py-5' : 'aspect-square',
+              isSel ? 'bg-ink shadow-lg' : isToday ? 'ring-2 ring-inset ring-clay/40 hover:bg-parchment' : 'hover:bg-parchment')}>
+            <span className={cn('font-black leading-none', large ? 'text-3xl' : 'text-sm', isSel ? 'text-white' : 'text-ink')}>
+              {date.getDate()}
+            </span>
+            <div className={cn('flex gap-0.5 mt-1', large ? 'h-2' : 'h-1.5')}>
+              {dots.map((c,i) => <div key={i} className={cn('rounded-full',c, large ? 'w-2 h-2' : 'w-1.5 h-1.5')} />)}
+            </div>
+          </button>
+        );
+      };
+
+      const selectedRecords = byDate[selectedDate] || [];
+      const isToday = selectedDate === todayStr;
+
+      return (
+        <div className="space-y-8 fade-in">
+          <header className="flex justify-between items-center">
+            <div className="space-y-1">
+              <h2 className="text-4xl font-serif font-black text-jade tracking-tighter">食緒曆卡</h2>
+            </div>
+          </header>
+
+          {/* ── Calendar card ── */}
+          <div className="bg-white rounded-[5px] shadow-card border border-stroke overflow-hidden">
+            {/* top bar */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-parchment">
+              <div className="flex items-center gap-1">
+                {expanded ? (
+                  <>
+                    <button onClick={() => setViewMonth(new Date(monthData.y, monthData.mo-1, 1))}
+                      className="w-7 h-7 rounded-full hover:bg-parchment flex items-center justify-center text-muted transition-colors">
+                      <ChevronLeftIcon size={14} />
+                    </button>
+                    <span className="font-black text-ink font-serif text-sm px-1">
+                      {monthData.y}年 {monthNames[monthData.mo]}
+                    </span>
+                    <button onClick={() => setViewMonth(new Date(monthData.y, monthData.mo+1, 1))}
+                      className="w-7 h-7 rounded-full hover:bg-parchment flex items-center justify-center text-muted transition-colors">
+                      <ChevronRightIcon size={14} />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => setWeekOffset(w => w-1)}
+                      className="w-7 h-7 rounded-full hover:bg-parchment flex items-center justify-center text-muted transition-colors">
+                      <ChevronLeftIcon size={14} />
+                    </button>
+                    <span className="font-black text-ink font-serif text-sm px-1">
+                      {today.getFullYear()}年 {monthNames[today.getMonth()]}
+                    </span>
+                    <button onClick={() => setWeekOffset(w => w+1)}
+                      className="w-7 h-7 rounded-full hover:bg-parchment flex items-center justify-center text-muted transition-colors">
+                      <ChevronRightIcon size={14} />
+                    </button>
+                  </>
+                )}
+              </div>
+              <button onClick={() => setExpanded(e => !e)}
+                className="text-[10px] font-black text-muted bg-parchment border border-stroke/60 px-3 py-1 rounded-full hover:border-ink/20 transition-colors tracking-widest">
+                {expanded ? '收起' : '展開月曆'}
+              </button>
+            </div>
+
+            {/* day name headers */}
+            <div className="grid grid-cols-7 border-b border-parchment/60">
+              {dayNames.map(d => <div key={d} className="text-[10px] text-muted font-black py-2 text-center tracking-widest">{d}</div>)}
+            </div>
+
+            {!expanded ? (
+              /* ── Week view (enlarged) ── */
+              <div className="grid grid-cols-7 px-3 py-4 gap-2">
+                {weekDays.map(d => <DayCell key={toStr(d)} date={d} large={true} />)}
+              </div>
+            ) : (
+              /* ── Month view ── */
+              <div className="grid grid-cols-7 p-2 gap-1">
+                {Array.from({length: monthData.firstDay}).map((_,i) => <div key={`e${i}`} />)}
+                {Array.from({length: monthData.total}).map((_,i) => {
+                  const d = new Date(monthData.y, monthData.mo, i+1);
+                  return <DayCell key={i} date={d} large={false} />;
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* ── Selected day records ── */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-black flex items-center gap-2 uppercase tracking-[0.2em] text-muted">
+                <CalendarIcon size={16} className="text-amber" />
+                {isToday ? '今日細節' : '選取細節'} · {fmtDate(selectedDate)}
+              </h3>
+              {!isToday && (
+                <button onClick={() => setSelectedDate(todayStr)}
+                  className="text-[10px] font-bold text-muted bg-stroke/60 px-2 py-0.5 rounded-full hover:bg-stroke transition-colors">
+                  回今日
+                </button>
+              )}
+            </div>
+            {selectedRecords.length > 0 ? selectedRecords.map(r => (
+              <div key={r.id} onClick={() => setExpandedRecordId(expandedRecordId === r.id ? null : r.id)}
+                className="bg-white rounded-[5px] p-6 shadow-sm border border-stroke flex flex-col gap-4" style={{ cursor:'pointer' }}>
+                <div className="space-y-1">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-black text-ink" style={{ fontFamily:"'Noto Serif TC',serif", fontSize:18, letterSpacing:'0.05em', marginBottom:2 }}>{r.foodEmoji || '這一餐'}</p>
+                      <p className="font-bold text-sm text-muted">{r.mealType} · {r.time} <span style={{fontSize:11,color:'var(--jade)',fontFamily:"'Noto Serif TC',serif",fontWeight:400,opacity:0.8}}>{getEarthlyBranch(r.time)}時</span></p>
+                    </div>
+                    {r.fortune?.merit_point && (
+                      <span style={{ fontSize:11, fontWeight:900, color:'var(--amber)', fontFamily:"'Noto Serif TC',serif", letterSpacing:'0.05em' }}>
+                        {r.fortune.merit_point.match(/[+-]?\d+/)?.[0] ? (r.fortune.merit_point.match(/[+-]?\d+/)[0].startsWith('+') ? '' : '+') + r.fortune.merit_point.match(/[+-]?\d+/)[0] : r.fortune.merit_point} 功德
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs font-bold text-muted">
+                    <span className="text-forest">心情：{r.mood}</span>
+                    <span className="text-stroke font-normal">|</span>
+                    <span>{r.bodyFeeling}</span>
+                  </div>
+                  {r.fortune?.main_title && (
+                    <p className="text-xs text-muted/70 font-serif pt-0.5">「{r.fortune.main_title}」</p>
+                  )}
+                </div>
+                {(r.fortune?.do || r.fortune?.next_meal) && (
+                  <div className="flex flex-col gap-1 pt-2 border-t border-parchment">
+                    {r.fortune.do && <p className="text-[11px] text-forest/80 font-serif">{r.fortune.do}</p>}
+                    {r.fortune.next_meal && <p className="text-[11px] text-amber font-serif">{r.fortune.next_meal}</p>}
+                  </div>
+                )}
+                {expandedRecordId === r.id && <MBEIBars mbeiCode={r.mbeiCode} />}
+              </div>
+            )) : (
+              <div className="bg-white rounded-[5px] p-10 text-center border-2 border-dashed border-stroke text-muted text-sm font-bold">
+                {isToday ? '今日尚無食緒紀錄。' : '這天沒有紀錄。'}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    function SpectrumTuner() {
+      const DIMS = [
+        { num:'01', title:'能量來源',
+          left:  { code:'M', label:'魂', name:'以情入食，滋養神魂', desc:'你吃飯是為了「爽」，尋求情緒的補償。' },
+          right: { code:'B', label:'魄', name:'以身入食，修煉肉體', desc:'你吃飯是為了「活」，補充生存機能。' } },
+        { num:'02', title:'食源性',
+          left:  { code:'N', label:'野', name:'吸收大地的原野食物', desc:'你吃的是「土裡長」的新鮮無添加物。' },
+          right: { code:'P', label:'煉', name:'攝取人工的煉化之物', desc:'你吃的是「工廠出」的重組與精緻加工品。' } },
+        { num:'03', title:'身體負荷',
+          left:  { code:'L', label:'靈', name:'氣血通暢，輕盈羽化', desc:'飲食清爽好代謝，身體毫無殘留感。' },
+          right: { code:'H', label:'煞', name:'痰濕淤塞，沉重濁氣', desc:'油膩重鹹帶來極端刺激，身體產生負擔感。' } },
+        { num:'04', title:'規律節奏',
+          left:  { code:'R', label:'曆', name:'順應十二時辰，循天時', desc:'你是準時吃飯的乖寶寶，定時定量。' },
+          right: { code:'V', label:'幻', name:'暴飲暴食，飄忽無常', desc:'你是看心情、看壓力才進食的邊緣人。' } },
+      ];
+      const [hover, setHover] = React.useState(Array(4).fill(null));
+      const set = (i, v) => setHover(h => h.map((x,j) => j===i ? v : x));
+
+      return (
+        <div style={{ background:'#1a150a', border:'1px solid rgba(149,211,195,0.12)', borderRadius:5, padding:'24px 20px', display:'flex', flexDirection:'column', gap:0 }}>
+          <div style={{ marginBottom:24 }}>
+            <p style={{ fontSize:9, color:'var(--jade)', fontFamily:"'JetBrains Mono',monospace", fontWeight:700, letterSpacing:'0.25em', margin:'0 0 6px', opacity:0.7 }}>MBEI SYSTEM · 四大維度</p>
+            <h4 style={{ fontSize:16, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color:'var(--cream)', margin:0, letterSpacing:'0.1em' }}>能量調頻儀</h4>
+            <p style={{ fontSize:12, color:'var(--mist)', margin:'4px 0 0', opacity:0.6 }}>滑動光譜，解讀你的食緒靈魂維度</p>
+          </div>
+          {DIMS.map((dim, i) => {
+            const side = hover[i];
+            const active = side ? (side === 'left' ? dim.left : dim.right) : null;
+            const jade = 'rgba(149,211,195,';
+            const amber = 'rgba(200,184,138,';
+            return (
+              <div key={i} style={{ paddingBottom: i < 3 ? 20 : 0, marginBottom: i < 3 ? 20 : 0, borderBottom: i < 3 ? '1px solid rgba(149,211,195,0.06)' : 'none' }}>
+                {/* 維度標題 */}
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
+                  <span style={{ fontSize:9, fontFamily:"'JetBrains Mono',monospace", color:'rgba(149,211,195,0.3)', letterSpacing:'0.15em' }}>{dim.num} /</span>
+                  <span style={{ fontSize:12, fontFamily:"'Noto Serif TC',serif", fontWeight:700, color:'var(--sand)', letterSpacing:'0.15em' }}>{dim.title}</span>
+                </div>
+                {/* 光譜軌道 — 整列都是 hit area */}
+                <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:12,
+                  padding:'16px 0', margin:'-16px 0 12px', cursor:'pointer' }}
+                  onMouseMove={e => { const r=e.currentTarget.getBoundingClientRect(); const pct=(e.clientX-r.left)/r.width; set(i, pct<0.15?'left':pct>0.85?'right':pct<0.5?'left':'right'); }}
+                  onMouseLeave={() => set(i,null)}
+                  onTouchStart={e => { const r=e.currentTarget.getBoundingClientRect(); set(i,(e.touches[0].clientX-r.left)/r.width<0.5?'left':'right'); }}
+                  onTouchEnd={() => set(i,null)}>
+                  {/* 左極端 */}
+                  <div style={{ width:36, textAlign:'right', flexShrink:0, userSelect:'none' }}>
+                    <span style={{ fontSize:20, fontFamily:"'Noto Serif TC',serif", fontWeight:900, display:'block', lineHeight:1,
+                      color: side==='left' ? 'var(--jade)' : jade+'0.25)', transition:'color 0.4s cubic-bezier(0.4,0,0.2,1)' }}>{dim.left.code}</span>
+                    <span style={{ fontSize:10, display:'block', letterSpacing:'0.1em', marginTop:2,
+                      color: side==='left' ? 'var(--jade)' : jade+'0.2)', transition:'color 0.4s cubic-bezier(0.4,0,0.2,1)' }}>{dim.left.label}</span>
+                  </div>
+                  {/* 軌道（視覺） */}
+                  <div style={{ flex:1, position:'relative', height:6, borderRadius:3, background:'rgba(255,255,255,0.04)', backdropFilter:'blur(4px)', pointerEvents:'none' }}>
+                    {/* 漸層光芒 */}
+                    <div style={{ position:'absolute', inset:0, borderRadius:3, transition:'all 0.4s cubic-bezier(0.4,0,0.2,1)',
+                      background: side==='left'  ? 'linear-gradient(90deg,rgba(149,211,195,0.65) 0%,rgba(149,211,195,0.08) 55%,transparent 100%)' :
+                                  side==='right' ? 'linear-gradient(90deg,transparent 0%,rgba(200,184,138,0.08) 45%,rgba(200,184,138,0.65) 100%)' :
+                                  'transparent' }} />
+                    {/* 游標 */}
+                    <div style={{ position:'absolute', top:'50%', transform:'translate(-50%,-50%)',
+                      left: side==='left' ? '6%' : side==='right' ? '94%' : '50%',
+                      width:14, height:14, borderRadius:'50%', transition:'all 0.4s cubic-bezier(0.4,0,0.2,1)',
+                      background: side==='left' ? 'var(--jade)' : side==='right' ? 'var(--amber)' : 'rgba(149,211,195,0.3)',
+                      boxShadow: side==='left'  ? '0 0 14px rgba(149,211,195,0.8), 0 0 4px rgba(149,211,195,1)' :
+                                  side==='right' ? '0 0 14px rgba(200,184,138,0.8), 0 0 4px rgba(200,184,138,1)' : 'none' }} />
+                  </div>
+                  {/* 右極端 */}
+                  <div style={{ width:36, textAlign:'left', flexShrink:0, userSelect:'none' }}>
+                    <span style={{ fontSize:20, fontFamily:"'Noto Serif TC',serif", fontWeight:900, display:'block', lineHeight:1,
+                      color: side==='right' ? 'var(--amber)' : amber+'0.25)', transition:'color 0.4s cubic-bezier(0.4,0,0.2,1)' }}>{dim.right.code}</span>
+                    <span style={{ fontSize:10, display:'block', letterSpacing:'0.1em', marginTop:2,
+                      color: side==='right' ? 'var(--amber)' : amber+'0.2)', transition:'color 0.4s cubic-bezier(0.4,0,0.2,1)' }}>{dim.right.label}</span>
+                  </div>
+                </div>
+                {/* 動態解說 */}
+                <div style={{ minHeight:56 }}>
+                  {active && (
+                    <div key={side+i} className="shichen-content" style={{ padding:'10px 14px',
+                      background: side==='left' ? 'rgba(149,211,195,0.05)' : 'rgba(200,184,138,0.05)',
+                      border: `1px solid ${side==='left' ? 'rgba(149,211,195,0.15)' : 'rgba(200,184,138,0.15)'}`,
+                      borderRadius:5, backdropFilter:'blur(8px)' }}>
+                      <p style={{ fontSize:14, fontFamily:"'Noto Serif TC',serif", fontWeight:700, color:'var(--cream)', margin:'0 0 4px', letterSpacing:'0.04em' }}>{active.name}</p>
+                      <p style={{ fontSize:12, color:'var(--mist)', margin:0, opacity:0.75, lineHeight:1.6 }}>{active.desc}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    function InsightView({ records = [] }) {
+      const [tab, setTab] = useState('personal');
+      const [showEncyclopedia, setShowEncyclopedia] = useState(false);
+      const [selectedCreature, setSelectedCreature] = useState(null);
+      const [creatureNavEnabled, setCreatureNavEnabled] = useState(true);
+      const touchStartX = React.useRef(null);
+      const encCreatures = Object.values(MBEI_TYPES);
+      const encIdx = selectedCreature ? encCreatures.findIndex(c => c.code === selectedCreature.code) : 0;
+      const goCreature = dir => setSelectedCreature(encCreatures[(encIdx + dir + encCreatures.length) % encCreatures.length]);
+
+      const hatch = useMemo(() => {
+        if (!records.length) return { stage: 0, count: 0, unlockedCodes: new Set(), weekCode: null };
+        const sorted = [...records].sort((a,b) => new Date(a.date) - new Date(b.date));
+        const daysSinceFirst = Math.floor((new Date() - new Date(sorted[0].date)) / 86400000);
+        const count = records.length;
+        const freq = {};
+        records.forEach(r => { freq[r.mbeiCode] = (freq[r.mbeiCode]||0)+1; });
+        const topCode = Object.entries(freq).sort((a,b)=>b[1]-a[1])[0]?.[0] || 'MPLR';
+        const dominantType = MBEI_TYPES[topCode] || MBEI_TYPES['MPLR'];
+        const mCount = records.filter(r=>r.mbeiCode[0]==='M').length;
+        const firstLetter = mCount > count/2 ? 'M' : 'B';
+        const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate()-7);
+        const weekRecords = records.filter(r=>new Date(r.date)>=weekAgo);
+        const stage = daysSinceFirst >= 7 ? 3 : count >= 5 ? 2 : 1;
+        // 解鎖紀錄
+        const unlockedCodes = new Set(records.map(r => r.mbeiCode));
+        // 本週主型格
+        const weekFreq = {};
+        weekRecords.forEach(r => { weekFreq[r.mbeiCode] = (weekFreq[r.mbeiCode]||0)+1; });
+        const weekCode = weekRecords.length > 0 ? (Object.entries(weekFreq).sort((a,b)=>b[1]-a[1])[0]?.[0] || null) : null;
+        return { stage, dominantType, daysSinceFirst, count, firstLetter, weekRecords, unlockedCodes, weekCode };
+      }, [records]);
+
+      const latest = records[0];
+      const stageClue = !latest ? '' : (()=>{
+        const c = latest.mbeiCode;
+        return (c[0]==='M' ? '魂動（情緒主導）' : '魄健（生理理性）') + '・' + (c[2]==='H' ? '煞氣（身體負荷重）' : '靈氣（身體輕盈）');
+      })();
+
+      const card = { background:'#252016', border:'1px solid #3a3020', borderRadius:5, boxShadow:'0 8px 30px rgba(135,123,115,0.08)' };
+
+      return (
+        <div className="space-y-10 fade-in"
+          onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
+          onTouchEnd={e => { if (!selectedCreature||!creatureNavEnabled) return; const dx=touchStartX.current-e.changedTouches[0].clientX; if(Math.abs(dx)>50) goCreature(dx>0?1:-1); }}>
+          <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div className="space-y-1">
+              <h2 className="text-4xl font-serif font-black text-jade tracking-tighter">食緒靈獸</h2>
+            </div>
+            <div className="flex bg-parchment p-1.5 rounded-2xl border border-stroke/50 shadow-inner w-full md:w-auto">
+              {[['personal','靈獸孵化'],['group','靈獸圖鑑']].map(([t,label]) => (
+                <button key={t} onClick={() => setTab(t)} className={cn("flex-1 md:w-32 px-4 py-2.5 rounded-xl text-xs font-black transition-all uppercase tracking-widest", tab===t ? "bg-white text-ink shadow-md" : "text-muted hover:text-ink")}>{label}</button>
+              ))}
+            </div>
+          </header>
+
+          {tab === 'personal' ? (
+            <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+
+              {/* ── 靈獸孵化卡 ── */}
+              <div style={{ ...card, overflow:'hidden' }}>
+                {/* 階段指示器 */}
+                <div style={{ padding:'20px 24px 0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <div style={{ display:'flex', gap:4, alignItems:'center' }}>
+                    {['混沌期','破殼期','完全體'].map((s,i) => (
+                      <React.Fragment key={i}>
+                        <div style={{ display:'flex', alignItems:'center', gap:5 }}>
+                          <div style={{ width:7, height:7, borderRadius:'50%',
+                            background: hatch.stage > i ? (hatch.stage===i+1 ? 'var(--jade)' : 'rgba(149,211,195,0.35)') : 'rgba(149,211,195,0.1)',
+                            boxShadow: hatch.stage===i+1 ? '0 0 8px rgba(149,211,195,0.6)' : 'none', transition:'all 0.3s' }} />
+                          <span style={{ fontSize:11, fontFamily:"'Noto Serif TC',serif", letterSpacing:'0.1em',
+                            color: hatch.stage===i+1 ? 'var(--jade)' : hatch.stage>i+1 ? 'rgba(149,211,195,0.35)' : 'rgba(149,211,195,0.15)',
+                            fontWeight: hatch.stage===i+1 ? 700 : 400 }}>{s}</span>
+                        </div>
+                        {i < 2 && <span style={{ fontSize:10, color:'rgba(149,211,195,0.15)', margin:'0 2px' }}>›</span>}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                  <span style={{ fontSize:11, color:'var(--mist)', fontFamily:"'Noto Serif TC',serif" }}>{hatch.count} 筆紀錄</span>
+                </div>
+
+                {/* 階段 0：尚無紀錄 */}
+                {hatch.stage === 0 && (
+                  <div style={{ padding:'48px 24px', textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center', gap:16 }}>
+                    <span style={{ fontSize:64 }}>🥚</span>
+                    <h3 style={{ fontSize:20, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color:'var(--jade)', margin:0 }}>靈獸尚未降世</h3>
+                    <p style={{ fontSize:15, color:'var(--sand)', lineHeight:1.8, margin:0 }}>記下第一餐，你的山海靈獸將從這裡開始孵化</p>
+                  </div>
+                )}
+
+                {/* 階段 1：混沌期 */}
+                {hatch.stage === 1 && (
+                  <div style={{ padding:'32px 24px', display:'flex', flexDirection:'column', alignItems:'center', gap:20 }}>
+                    <div style={{ position:'relative', display:'inline-block' }}>
+                      <span className="float-glow" style={{ fontSize:72, lineHeight:1.2, display:'block' }}>🥚</span>
+                      <div style={{ position:'absolute', inset:-20, background:'radial-gradient(circle, rgba(149,211,195,0.07) 0%, transparent 70%)', borderRadius:'50%', pointerEvents:'none' }} />
+                    </div>
+                    <div style={{ textAlign:'center', maxWidth:280 }}>
+                      <p style={{ fontSize:11, color:'var(--jade)', letterSpacing:'0.2em', fontWeight:700, fontFamily:"'Noto Serif TC',serif", margin:'0 0 10px' }}>混沌期 · 靈氣凝聚中</p>
+                      <p style={{ fontSize:15, color:'var(--cream)', lineHeight:1.9, fontFamily:"'Noto Serif TC',serif", margin:'0 0 18px' }}>
+                        牠在迷霧中漸漸成形，<br />已感知到你的{stageClue}
+                      </p>
+                      <div style={{ display:'flex', gap:8, alignItems:'center', justifyContent:'center' }}>
+                        {Array.from({length:5}).map((_,i) => (
+                          <div key={i} style={{ width:10, height:10, borderRadius:'50%',
+                            background: i < hatch.count ? 'var(--jade)' : 'rgba(149,211,195,0.12)',
+                            boxShadow: i < hatch.count ? '0 0 6px rgba(149,211,195,0.35)' : 'none', transition:'all 0.3s' }} />
+                        ))}
+                        <span style={{ fontSize:12, color:'var(--mist)', marginLeft:6, fontFamily:"'Noto Serif TC',serif" }}>{hatch.count}/5 筆可破殼</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 階段 2：破殼期 */}
+                {hatch.stage === 2 && hatch.dominantType && (
+                  <div style={{ padding:'32px 24px', display:'flex', flexDirection:'column', alignItems:'center', gap:20 }}>
+                    <div style={{ position:'relative', width:120, height:150, flexShrink:0 }}>
+                      <img src={CREATURE_IMG[hatch.dominantType.code]} alt="?"
+                        style={{ width:'100%', height:'100%', objectFit:'contain', filter:'blur(16px) brightness(0.45)', display:'block' }} />
+                      <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                        <span style={{ fontSize:36, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color:'var(--jade)', textShadow:'0 0 16px rgba(149,211,195,0.6)' }}>?</span>
+                      </div>
+                    </div>
+                    <div style={{ textAlign:'center', maxWidth:300 }}>
+                      <p style={{ fontSize:11, color:'var(--amber)', letterSpacing:'0.2em', fontWeight:700, fontFamily:"'Noto Serif TC',serif", margin:'0 0 12px' }}>破殼期 · 型態漸顯</p>
+                      <div style={{ padding:'14px 20px', background:'rgba(149,211,195,0.05)', border:'1px solid rgba(149,211,195,0.12)', borderRadius:5, marginBottom:12 }}>
+                        <p style={{ fontSize:12, color:'var(--mist)', letterSpacing:'0.1em', margin:'0 0 6px', fontFamily:"'Noto Serif TC',serif" }}>第一維度已顯影</p>
+                        <p style={{ fontSize:22, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color:'var(--jade)', margin:'0 0 8px' }}>
+                          {hatch.firstLetter === 'M' ? 'M・魂系' : 'B・魄系'}
+                          <span style={{ color:'rgba(149,211,195,0.2)', fontSize:16 }}> ??</span>
+                        </p>
+                        <p style={{ fontSize:13, color:'var(--sand)', lineHeight:1.7, fontFamily:"'Noto Serif TC',serif", margin:0 }}>
+                          {hatch.firstLetter === 'M' ? '你以情入食——飲食常受心緒牽引' : '你以身入食——理性管理飲食節奏'}
+                        </p>
+                      </div>
+                      <p style={{ fontSize:12, color:'var(--mist)', fontFamily:"'Noto Serif TC',serif" }}>再 {Math.max(0, 7-hatch.daysSinceFirst)} 天解鎖完全體</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* 階段 3：完全體 */}
+                {hatch.stage >= 3 && hatch.dominantType && (
+                  <div style={{ padding:'28px 24px' }}>
+                    <div style={{ display:'flex', gap:20, alignItems:'flex-start', marginBottom:16 }}>
+                      <div style={{ flexShrink:0 }}>
+                        <div style={{ width:100, height:125, borderRadius:5, overflow:'hidden', border:'2px solid rgba(149,211,195,0.2)', boxShadow:'0 8px 32px rgba(0,0,0,0.4)' }}>
+                          <img src={CREATURE_IMG[hatch.dominantType.code]} alt={hatch.dominantType.creature} style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />
+                        </div>
+                        <div style={{ textAlign:'center', marginTop:6 }}>
+                          <span style={{ fontSize:10, color:'var(--jade)', fontFamily:"'JetBrains Mono',monospace", fontWeight:700, background:'rgba(149,211,195,0.1)', padding:'2px 8px', borderRadius:4 }}>{hatch.dominantType.code}</span>
+                        </div>
+                      </div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <p style={{ fontSize:11, color:'var(--jade)', letterSpacing:'0.2em', fontWeight:700, fontFamily:"'Noto Serif TC',serif", margin:'0 0 8px' }}>完全體 · 靈獸降世</p>
+                        <h3 style={{ fontSize:22, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color:'var(--cream)', margin:'0 0 8px' }}>{hatch.dominantType.name}</h3>
+                        <span style={{ fontSize:12, color:'var(--sand)', background:'rgba(200,184,138,0.08)', border:'1px solid rgba(200,184,138,0.15)', borderRadius:20, padding:'3px 12px', fontFamily:"'Noto Serif TC',serif" }}>{hatch.dominantType.creature}</span>
+                        <p style={{ fontSize:14, color:'var(--sand)', lineHeight:1.8, marginTop:12, borderLeft:'3px solid rgba(217,138,91,0.5)', paddingLeft:12, fontFamily:"'Noto Serif TC',serif" }}>「{hatch.dominantType.insight}」</p>
+                      </div>
+                    </div>
+                    <div style={{ padding:'14px 16px', background:'rgba(149,211,195,0.04)', border:'1px solid rgba(149,211,195,0.08)', borderRadius:5 }}>
+                      {hatch.weekRecords.length > 0 ? (
+                        <>
+                          <p style={{ fontSize:11, color:'var(--jade)', letterSpacing:'0.15em', margin:'0 0 8px', fontFamily:"'Noto Serif TC',serif", fontWeight:700 }}>本週食緒摘要</p>
+                          <p style={{ fontSize:14, color:'var(--sand)', lineHeight:1.9, fontFamily:"'Noto Serif TC',serif", margin:0 }}>
+                            本週 {hatch.weekRecords.length} 次紀錄，主要型格為 {hatch.dominantType.code}。
+                            {hatch.weekRecords.filter(r=>r.mbeiCode[0]==='M').length > hatch.weekRecords.length/2
+                              ? ' 情緒主導你的飲食選擇，留意心情與食欲的連動。'
+                              : ' 飲食相對理性規律，繼續保持。'}
+                          </p>
+                        </>
+                      ) : (
+                        <p style={{ fontSize:13, color:'var(--mist)', fontFamily:"'Noto Serif TC',serif", margin:0 }}>近 7 天尚無紀錄，持續記錄才能看見本週食緒。</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 能量調頻儀 */}
+              <SpectrumTuner />
+
+            </div>
+          ) : (
+            /* ── 靈獸圖鑑 tab ── */
+            <div style={{ ...card, padding:'20px' }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
+                <h4 style={{ fontSize:14, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color:'var(--jade)', letterSpacing:'0.15em', margin:0 }}>十六型山海經圖鑑</h4>
+                <span style={{ fontSize:10, color:'var(--mist)', letterSpacing:'0.1em' }}>點擊已解鎖型格查看詳情</span>
+              </div>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:8 }}>
+                {Object.values(MBEI_TYPES).map(type => {
+                  const isUnlocked = hatch.unlockedCodes?.has(type.code);
+                  const isWeek = type.code === hatch.weekCode;
+                  return (
+                    <div key={type.code}
+                      onClick={() => isUnlocked && (setSelectedCreature(type), setCreatureNavEnabled(true))}
+                      style={{ background: isWeek ? 'rgba(149,211,195,0.07)' : 'rgba(21,13,0,0.6)',
+                        border: isWeek ? '1px solid rgba(149,211,195,0.4)' : isUnlocked ? '1px solid rgba(149,211,195,0.15)' : '1px solid rgba(149,211,195,0.06)',
+                        borderRadius:5, padding:'10px', display:'flex', gap:10, alignItems:'flex-start',
+                        cursor: isUnlocked ? 'pointer' : 'default', position:'relative',
+                        opacity: isUnlocked ? 1 : 0.35, transition:'border-color 0.2s, opacity 0.2s' }}>
+                      {isWeek && (
+                        <div style={{ position:'absolute', top:5, right:5, fontSize:8, fontWeight:900, color:'var(--jade)', background:'rgba(149,211,195,0.15)', border:'1px solid rgba(149,211,195,0.3)', borderRadius:3, padding:'1px 4px', fontFamily:"'Noto Serif TC',serif", letterSpacing:'0.1em' }}>本週</div>
+                      )}
+                      <div style={{ width:38, height:48, flexShrink:0, borderRadius:4, overflow:'hidden', border:'1px solid rgba(149,211,195,0.12)', position:'relative' }}>
+                        <img src={CREATURE_IMG[type.code]} alt={type.creature} style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />
+                        {!isUnlocked && (
+                          <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.3)' }}>
+                            <span style={{ fontSize:12 }}>🔒</span>
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <span style={{ fontSize:9, fontWeight:700, color: isWeek ? 'var(--jade)' : 'var(--mist)', background:'rgba(149,211,195,0.1)', border:'1px solid rgba(149,211,195,0.15)', borderRadius:4, padding:'1px 5px', fontFamily:"'Noto Serif TC',serif", letterSpacing:'0.05em', display:'inline-block', marginBottom:3 }}>{type.code}</span>
+                        <h4 style={{ fontSize:12, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color: isWeek ? 'var(--jade)' : 'var(--cream)', letterSpacing:'0.05em', margin:'0 0 3px', lineHeight:1.3 }}>{type.name.split(' ')[0]}</h4>
+                        <p style={{ fontSize:10, color:'var(--sand)', lineHeight:1.4, fontFamily:"'Noto Serif TC',serif", margin:0, opacity:0.7, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{type.insight}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 十六型圖鑑 Modal */}
+          {showEncyclopedia && (
+            <div style={{ position:'fixed', inset:0, zIndex:110, display:'flex', background:'rgba(0,0,0,0.85)', backdropFilter:'blur(8px)' }}>
+              <div style={{ position:'absolute', inset:0 }} onClick={() => setShowEncyclopedia(false)} />
+              <div style={{ position:'relative', zIndex:10, width:'100%', maxWidth:1100, margin:'auto', height:'92vh',
+                background:'var(--deep)', border:'1px solid rgba(149,211,195,0.2)', borderRadius:5,
+                display:'flex', flexDirection:'column', overflow:'hidden', animation:'onboardFadeIn 0.4s ease-out',
+                boxShadow:'0 32px 80px rgba(0,0,0,0.8)' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'20px 28px', borderBottom:'1px solid rgba(149,211,195,0.12)', flexShrink:0 }}>
+                  <div>
+                    <p style={{ fontSize:13, color:'var(--mist)', letterSpacing:'0.2em', marginBottom:4, fontFamily:"'Noto Serif TC', serif", fontWeight:500 }}>食緒型格 · 山海神獸</p>
+                    <h3 style={{ fontSize:24, fontFamily:"'Noto Serif TC', serif", fontWeight:900, color:'var(--jade)', letterSpacing:'0.1em', margin:0 }}>十六型圖鑑</h3>
+                  </div>
+                  <button onClick={() => setShowEncyclopedia(false)} style={{ width:40, height:40, borderRadius:'50%', background:'rgba(149,211,195,0.1)', border:'1px solid rgba(149,211,195,0.25)', color:'var(--jade)', fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
+                </div>
+                <div style={{ display:'flex', flex:1, overflow:'hidden' }}>
+                  <div style={{ width:340, flexShrink:0, position:'relative', overflow:'hidden', borderRight:'1px solid rgba(149,211,195,0.1)' }} className="hidden md:block">
+                    <img src="openspec/asset/png/encyclopedia_bg.jpg" alt="十六型神獸圖鑑" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'top center' }} />
+                    <div style={{ position:'absolute', inset:0, background:'linear-gradient(to right, rgba(18,12,0,0) 0%, rgba(18,12,0,0.5) 100%)' }} />
+                    <div style={{ position:'absolute', bottom:24, left:0, right:0, textAlign:'center' }}>
+                      <p style={{ fontSize:13, color:'var(--mist)', fontFamily:"'Noto Serif TC', serif", fontWeight:500, letterSpacing:'0.15em' }}>壁畫 · 諸神降世</p>
+                    </div>
+                  </div>
+                  <div style={{ flex:1, overflowY:'auto', padding:'16px 20px', display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(240px, 1fr))', gap:10, alignContent:'start' }} className="scrollbar-hide">
+                    {Object.values(MBEI_TYPES).map(type => {
+                      const isUnlocked = hatch.unlockedCodes?.has(type.code);
+                      const isWeek = type.code === hatch.weekCode;
+                      return (
+                        <div key={type.code}
+                          onClick={() => isUnlocked && (setSelectedCreature(type), setCreatureNavEnabled(true))}
+                          style={{ background: isWeek ? 'rgba(149,211,195,0.07)' : 'rgba(21,13,0,0.8)',
+                            border: isWeek ? '1px solid rgba(149,211,195,0.4)' : isUnlocked ? '1px solid rgba(149,211,195,0.15)' : '1px solid rgba(149,211,195,0.08)',
+                            borderRadius:5, padding:'12px', display:'flex', gap:10, alignItems:'flex-start',
+                            transition:'border-color 0.2s, background 0.2s',
+                            cursor: isUnlocked ? 'pointer' : 'default', position:'relative',
+                            opacity: isUnlocked ? 1 : 0.38 }}
+                          onMouseEnter={e => isUnlocked && (e.currentTarget.style.borderColor = isWeek ? 'rgba(149,211,195,0.6)' : 'rgba(149,211,195,0.35)')}
+                          onMouseLeave={e => isUnlocked && (e.currentTarget.style.borderColor = isWeek ? 'rgba(149,211,195,0.4)' : 'rgba(149,211,195,0.15)')}>
+                          {isWeek && (
+                            <div style={{ position:'absolute', top:6, right:6, fontSize:9, fontWeight:900, color:'var(--jade)', background:'rgba(149,211,195,0.15)', border:'1px solid rgba(149,211,195,0.3)', borderRadius:4, padding:'2px 5px', fontFamily:"'Noto Serif TC',serif", letterSpacing:'0.1em' }}>本週</div>
+                          )}
+                          <div style={{ width:44, height:56, flexShrink:0, borderRadius:4, overflow:'hidden', border:'1px solid rgba(149,211,195,0.15)', position:'relative' }}>
+                            <img src={CREATURE_IMG[type.code]} alt={type.creature}
+                              style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />
+                            {!isUnlocked && (
+                              <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.25)' }}>
+                                <span style={{ fontSize:14 }}>🔒</span>
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <div style={{ display:'flex', alignItems:'center', gap:5, marginBottom:4, flexWrap:'wrap' }}>
+                              <span style={{ fontSize:10, fontWeight:700, color: isWeek ? 'var(--jade)' : 'var(--mist)', background:'rgba(149,211,195,0.1)', border:'1px solid rgba(149,211,195,0.2)', borderRadius:5, padding:'1px 6px', fontFamily:"'Noto Serif TC',serif", letterSpacing:'0.05em' }}>{type.code}</span>
+                            </div>
+                            <h4 style={{ fontSize:13, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color: isWeek ? 'var(--jade)' : 'var(--cream)', letterSpacing:'0.05em', margin:'0 0 4px', lineHeight:1.3 }}>{type.name.split(' ')[0]}</h4>
+                            <p style={{ fontSize:11, color:'var(--sand)', lineHeight:1.5, fontFamily:"'Noto Serif TC',serif", margin:0, opacity:0.75, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{type.insight}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 神獸大卡片 */}
+          {selectedCreature && (
+            <div style={{ position:'fixed', inset:0, zIndex:200, background:'rgba(0,0,0,0.92)', backdropFilter:'blur(12px)', display:'flex', alignItems:'center', justifyContent:'center', animation:'onboardFadeIn 0.25s ease-out' }}>
+              <div onClick={e => e.stopPropagation()} style={{ position:'relative', width:'min(400px, 90vw)' }}>
+                <button onClick={() => setSelectedCreature(null)} style={{ position:'absolute', top:-14, right:-14, zIndex:10, width:36, height:36, borderRadius:'50%', background:'rgba(149,211,195,0.12)', border:'1px solid rgba(149,211,195,0.3)', color:'var(--jade)', fontSize:16, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
+                {creatureNavEnabled && <button onClick={e=>{e.stopPropagation();goCreature(-1);}} style={{ position:'absolute', left:-44, top:'35%', zIndex:10, width:36, height:36, borderRadius:'50%', background:'rgba(149,211,195,0.10)', border:'1px solid rgba(149,211,195,0.25)', color:'var(--jade)', fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>‹</button>}
+                {creatureNavEnabled && <button onClick={e=>{e.stopPropagation();goCreature(1);}} style={{ position:'absolute', right:-44, top:'35%', zIndex:10, width:36, height:36, borderRadius:'50%', background:'rgba(149,211,195,0.10)', border:'1px solid rgba(149,211,195,0.25)', color:'var(--jade)', fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>›</button>}
+                <div style={{ borderRadius:'2rem', overflow:'hidden', border:'1px solid rgba(149,211,195,0.2)', boxShadow:'0 32px 80px rgba(0,0,0,0.85)', marginBottom:20 }}>
+                  <img src={CREATURE_IMG[selectedCreature.code]} alt={selectedCreature.creature} style={{ width:'100%', display:'block', objectFit:'contain' }} />
+                </div>
+                <div style={{ textAlign:'center', padding:'0 4px' }}>
+                  <span style={{ fontSize:11, fontWeight:700, color:'var(--jade)', background:'rgba(149,211,195,0.12)', border:'1px solid rgba(149,211,195,0.2)', borderRadius:5, padding:'2px 10px', fontFamily:"'Noto Serif TC',serif", letterSpacing:'0.1em' }}>{selectedCreature.code}</span>
+                  <h3 style={{ fontSize:20, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color:'var(--cream)', margin:'12px 0 6px' }}>{selectedCreature.name}</h3>
+                  <p style={{ fontSize:13, color:'var(--sand)', lineHeight:1.7, fontFamily:"'Noto Serif TC',serif", marginBottom:10 }}>{selectedCreature.description}</p>
+                  <p style={{ fontSize:13, color:'var(--mist)', lineHeight:1.8, fontFamily:"'Noto Serif TC',serif", fontStyle:'italic' }}>「{selectedCreature.insight}」</p>
+                  {creatureNavEnabled && <p style={{ fontSize:11, color:'rgba(149,211,195,0.35)', marginTop:14, fontFamily:"'Noto Serif TC',serif", letterSpacing:'0.15em' }}>{encIdx+1} / {encCreatures.length}</p>}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function ProfileView({ records, loginProfile, onLogout }) {
+      const latestType = records[0] ? MBEI_TYPES[records[0].mbeiCode] : MBEI_TYPES['MPLR'];
+      const [selectedCreature, setSelectedCreature] = useState(null);
+      const [creatureNavEnabled, setCreatureNavEnabled] = useState(true);
+      const touchStartX = React.useRef(null);
+      const encCreatures = Object.values(MBEI_TYPES);
+      const encIdx = selectedCreature ? encCreatures.findIndex(c => c.code === selectedCreature.code) : 0;
+      const goCreature = dir => setSelectedCreature(encCreatures[(encIdx + dir + encCreatures.length) % encCreatures.length]);
+      const [rankTab, setRankTab] = useState('personal');
+
+      const personalLeaderboard = useMemo(() => {
+        const seed = LEADERBOARD_DATA.slice(0,5).map((u,i) => ({...u, points: Math.max(5, 28-i*5), scoreLabel:'累積功德'}));
+        const userRow = { rank:0, name:loginProfile.nickname, points:calcMeritTotal(records), code:latestType.code, isUser:true, scoreLabel:'累積功德' };
+        return [...seed, userRow].sort((a,b)=>b.points-a.points).map((u,idx)=>({...u,rank:idx+1}));
+      }, [loginProfile.nickname, records, latestType.code]);
+
+      const mbeiLeaderboard = useMemo(() => {
+        return Object.values(MBEI_TYPES).map((type,idx)=>({
+          name:`${type.creature}`, points:Math.max(15,96-idx*3), emoji:type.emoji, code:type.code, scoreLabel:'群體分'
+        })).sort((a,b)=>b.points-a.points).map((u,idx)=>({...u,rank:idx+1}));
+      }, []);
+
+      const board = rankTab === 'personal' ? personalLeaderboard : mbeiLeaderboard;
+
+      return (
+        <div className="space-y-12 fade-in">
+          <div className="grid gap-10">
+            <div className="space-y-10">
+              <section className="space-y-6">
+                <div className="flex items-center justify-between px-2">
+                  <div className="flex items-center gap-3"><AwardIcon size={22} className="text-clay" /><h3 className="text-2xl font-serif font-black tracking-tighter text-ink">食修功德排行榜</h3></div>
+                  <span className="text-[10px] font-black text-muted uppercase tracking-widest opacity-60">更新於 5 分鐘前</span>
+                </div>
+                <div className="px-2">
+                  <div className="inline-flex gap-2 w-full md:w-auto">
+                    <button onClick={() => setRankTab('personal')} className={cn("flex-1 px-5 py-2.5 rounded-xl text-xs font-black tracking-widest border-2 transition-all", rankTab==='personal' ? "border-jade text-jade bg-jade/10" : "border-stroke text-muted bg-transparent")}>個人榜單</button>
+                    <button onClick={() => setRankTab('mbei')} className={cn("flex-1 px-5 py-2.5 rounded-xl text-xs font-black tracking-widest border-2 transition-all", rankTab==='mbei' ? "border-jade text-jade bg-jade/10" : "border-stroke text-muted bg-transparent")}>16型種類榜單</button>
+                  </div>
+                </div>
+                <div className="bg-white rounded-[5px] border-4 border-ink overflow-hidden shadow-2xl relative">
+                  <div className="paper-texture" style={{opacity:0.02}} />
+                  {board.map(user => (
+                    <div key={user.rank} onClick={() => { setSelectedCreature(MBEI_TYPES[user.code]); setCreatureNavEnabled(false); }} style={{ cursor:'pointer' }} className={cn("flex items-center justify-between p-6 md:p-8 border-b border-parchment last:border-0 transition-colors", user.isUser ? "bg-clay/10 hover:bg-clay/15" : "hover:bg-parchment/30")}>
+                      <div className="flex items-center gap-6">
+                        <span className={cn("w-8 text-center font-serif font-black text-lg md:text-xl", user.rank===1?"text-amber":user.rank===2?"text-muted":user.rank===3?"text-clay":"text-stroke")}>{user.rank}</span>
+                        <div style={{ width:44, height:55, borderRadius:5, overflow:'hidden', flexShrink:0, border:'1px solid rgba(234,228,217,0.5)', background:'var(--paper)' }}>
+                          <img src={CREATURE_IMG[user.code]} alt={user.name} style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />
+                        </div>
+                        <div>
+                          <p className="text-lg font-black text-ink flex items-center gap-2">{user.name}{rankTab==='personal'&&user.isUser&&<span className="text-[10px] bg-ink text-white px-3 py-0.5 rounded-full uppercase tracking-tighter font-black">這是你</span>}</p>
+                          <p className="text-xs text-muted font-bold uppercase tracking-widest">{rankTab==='personal'?'依暱稱統計 · 紀錄總次數':`${MBEI_TYPES[user.code]?.code || ''} 型格`}</p>
+                        </div>
+                      </div>
+                      <div className="text-right"><p className="text-xl font-serif font-black text-ink">{user.points}</p><p className="text-[10px] font-black text-muted uppercase tracking-widest">{user.scoreLabel}</p></div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
+          </div>
+          {selectedCreature && (
+            <div
+              onClick={() => setSelectedCreature(null)}
+              onTouchStart={e => { if (creatureNavEnabled) touchStartX.current = e.touches[0].clientX; }}
+              onTouchEnd={e => { if (!creatureNavEnabled) return; const dx = e.changedTouches[0].clientX - touchStartX.current; if (Math.abs(dx) > 50) goCreature(dx < 0 ? 1 : -1); }}
+              style={{ position:'fixed', inset:0, zIndex:200, background:'rgba(0,0,0,0.92)',
+                backdropFilter:'blur(12px)', display:'flex', alignItems:'center', justifyContent:'center',
+                animation:'onboardFadeIn 0.25s ease-out' }}>
+              <div onClick={e => e.stopPropagation()}
+                style={{ position:'relative', width:'min(400px, 90vw)' }}>
+                {/* close */}
+                <button onClick={() => setSelectedCreature(null)}
+                  style={{ position:'absolute', top:-14, right:-14, zIndex:10,
+                    width:36, height:36, borderRadius:'50%', background:'rgba(149,211,195,0.12)',
+                    border:'1px solid rgba(149,211,195,0.3)', color:'var(--jade)',
+                    fontSize:16, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
+                {/* prev */}
+                {creatureNavEnabled && <button onClick={e => { e.stopPropagation(); goCreature(-1); }}
+                  style={{ position:'absolute', left:-44, top:'35%', zIndex:10,
+                    width:36, height:36, borderRadius:'50%', background:'rgba(149,211,195,0.10)',
+                    border:'1px solid rgba(149,211,195,0.25)', color:'var(--jade)',
+                    fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>‹</button>}
+                {/* next */}
+                {creatureNavEnabled && <button onClick={e => { e.stopPropagation(); goCreature(1); }}
+                  style={{ position:'absolute', right:-44, top:'35%', zIndex:10,
+                    width:36, height:36, borderRadius:'50%', background:'rgba(149,211,195,0.10)',
+                    border:'1px solid rgba(149,211,195,0.25)', color:'var(--jade)',
+                    fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>›</button>}
+                <div style={{ borderRadius:'2rem', overflow:'hidden', border:'1px solid rgba(149,211,195,0.2)',
+                  boxShadow:'0 32px 80px rgba(0,0,0,0.85)', marginBottom:20 }}>
+                  <img src={CREATURE_IMG[selectedCreature.code]} alt={selectedCreature.creature}
+                    style={{ width:'100%', display:'block', objectFit:'contain' }} />
+                </div>
+                <div style={{ textAlign:'center', padding:'0 4px' }}>
+                  <span style={{ fontSize:11, fontWeight:700, color:'var(--jade)',
+                    background:'rgba(149,211,195,0.12)', border:'1px solid rgba(149,211,195,0.2)',
+                    borderRadius:5, padding:'2px 10px', fontFamily:"'Noto Serif TC',serif",
+                    letterSpacing:'0.1em' }}>{selectedCreature.code}</span>
+                  <h3 style={{ fontSize:20, fontFamily:"'Noto Serif TC',serif", fontWeight:900,
+                    color:'var(--cream)', margin:'12px 0 6px' }}>{selectedCreature.name}</h3>
+                  <p style={{ fontSize:13, color:'var(--sand)', lineHeight:1.7,
+                    fontFamily:"'Noto Serif TC',serif", marginBottom:10 }}>{selectedCreature.description}</p>
+                  <p style={{ fontSize:13, color:'var(--mist)', lineHeight:1.8,
+                    fontFamily:"'Noto Serif TC',serif", fontStyle:'italic' }}>「{selectedCreature.insight}」</p>
+                  {creatureNavEnabled && <p style={{ fontSize:11, color:'rgba(149,211,195,0.35)', marginTop:14,
+                    fontFamily:"'Noto Serif TC',serif", letterSpacing:'0.15em' }}>{encIdx + 1} / {encCreatures.length}</p>}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function SpectralSlider({ value, onChange, leftLabel, rightLabel, leftColor, rightColor, trackLeft, trackRight, statusLabels }) {
+      const pct = value;
+      const trackStyle = { background: `linear-gradient(to right, ${trackLeft} 0%, ${trackLeft} ${pct}%, ${trackRight} ${pct}%, ${trackRight} 100%)` };
+      const status = pct < 30 ? statusLabels[0] : pct < 70 ? statusLabels[1] : statusLabels[2];
+      return (
+        <div style={{ borderRadius:10, padding:'18px 20px 14px', position:'relative', overflow:'hidden', background:'rgba(0,0,0,0.55)', border:'1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ display:'flex', justifyContent:'space-between', marginBottom:12, alignItems:'center' }}>
+            <span style={{ fontSize:11, color:leftColor, fontFamily:"'Noto Serif TC',serif", letterSpacing:'0.1em' }}>{leftLabel}</span>
+            <span style={{ fontSize:10, color:'rgba(255,255,255,0.35)', fontFamily:"'Noto Serif TC',serif", letterSpacing:'0.15em' }}>{status}</span>
+            <span style={{ fontSize:11, color:rightColor, fontFamily:"'Noto Serif TC',serif", letterSpacing:'0.1em' }}>{rightLabel}</span>
+          </div>
+          <input type="range" min="0" max="100" value={value} onChange={e => onChange(parseInt(e.target.value))}
+            className="spectral-slider" style={trackStyle} />
+        </div>
+      );
+    }
+
+    function RecordModal({ onClose, onSubmit, formData, setFormData, isLoading }) {
+      const setField = (field, value) => setFormData(prev => ({...prev, [field]: value}));
+      return (
+        <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center overflow-hidden p-0 md:p-12">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+          <div className="w-full md:max-w-5xl h-[94vh] md:h-auto md:max-h-[90vh] bg-paper rounded-t-[5px] md:rounded-[5px] relative z-10 flex flex-col shadow-2xl border-t-8 md:border-8 border-ink overflow-hidden sheet-up">
+            <div className="paper-texture" style={{opacity:0.03}} />
+            <div className="p-8 md:p-12 flex justify-between items-center border-b border-stroke shrink-0 bg-parchment/80 backdrop-blur-md relative z-10">
+              <div className="space-y-1"><h3 className="text-3xl font-serif font-black tracking-tighter text-ink">凝練食緒</h3><p className="text-[10px] font-black text-muted uppercase tracking-[0.3em]">CRAFTING DIETARY SPIRIT</p></div>
+              <button onClick={onClose} className="w-12 h-12 flex items-center justify-center bg-ink text-white rounded-full hover:scale-110 active:scale-90 transition-all shadow-lg"><XIcon size={24} /></button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-8 md:p-16 space-y-12 pb-64 md:pb-52 scrollbar-hide relative z-10">
+              <RecordSection title="這一餐吃了什麼？">
+                <input type="text" className="w-full rounded-[1.5rem] border-2 border-stroke bg-white px-6 py-4 text-lg font-semibold text-ink placeholder:text-[#B0A7A1] focus:outline-none focus:border-ink/30" placeholder="例如：牛肉麵、拿鐵、雞肉沙拉" value={formData.foodEmoji} onChange={e => setField('foodEmoji', e.target.value)} required />
+              </RecordSection>
+              <div className="grid md:grid-cols-2 gap-12 lg:gap-16">
+                <RecordSection title="餐別"><PillSelector options={['早餐','午餐','晚餐','宵夜','點心']} value={formData.mealType} onChange={v => setField('mealType', v)} /></RecordSection>
+                <RecordSection title="幾點吃這餐">
+                  <input type="time" value={formData.mealTime} onChange={e => setField('mealTime', e.target.value)}
+                    className="w-full rounded-[1.5rem] border-2 border-stroke bg-white px-5 py-4 text-lg font-semibold text-ink focus:outline-none focus:border-ink/30" />
+                </RecordSection>
+              </div>
+              <RecordSection title="情境與執念（選填）">
+                <div style={{ position:'relative' }}>
+                  <textarea
+                    value={formData.context || ''}
+                    onChange={e => setField('context', e.target.value)}
+                    placeholder="被老闆罵？想犒賞自己？心情超差？隨便說說…填了有 +1 功德"
+                    rows={2}
+                    className="w-full rounded-[1.5rem] border-2 border-stroke bg-white px-6 py-4 text-base font-semibold text-ink placeholder:text-[#B0A7A1] focus:outline-none focus:border-ink/30 resize-none"
+                  />
+                  {formData.context?.trim() && (
+                    <span style={{ position:'absolute', right:16, bottom:14, fontSize:11, color:'var(--forest)', fontWeight:700, fontFamily:"'Noto Serif TC',serif" }}>+1 功德 ✦</span>
+                  )}
+                </div>
+              </RecordSection>
+              <div className="py-10 bg-parchment/30 rounded-[5px] px-8 md:px-12 border border-stroke/50 shadow-inner">
+                <RecordSection title="吃完這一餐，爽度如何？">
+                  <div style={{ padding:'8px 4px 0' }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', marginBottom:12 }}>
+                      {[1,2,3,4,5].map(n => (
+                        <span key={n} onClick={() => setField('mood', n)}
+                          style={{ fontSize: formData.mood === n ? 32 : 22, transition:'font-size 0.15s, opacity 0.15s',
+                            opacity: formData.mood === n ? 1 : 0.35, cursor:'pointer', userSelect:'none' }}>
+                          {MOOD_SCORE_EMOJIS[n]}
+                        </span>
+                      ))}
+                    </div>
+                    <input type="range" min="1" max="5" step="1" value={formData.mood}
+                      onChange={e => setField('mood', parseInt(e.target.value))}
+                      style={{ width:'100%', accentColor:'var(--jade)', cursor:'pointer', height:6 }} />
+                    <div style={{ display:'flex', justifyContent:'space-between', marginTop:8 }}>
+                      {[1,2,3,4,5].map(n => (
+                        <span key={n} style={{ flex:1, textAlign:'center', fontSize:11,
+                          color: formData.mood === n ? 'var(--forest)' : '#B0A7A1',
+                          fontWeight: formData.mood === n ? 700 : 400, transition:'color 0.15s', fontFamily:"'Noto Serif TC',serif" }}>
+                          {MOOD_SCORE_LABELS[n]}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </RecordSection>
+              </div>
+              <RecordSection title="吃完身體的感受？">
+                <IconGrid options={BODY_FEELING_OPTIONS} value={formData.bodyFeeling} onChange={v => setField('bodyFeeling', v)} />
+              </RecordSection>
+            </div>
+            <div className="p-6 md:p-12 bg-parchment/90 backdrop-blur-xl absolute bottom-0 left-0 right-0 border-t-2 border-stroke z-20 flex justify-center">
+              <div className="max-w-md w-full">
+                <button onClick={onSubmit} disabled={isLoading || !formData.foodEmoji.trim()}
+                  className="inject-btn w-full text-white py-5 md:py-7 rounded-[5px] font-black text-xl md:text-2xl shadow-2xl flex items-center justify-center gap-4 relative overflow-hidden disabled:opacity-50"
+                  style={{ background:'linear-gradient(135deg,#1a1208 0%,#2d2010 50%,#1a1208 100%)', border:'1px solid rgba(212,168,67,0.35)' }}>
+                  <div className="absolute inset-0 paper-texture" style={{opacity:0.15}} />
+                  {isLoading ? <span className="spin-loading text-3xl">☯</span> : <span className="tracking-[0.4em]" style={{fontFamily:"'Noto Serif TC',serif"}}>注入孵化池</span>}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function FortuneSlip({ fortune, onClose }) {
+      const poemLines = (fortune.poem || '').split('\n').filter(Boolean);
+      const hasMerit = fortune.merit_point?.startsWith('+2');
+      const serif = "'Noto Serif TC',serif";
+      return (
+        <div className="fortune-card">
+
+          {/* ── 功德彩蛋 Badge ── */}
+          {hasMerit && (
+            <div className="merit-badge" style={{
+              position:'absolute', top:-14, right:-6, zIndex:10,
+              background:'linear-gradient(135deg,#1e1600,#4a3200)',
+              border:'1px solid rgba(255,215,0,0.55)',
+              borderRadius:20, padding:'4px 12px',
+              fontSize:11, fontWeight:700,
+              color:'rgba(255,215,0,0.95)',
+              fontFamily:serif,
+              boxShadow:'0 0 14px rgba(255,215,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
+            }}>
+              {fortune.merit_point}
+            </div>
+          )}
+
+          {/* ── 雲霧效果 ── */}
+          <div style={{
+            position:'absolute', inset:-50, borderRadius:40,
+            background:'radial-gradient(ellipse at 50% 45%, rgba(255,252,230,0.98) 0%, rgba(230,210,160,0.75) 30%, rgba(180,140,80,0.35) 58%, transparent 78%)',
+            animation:'mist-dissipate 1.1s cubic-bezier(0.15,0,0.8,1) forwards',
+            zIndex:20, pointerEvents:'none',
+          }} />
+
+          {/* ── 卡片主體 ── */}
+          <div style={{
+            position:'relative', zIndex:1,
+            background:'linear-gradient(170deg,#6e1a1b 0%,#9e2a2b 45%,#7a1f20 100%)',
+            borderRadius:8, overflow:'hidden',
+            maxHeight:'88vh', display:'flex', flexDirection:'column',
+          }}>
+<div className="absolute inset-0 paper-texture" style={{opacity:0.22,mixBlendMode:'overlay',pointerEvents:'none'}} />
+
+            <div style={{
+              position:'relative', zIndex:2,
+              overflowY:'auto', padding:'28px 24px 20px',
+              display:'flex', flexDirection:'column', alignItems:'center',
+            }}>
+
+              {/* Top rule */}
+              <div style={{ width:'55%', height:1, background:'rgba(255,255,255,0.18)', marginBottom:20 }} />
+
+              {/* ── 御膳賜名 + 原名 + MBEI（橫排小字）── */}
+              {fortune.mythical_food_name && (
+                <div style={{ textAlign:'center', marginBottom:18 }}>
+                  <div style={{ fontSize:15, fontWeight:900, color:'white', fontFamily:serif, letterSpacing:'0.2em' }}>
+                    {fortune.mythical_food_name}
+                  </div>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, marginTop:5 }}>
+                    {fortune.original_food_name && (
+                      <span style={{ fontSize:10, color:'rgba(255,255,255,0.38)', fontFamily:serif }}>{fortune.original_food_name}</span>
+                    )}
+                    {fortune.calculated_mbei && (
+                      <span style={{ fontSize:9, color:'rgba(255,215,100,0.5)', fontFamily:'monospace', letterSpacing:'0.12em', border:'1px solid rgba(255,215,100,0.2)', borderRadius:2, padding:'1px 5px' }}>{fortune.calculated_mbei}</span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ── 主標題：直排置中 ── */}
+              <div style={{ display:'flex', justifyContent:'center', marginBottom:24 }}>
+                <div style={{
+                  writingMode:'vertical-rl', textOrientation:'upright',
+                  fontFamily:serif, fontSize:22, fontWeight:900,
+                  color:'white', letterSpacing:'0.18em', lineHeight:1.7,
+                }}>
+                  {fortune.main_title}
+                </div>
+              </div>
+
+              {/* ── 金色漸層分隔線 ── */}
+              <div style={{ width:'88%', height:1, background:'linear-gradient(90deg,transparent,rgba(218,165,32,0.4),transparent)', marginBottom:20 }} />
+
+              {/* ── 詩句：橫排，每行置中 ── */}
+              <div style={{ width:'100%', display:'flex', flexDirection:'column', gap:8, marginBottom:18 }}>
+                {poemLines.map((line, idx) => (
+                  <p key={idx} style={{ color:'rgba(255,255,255,0.85)', fontFamily:serif, fontSize:14, letterSpacing:'0.12em', lineHeight:1.9, margin:0, textAlign:'center' }}>
+                    {line}
+                  </p>
+                ))}
+              </div>
+
+              <div style={{ width:'55%', height:1, background:'rgba(255,255,255,0.12)', margin:'8px 0 8px' }} />
+              <button onClick={onClose}
+                style={{ color:'rgba(255,255,255,0.38)', fontFamily:serif, fontSize:12, letterSpacing:'0.25em', background:'none', border:'none', cursor:'pointer', padding:'8px 16px', transition:'color 0.2s' }}
+                onMouseEnter={e => e.target.style.color='rgba(255,255,255,0.85)'}
+                onMouseLeave={e => e.target.style.color='rgba(255,255,255,0.38)'}>
+                點擊收起
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function ResultModal({ record, onClose, totalRecords }) {
+      const type = MBEI_TYPES[record.mbeiCode];
+      const isUnlocked = totalRecords >= 10;
+      const fortune = useMemo(() => record.fortune || getMockFortune(record), [record]);
+
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 overflow-hidden">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={onClose} />
+          {!isUnlocked ? (
+            <FortuneSlip fortune={fortune} onClose={onClose} />
+          ) : (
+            <div className="w-full max-w-lg md:max-w-xl bg-white rounded-[5px] overflow-hidden relative shadow-2xl flex flex-col border-2 border-stroke modal-up">
+              <div className="paper-texture" style={{opacity:0.05}} />
+              <div className="bg-paper pt-16 pb-8 flex flex-col items-center gap-6 relative shrink-0">
+                <div className="absolute top-8 left-8 flex flex-col items-start gap-1"><span className="text-xs font-mono opacity-50">{record.date}</span><div className="seal text-sm">今日食緒</div></div>
+                <div className="absolute top-8 right-8"><button onClick={onClose} className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-md border border-stroke"><XIcon size={18} /></button></div>
+                <div style={{ width:128, height:160, borderRadius:5, overflow:'hidden', border:'4px solid #FAF8F5', boxShadow:'0 8px 32px rgba(0,0,0,0.15)', background:'var(--paper)' }}>
+                  <img src={CREATURE_IMG[record.mbeiCode]} alt={type.creature} style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />
+                </div>
+                <div className="text-center space-y-2 px-6">
+                  <p className="text-xs font-black text-muted uppercase tracking-[0.4em]">{record.mbeiCode}</p>
+                  <h3 className="text-3xl md:text-4xl font-serif font-black text-ink tracking-tighter">{type.name}</h3>
+                  <span className="bg-parchment px-3 py-1 rounded-full text-xs text-muted font-bold border border-stroke/50">{type.creature}</span>
+                </div>
+              </div>
+              <div className="flex-1 p-10 pt-4 space-y-8 relative z-10 overflow-y-auto scrollbar-hide">
+                <div className="space-y-6">
+                  <div className="flex items-center gap-4 justify-center text-xs font-black text-muted/60 uppercase tracking-widest">
+                    <span className="text-forest">餐後心情：{record.mood}</span><ChevronRightIcon size={12} /><span className="text-clay">{record.bodyFeeling}</span>
+                  </div>
+                  <div className="bg-parchment p-8 rounded-[5px] border border-stroke space-y-6 shadow-inner">
+                    {fortune.poem && <p className="text-sm font-serif leading-relaxed text-ink text-center border-b border-stroke/40 pb-4">{fortune.poem.split('\n').map((l,i) => <span key={i}>{l}{i < fortune.poem.split('\n').length-1 && <br/>}</span>)}</p>}
+                    {fortune.explanation && <p className="text-xs text-muted font-serif leading-relaxed text-center">{fortune.explanation}</p>}
+                    <div className="flex gap-8">
+                      <div className="flex-1 space-y-2"><div className="flex items-center gap-2"><div className="w-1.5 h-3 bg-forest rounded-full" /><span className="text-[11px] font-black text-forest uppercase tracking-[0.2em]">宜行</span></div><p className="text-sm font-bold leading-relaxed text-ink">{fortune.do || '補水、慢食、靜心、深呼吸'}</p></div>
+                      <div className="flex-1 space-y-2"><div className="flex items-center gap-2"><div className="w-1.5 h-3 bg-clay rounded-full" /><span className="text-[11px] font-black text-clay uppercase tracking-[0.2em]">下餐建議</span></div><p className="text-sm font-bold leading-relaxed text-ink">{fortune.next_meal || '均衡飲食'}</p></div>
+                    </div>
+                    <div className="h-px bg-stroke w-full opacity-50" />
+                    <p className="text-base md:text-lg font-serif leading-relaxed text-ink border-l-4 border-amber pl-6 py-1">「{type.insight}」</p>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 bg-white px-6 py-4 rounded-[5px] border border-stroke shadow-sm"><AwardIcon size={20} className="text-amber" /><span className="text-xs font-bold uppercase tracking-[0.2em] text-muted">成就解鎖：誠實記錄者</span></div>
+                  <button onClick={onClose} className="w-full py-6 text-ink font-black text-xs tracking-[0.4em] uppercase hover:opacity-100 opacity-60 transition-opacity">收納食緒曆卡</button>
+                </div>
+              </div>
+              <div className="h-3 w-full bg-clay shrink-0" />
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ── Main App ──
+    function App() {
+      const [loginProfile, setLoginProfile] = useState(() => {
+        const profiles = loadProfiles();
+        const activeEmail = localStorage.getItem(ACTIVE_USER_KEY);
+        if (!activeEmail) return null;
+        return profiles[normalizeEmail(activeEmail)] || null;
+      });
+      const [splashDone, setSplashDone] = useState(false);
+      const [activeTab, setActiveTab] = useState('home');
+      const [showProfilePopup, setShowProfilePopup] = useState(false);
+      const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+      const [isRecordOpen, setIsRecordOpen] = useState(false);
+      const [isLoading, setIsLoading] = useState(false);
+      const [showResult, setShowResult] = useState(false);
+      const [latestRecord, setLatestRecord] = useState(null);
+      const [records, setRecords] = useState([]);
+      const [formData, setFormData] = useState(() => {
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2,'0');
+        const mm = String(now.getMinutes()).padStart(2,'0');
+        return { mealType:'午餐', mood:3, bodyFeeling:'暖心飽足', foodEmoji:'', mealTime:`${hh}:${mm}`, context:'' };
+      });
+
+      const handleLogin = (profile) => {
+        const normalized = normalizeEmail(profile.email);
+        const profiles = loadProfiles();
+        profiles[normalized] = profile;
+        saveProfiles(profiles);
+        localStorage.setItem(ACTIVE_USER_KEY, normalized);
+        setLoginProfile(profile);
+        setSplashDone(true);
+      };
+
+      const handleLogout = () => { localStorage.removeItem(ACTIVE_USER_KEY); setLoginProfile(null); setSplashDone(false); };
+
+      const determineMBEI = (data) => {
+        let mbei = '';
+        // M/B：有情境文字或心情很爽 → M（情緒），否則 → B
+        mbei += (data.context && data.context.trim()) || data.mood >= 4 ? 'M' : 'B';
+        const bfOpt = BODY_FEELING_OPTIONS.find(o => o.label === data.bodyFeeling) || { n:false, hLevel:1 };
+        mbei += bfOpt.n ? 'N' : 'P';
+        mbei += bfOpt.hLevel >= 2 ? 'H' : 'L';
+        // R/V：時間自動判斷
+        const hour = parseInt((data.mealTime || '12:00').split(':')[0]);
+        const isV = data.mealType === '宵夜' ||
+          (data.mealType === '早餐' && (hour < 6 || hour >= 10)) ||
+          (data.mealType === '午餐' && (hour < 11 || hour >= 14)) ||
+          (data.mealType === '晚餐' && (hour < 17 || hour >= 21)) ||
+          (data.mealType === '點心' && (hour < 14 || hour >= 17));
+        mbei += isV ? 'V' : 'R';
+        return mbei;
+      };
+
+      const handleRecord = async () => {
+        if (!formData.foodEmoji.trim()) return;
+        setIsLoading(true);
+        const moodText = MOOD_SCORE_LABELS[formData.mood] || '普通';
+        const aiFortune = await generateAIFortune({ ...formData, foodEmoji: formData.foodEmoji.trim(), mood: moodText });
+        const mbeiCode = aiFortune?.calculated_mbei || determineMBEI(formData);
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+        setTimeout(() => {
+          const newRecord = {
+            id: Date.now().toString(),
+            date: dateStr,
+            time: formData.mealTime || new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+            foodEmoji: formData.foodEmoji.trim(),
+            mealType: formData.mealType,
+            mealTime: formData.mealTime,
+            mood: moodText,
+            bodyFeeling: formData.bodyFeeling,
+            context: formData.context || '',
+            mbeiCode,
+            fortune: aiFortune || undefined,
+          };
+          setRecords(prev => [newRecord, ...prev]);
+          setLatestRecord(newRecord);
+          setIsLoading(false);
+          setIsRecordOpen(false);
+          setShowResult(true);
+        }, 800);
+      };
+
+      if (!splashDone) return <LoginGate onLogin={handleLogin} existingProfile={loginProfile} />;
+
+      return (
+        <div style={{ minHeight:'100vh', background:'var(--night)', display:'flex', alignItems:'flex-start', position:'relative', fontFamily:"'Noto Serif TC', serif" }}>
+          {/* 側欄（桌面） */}
+          <aside style={{ display:'none', flexDirection:'column', width:280, height:'100vh', background:'rgba(15,9,0,0.92)',
+            borderRight:'1px solid rgba(149,211,195,0.12)', zIndex:50, flexShrink:0, position:'sticky', top:0 }}
+            className="md:flex">
+            <div style={{ display:'flex', flexDirection:'column', height:'100%', padding:32, overflowY:'auto' }}>
+              {/* Logo */}
+              <div style={{ marginBottom:40 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
+                  <div style={{ width:4, height:24, background:'var(--jade)', borderRadius:2 }} />
+                  <h1 style={{ fontSize:22, fontFamily:"'Noto Serif TC', serif", fontWeight:900, color:'var(--jade)', letterSpacing:'0.15em', margin:0 }}>食緒曆</h1>
+                </div>
+                <p style={{ fontSize:13, color:'var(--mist)', letterSpacing:'0.1em', marginLeft:12, fontWeight:500 }}>飲食覺察日誌</p>
+              </div>
+              {/* 導覽 */}
+              <div style={{ flex:1, display:'flex', flexDirection:'column', gap:4 }}>
+                {['今日日誌|home','食緒曆卡|almanac','食緒靈獸|insight','功德|profile'].map(item => {
+                  const [label, tab] = item.split('|');
+                  const active = activeTab === tab;
+                  return (
+                    <button key={tab} onClick={() => setActiveTab(tab)}
+                      style={{ width:'100%', display:'flex', alignItems:'center', padding:'12px 16px', borderRadius:10,
+                        background: active ? 'rgba(149,211,195,0.1)' : 'transparent',
+                        border: active ? '1px solid rgba(149,211,195,0.2)' : '1px solid transparent',
+                        color: active ? 'var(--jade)' : 'var(--sand)',
+                        fontFamily:"'Noto Serif TC', serif", fontSize:15, fontWeight: active ? 700 : 400,
+                        cursor:'pointer', letterSpacing:'0.05em', textAlign:'left' }}>
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              {/* 記錄按鈕 */}
+              <button onClick={() => setIsRecordOpen(true)}
+                style={{ width:'100%', background:'var(--crimson)', border:'2px solid rgba(255,180,160,0.2)', borderRadius:12,
+                  padding:'14px 0', color:'var(--blush)', fontSize:14, fontWeight:800, fontFamily:"'Noto Serif TC', serif",
+                  letterSpacing:'0.15em', cursor:'pointer',
+                  boxShadow:'0 0 0 4px rgba(133,41,27,0.12), 0 8px 24px rgba(133,41,27,0.4)' }}
+                className="wax-seal-active">
+                ＋ 凝練食緒
+              </button>
+            </div>
+          </aside>
+
+          <div style={{ flex:1, display:'flex', flexDirection:'column', minHeight:'100vh' }}>
+            {/* 手機頂欄 */}
+            <header style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'16px 20px',
+              background:'rgba(15,9,0,0.95)', borderBottom:'1px solid rgba(149,211,195,0.12)', zIndex:40 }}
+              className="md:hidden">
+              <h1 style={{ fontSize:18, fontFamily:"'Noto Serif TC', serif", fontWeight:900, color:'var(--jade)', letterSpacing:'0.2em', margin:0 }}>食緒曆</h1>
+              <button onClick={() => setShowProfilePopup(true)}
+                style={{ width:32, height:32, borderRadius:'50%', background:'rgba(149,211,195,0.08)',
+                  border:'1px solid rgba(149,211,195,0.2)', display:'flex', alignItems:'center', justifyContent:'center',
+                  color:'var(--jade)', cursor:'pointer' }}>
+                <UserIcon size={16} />
+              </button>
+            </header>
+
+            <main style={{ flex:1, position:'relative', zIndex:10, paddingBottom:120 }}
+              className="scrollbar-hide md:pb-24">
+              <div style={{ maxWidth:960, margin:'0 auto', padding:'32px 20px' }} className="md:p-12">
+                {activeTab === 'home' && <HomeView records={records} loginProfile={loginProfile} />}
+                {activeTab === 'almanac' && <AlmanacView records={records} />}
+                {activeTab === 'insight' && <InsightView records={records} />}
+                {activeTab === 'profile' && <ProfileView records={records} loginProfile={loginProfile} onLogout={handleLogout} />}
+              </div>
+            </main>
+
+            {/* 手機底欄 */}
+            <nav style={{ position:'fixed', bottom:0, left:0, right:0,
+              background:'rgba(15,9,0,0.95)', borderRadius:'3px 3px 0 0', padding:'8px 12px 20px',
+              display:'flex', alignItems:'center', justifyContent:'space-around',
+              zIndex:40, borderTop:'1px solid rgba(149,211,195,0.15)',
+              boxShadow:'0 -4px 24px rgba(0,0,0,0.4)' }}
+              className="md:hidden">
+              {['今日|home','曆卡|almanac', null, '食神|insight','功德|profile'].map((item, i) => {
+                if (!item) return (
+                  <button key="record" onClick={() => setIsRecordOpen(true)}
+                    style={{ width:52, height:40, background:'var(--crimson)', borderRadius:8,
+                      border:'2px solid rgba(255,180,160,0.25)', display:'flex', alignItems:'center', justifyContent:'center',
+                      color:'var(--blush)', fontSize:22, cursor:'pointer', flexShrink:0,
+                      boxShadow:'0 4px 20px rgba(133,41,27,0.6)' }}>+</button>
+                );
+                const [label, tab] = item.split('|');
+                return (
+                  <button key={tab} onClick={() => setActiveTab(tab)}
+                    style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:2, background:'none', border:'none', cursor:'pointer',
+                      color: activeTab===tab ? 'var(--jade)' : 'var(--sand)', fontFamily:"'Noto Serif TC', serif", fontSize:13, fontWeight:600, flex:1 }}>
+                    <span>{label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+
+            {isRecordOpen && <RecordModal onClose={() => setIsRecordOpen(false)} onSubmit={handleRecord} formData={formData} setFormData={setFormData} isLoading={isLoading} />}
+            {showResult && latestRecord && <ResultModal record={latestRecord} onClose={() => setShowResult(false)} totalRecords={records.length} />}
+
+            {/* 個人資料彈跳popup（手機） */}
+            {showProfilePopup && (() => {
+              const latestType = records[0] ? MBEI_TYPES[records[0].mbeiCode] : MBEI_TYPES['MPLR'];
+              return (
+                <div className="md:hidden" style={{ position:'fixed', inset:0, zIndex:100, display:'flex', flexDirection:'column', justifyContent:'flex-end' }}>
+                  {/* 背景遮罩 */}
+                  <div onClick={() => setShowProfilePopup(false)}
+                    style={{ position:'absolute', inset:0, background:'rgba(0,0,0,0.55)', backdropFilter:'blur(4px)' }} />
+                  {/* 彈跳卡片 */}
+                  <div style={{
+                    position:'relative', zIndex:1,
+                    background:'linear-gradient(160deg,#1a1200 0%,#251900 60%,#1a1200 100%)',
+                    borderRadius:'20px 20px 0 0',
+                    border:'1px solid rgba(149,211,195,0.18)',
+                    borderBottom:'none',
+                    padding:'28px 24px 40px',
+                    animation:'slide-up-fade 0.38s cubic-bezier(0.2,0.8,0.2,1) both',
+                    boxShadow:'0 -8px 48px rgba(0,0,0,0.6)',
+                  }}>
+                    {/* 拖曳把手 */}
+                    <div style={{ width:44, height:4, borderRadius:2, background:'rgba(149,211,195,0.25)', margin:'0 auto 24px' }} />
+
+                    {/* 生物圖 + 基本資訊 */}
+                    <div style={{ display:'flex', gap:20, alignItems:'center', marginBottom:24 }}>
+                      <div style={{ width:80, height:100, borderRadius:8, overflow:'hidden', border:'3px solid rgba(149,211,195,0.25)', background:'var(--paper)', flexShrink:0, boxShadow:'0 4px 16px rgba(0,0,0,0.4)' }}>
+                        <img src={CREATURE_IMG[latestType.code]} alt={latestType.creature} style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />
+                      </div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <p style={{ fontSize:10, fontWeight:900, color:'var(--jade)', letterSpacing:'0.2em', textTransform:'uppercase', marginBottom:4 }}>今日食修者</p>
+                        <h3 style={{ fontSize:22, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color:'white', letterSpacing:'-0.02em', margin:'0 0 6px' }}>
+                          {loginProfile?.nickname || '修行者'}
+                        </h3>
+                        <div style={{ display:'inline-flex', alignItems:'center', gap:6, background:'rgba(149,211,195,0.08)', border:'1px solid rgba(149,211,195,0.2)', borderRadius:20, padding:'3px 10px', marginBottom:8 }}>
+                          <span style={{ fontSize:14 }}>{latestType.emoji}</span>
+                          <span style={{ fontSize:11, fontWeight:700, color:'var(--sand)', letterSpacing:'0.05em' }}>{latestType.name}</span>
+                        </div>
+                        <p style={{ fontSize:11, color:'var(--sand)', opacity:0.7, margin:0 }}>
+                          {loginProfile?.gender} · {loginProfile?.age} 歲
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* 功德 / 連續 數字 */}
+                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:24 }}>
+                      {[
+                        { label:'累積功德', value: calcMeritTotal(records).toLocaleString(), unit:'' },
+                        { label:'連續紀錄', value: calcStreak(records), unit:'天' },
+                      ].map(({ label, value, unit }) => (
+                        <div key={label} style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(149,211,195,0.12)', borderRadius:12, padding:'16px 12px', textAlign:'center' }}>
+                          <p style={{ fontSize:9, fontWeight:900, color:'var(--jade)', letterSpacing:'0.18em', textTransform:'uppercase', marginBottom:6 }}>{label}</p>
+                          <p style={{ fontSize:26, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color:'white', margin:0 }}>
+                            {value}<span style={{ fontSize:12, marginLeft:3, color:'var(--sand)' }}>{unit}</span>
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* 操作按鈕 */}
+                    {showLogoutConfirm ? (
+                      <div style={{ marginBottom:10 }}>
+                        <p style={{ textAlign:'center', fontSize:12, color:'var(--sand)', marginBottom:14, letterSpacing:'0.05em' }}>確定要切換使用者／登出嗎？</p>
+                        <div style={{ display:'flex', gap:10 }}>
+                          <button onClick={() => setShowLogoutConfirm(false)}
+                            style={{ flex:1, padding:'13px', background:'transparent', border:'1px solid rgba(149,211,195,0.2)', borderRadius:12,
+                              color:'rgba(200,184,138,0.6)', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+                            取消
+                          </button>
+                          <button onClick={() => { setShowProfilePopup(false); setShowLogoutConfirm(false); handleLogout(); }}
+                            style={{ flex:1, padding:'13px', background:'rgba(255,80,80,0.12)', border:'1px solid rgba(255,80,80,0.3)', borderRadius:12,
+                              color:'#ff6b6b', fontSize:13, fontWeight:900, letterSpacing:'0.05em', cursor:'pointer' }}>
+                            確認登出
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button onClick={() => setShowLogoutConfirm(true)}
+                        style={{ width:'100%', padding:'14px', background:'rgba(255,80,80,0.08)', border:'1px solid rgba(255,80,80,0.2)', borderRadius:12,
+                          color:'#ff8080', fontSize:13, fontWeight:900, letterSpacing:'0.1em', cursor:'pointer', marginBottom:10 }}>
+                        切換使用者／登出
+                      </button>
+                    )}
+                    <button onClick={() => { setShowProfilePopup(false); setShowLogoutConfirm(false); }}
+                      style={{ width:'100%', padding:'12px', background:'transparent', border:'none',
+                        color:'rgba(200,184,138,0.5)', fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                      關閉
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
