@@ -47,6 +47,18 @@ function propRichText(text) {
   return { rich_text: rich(text) };
 }
 
+function propEmail(email) {
+  const s = String(email ?? '').trim();
+  if (!s) return null;
+  return { email: s.slice(0, 200) };
+}
+
+function propUrl(url) {
+  const s = String(url ?? '').trim();
+  if (!s) return null;
+  return { url: s };
+}
+
 function propNumber(n) {
   if (n == null || Number.isNaN(Number(n))) return null;
   return { number: Number(n) };
@@ -137,7 +149,9 @@ function propForColumn(colName, value, types, { preferNumber = false } = {}) {
     const s = String(value).trim();
     return s ? { multi_select: [{ name: s.slice(0, 100) }] } : null;
   }
-  if (t === 'rich_text' || t === 'url' || t === 'email') return propRichText(String(value));
+  if (t === 'email') return propEmail(String(value));
+  if (t === 'url') return propUrl(String(value));
+  if (t === 'rich_text') return propRichText(String(value));
   return propRichText(String(value));
 }
 
