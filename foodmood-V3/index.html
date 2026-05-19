@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>食緒曆 FoodMood</title>
+  <title>山真海胃 FoodMood</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+TC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -133,6 +133,27 @@
     .inject-btn { transition: box-shadow 0.3s, background 0.3s; }
     .inject-btn:hover:not(:disabled) { box-shadow: 0 0 32px rgba(212,168,67,0.2), 0 4px 24px rgba(0,0,0,0.4); }
     .inject-btn:active:not(:disabled) { transform: scale(0.98); }
+    /* 中式朱紅框 */
+    .cn-red-frame-modal {
+      border: 3px solid #9e2a2b !important;
+      box-shadow:
+        inset 0 0 0 1px #d4503c,
+        inset 0 0 0 5px rgba(37, 29, 18, 0.92),
+        0 12px 48px rgba(0, 0, 0, 0.55);
+    }
+    .cn-red-frame-modal > .cn-corner {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border-color: #d4503c;
+      border-style: solid;
+      pointer-events: none;
+      z-index: 30;
+    }
+    .cn-corner-tl { top: 8px; left: 8px; border-width: 3px 0 0 3px; }
+    .cn-corner-tr { top: 8px; right: 8px; border-width: 3px 3px 0 0; }
+    .cn-corner-bl { bottom: 8px; left: 8px; border-width: 0 0 3px 3px; }
+    .cn-corner-br { bottom: 8px; right: 8px; border-width: 0 3px 3px 0; }
   </style>
   <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
@@ -143,8 +164,7 @@
   <script type="text/babel">
     const { useState, useMemo, useEffect } = React;
 
-    // ── Gemini API Key (填入你的 key 即可啟用 AI 解籤) ──
-    const GEMINI_API_KEY = '';
+    // ── AI 經 Vercel API（OPENAI_API_KEY 設在 Vercel 環境變數，勿寫在前端）──
 
     // ── Constants ──
     const MBEI_TYPES = {
@@ -197,10 +217,63 @@
       const h = parseInt((timeStr || '12:00').split(':')[0]);
       return h === 23 ? '子' : EARTHLY_BRANCHES[Math.floor((h + 1) / 2)];
     };
-    const calcMeritTotal = (records) => records.reduce((sum, r) => {
-      const m = r.fortune?.merit_point?.match(/\+(\d+)/);
-      return sum + (m ? parseInt(m[1]) : 0);
-    }, 0);
+    const MBEI_AXES = [
+      { key: 'MB', neg: 'B', pos: 'M', negLabel: '魄', posLabel: '魂' },
+      { key: 'NP', neg: 'P', pos: 'N', negLabel: '煉', posLabel: '野' },
+      { key: 'HL', neg: 'L', pos: 'H', negLabel: '靈', posLabel: '煞' },
+      { key: 'RV', neg: 'R', pos: 'V', negLabel: '曆', posLabel: '幻' },
+    ];
+    const clampMbeiScore = (n) => Math.max(-50, Math.min(50, Math.round(Number(n) || 0)));
+    const parseMoodToNumber = (mood) => {
+      if (typeof mood === 'number') return mood;
+      const map = { '很糟': 1, '不太好': 2, '普通': 3, '還不錯': 4, '很爽': 5 };
+      return map[mood] ?? 3;
+    };
+    const calcMeritFromContext = (context) => {
+      const t = (context || '').trim();
+      if (!t) return 1;
+      if (t.length >= 60) return 3;
+      if (t.length >= 15) return 2;
+      return 1;
+    };
+    const meritPointLabel = (n) => `+${n} 功德`;
+    const mbeiCodeFromScores = (scores) => {
+      if (!scores) return null;
+      return MBEI_AXES.map(({ key, neg, pos }) => (clampMbeiScore(scores[key]) >= 0 ? pos : neg)).join('');
+    };
+    const scoresFromMbeiCode = (code) => {
+      const c = String(code || 'MPLR').padEnd(4, 'M').slice(0, 4);
+      const def = 28;
+      const out = {};
+      MBEI_AXES.forEach(({ key, neg, pos }, i) => {
+        out[key] = c[i] === pos ? def : c[i] === neg ? -def : 0;
+      });
+      return out;
+    };
+    const normalizeMbeiScores = (raw) => {
+      const out = {};
+      MBEI_AXES.forEach(({ key }) => { out[key] = clampMbeiScore(raw?.[key]); });
+      return out;
+    };
+    const normalizeFortune = (fortune, recordData) => {
+      const ruleMerit = calcMeritFromContext(recordData?.context);
+      let meritEarned = fortune?.meritEarned;
+      if (typeof meritEarned !== 'number' || meritEarned < 1 || meritEarned > 3) {
+        const parsed = fortune?.merit_point?.match(/\+(\d+)/);
+        meritEarned = parsed ? parseInt(parsed[1], 10) : ruleMerit;
+      }
+      meritEarned = Math.min(3, Math.max(1, Math.round(meritEarned), ruleMerit));
+      let mbei_scores = fortune?.mbei_scores ? normalizeMbeiScores(fortune.mbei_scores) : null;
+      const calculated_mbei = mbeiCodeFromScores(mbei_scores) || fortune?.calculated_mbei || 'MPLR';
+      if (!mbei_scores) mbei_scores = scoresFromMbeiCode(calculated_mbei);
+      return { ...fortune, meritEarned, merit_point: meritPointLabel(meritEarned), mbei_scores, calculated_mbei };
+    };
+    const getRecordMerit = (r) => {
+      if (typeof r?.meritEarned === 'number') return r.meritEarned;
+      const m = r?.fortune?.merit_point?.match(/\+(\d+)/);
+      return m ? parseInt(m[1], 10) : 0;
+    };
+    const calcMeritTotal = (records) => records.reduce((sum, r) => sum + getRecordMerit(r), 0);
     const calcStreak = (records) => {
       if (!records.length) return 0;
       const toStr = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -237,22 +310,155 @@
     const normalizeEmail = (email) => email.trim().toLowerCase();
     const loadProfiles = () => { try { const r = localStorage.getItem(PROFILES_KEY); return r ? JSON.parse(r) : {}; } catch { return {}; } };
     const saveProfiles = (p) => localStorage.setItem(PROFILES_KEY, JSON.stringify(p));
+    const DRAFTS_KEY = 'foodmood_meal_drafts';
+    const recordsStorageKey = (email) => `foodmood_records_${normalizeEmail(email)}`;
+    const loadUserRecords = (email) => {
+      if (!email) return [];
+      try {
+        const r = localStorage.getItem(recordsStorageKey(email));
+        return r ? JSON.parse(r) : [];
+      } catch { return []; }
+    };
+    const saveUserRecords = (email, list) => {
+      if (!email) return;
+      localStorage.setItem(recordsStorageKey(email), JSON.stringify(list));
+    };
+    const MAX_DRAFTS = 8;
+    const loadMealDrafts = () => { try { const r = localStorage.getItem(DRAFTS_KEY); return r ? JSON.parse(r) : []; } catch { return []; } };
+    const saveMealDrafts = (drafts) => localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts.slice(0, MAX_DRAFTS)));
+    const getRecordFood = (r) => (r?.whatFood || r?.foodEmoji || '這一餐').trim() || '這一餐';
+    const makeDefaultFormData = () => {
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2,'0');
+      const mm = String(now.getMinutes()).padStart(2,'0');
+      return { mealType:'午餐', mood:null, bodyFeeling:null, whatFood:'', mealTime:`${hh}:${mm}`, context:'' };
+    };
 
-    // ── Gemini Service ──
+    const isFeelingsComplete = (fd) =>
+      typeof fd.mood === 'number' && fd.mood >= 1 && fd.mood <= 5
+      && BODY_FEELING_OPTIONS.some(o => o.label === fd.bodyFeeling);
+
+    /** 透過 Vercel API 寫入 Notion（金鑰只在伺服器，不進瀏覽器） */
+    const syncRecordToNotion = async (record, userLabel, meritTotal) => {
+      try {
+        const res = await fetch('/api/notion-record', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ record, user: userLabel || '', meritTotal }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          console.warn('[Notion]', data.error || res.status);
+          return { ok: false, error: data.error };
+        }
+        return { ok: true, pageId: data.pageId };
+      } catch (e) {
+        console.warn('[Notion]', e.message);
+        return { ok: false, error: e.message };
+      }
+    };
+
+    // ── Image compress & OpenAI vision ──
+    const IMAGE_MAX_EDGE = 1024;
+    const IMAGE_JPEG_QUALITY = 0.82;
+
+    const compressImageFile = (file) => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > IMAGE_MAX_EDGE || height > IMAGE_MAX_EDGE) {
+            if (width >= height) { height = Math.round(height * IMAGE_MAX_EDGE / width); width = IMAGE_MAX_EDGE; }
+            else { width = Math.round(width * IMAGE_MAX_EDGE / height); height = IMAGE_MAX_EDGE; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', IMAGE_JPEG_QUALITY);
+          const base64 = dataUrl.split(',')[1];
+          const sizeKB = Math.round((base64.length * 3) / 4 / 1024);
+          resolve({ base64, mimeType: 'image/jpeg', previewUrl: dataUrl, sizeKB });
+        };
+        img.onerror = () => reject(new Error('無法讀取圖片'));
+        img.src = reader.result;
+      };
+      reader.onerror = () => reject(new Error('無法讀取檔案'));
+      reader.readAsDataURL(file);
+    });
+
+    const callOpenAI = async (payload) => {
+      const res = await fetch('/api/openai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `AI 服務錯誤 (${res.status})`);
+      return data;
+    };
+
+    const recognizeFoodFromImage = async (base64, mimeType) => {
+      try {
+        const data = await callOpenAI({ action: 'vision', base64, mimeType });
+        const food = (data.food || '').trim();
+        if (!food) throw new Error('無法辨識這張照片，請手動輸入或重拍');
+        return food;
+      } catch (e) {
+        if (e.message?.includes('Failed to fetch') || e.message?.includes('404')) {
+          return '示範辨識：雞肉飯';
+        }
+        throw e;
+      }
+    };
+
+    /** 生圖（DALL·E），需 Vercel 已設 OPENAI_API_KEY */
+    const generateImageFromPrompt = async (prompt, size = '1024x1024') => {
+      const data = await callOpenAI({ action: 'image', prompt, size });
+      return data.url;
+    };
+
+    const buildFortuneKey = (data) => {
+      const moodText = typeof data.mood === 'number' ? MOOD_SCORE_LABELS[data.mood] : (data.mood || '');
+      return [data.whatFood?.trim(), data.mealType, moodText, data.bodyFeeling, data.mealTime, (data.context || '').trim()].join('§');
+    };
+
+    const determineMBEI = (data) => {
+      let mbei = '';
+      const moodNum = parseMoodToNumber(data.mood);
+      mbei += (data.context && data.context.trim()) || moodNum >= 4 ? 'M' : 'B';
+      const bfOpt = BODY_FEELING_OPTIONS.find(o => o.label === data.bodyFeeling) || { n: false, hLevel: 1 };
+      mbei += bfOpt.n ? 'N' : 'P';
+      mbei += bfOpt.hLevel >= 2 ? 'H' : 'L';
+      const hour = parseInt((data.mealTime || '12:00').split(':')[0], 10);
+      const isV = data.mealType === '宵夜' ||
+        (data.mealType === '早餐' && (hour < 6 || hour >= 10)) ||
+        (data.mealType === '午餐' && (hour < 11 || hour >= 14)) ||
+        (data.mealType === '晚餐' && (hour < 17 || hour >= 21)) ||
+        (data.mealType === '點心' && (hour < 14 || hour >= 17));
+      mbei += isV ? 'V' : 'R';
+      return mbei;
+    };
+
+    // ── AI 解籤 Service ──
     const getMockFortune = (recordData) => {
-      const food = recordData?.foodEmoji || '這一餐';
-      const mbei = recordData?.mbeiCode || 'MPLR';
+      const food = recordData?.whatFood || recordData?.foodEmoji || '這一餐';
+      const mbei = recordData?.mbeiCode || determineMBEI(recordData);
+      const mbei_scores = scoresFromMbeiCode(mbei);
+      const meritEarned = calcMeritFromContext(recordData?.context);
       const isEmotional = mbei[0] === 'M';
       const isProcessed = mbei[1] === 'P';
       const isHeavy = mbei[2] === 'H';
       const isIrregular = mbei[3] === 'V';
-      const hasContext = !!(recordData?.context && recordData.context.trim());
       const mythNames = { M:'神魂慰藉膳', P:'凡軀機能膳', MH:'濁氣渡劫餚', NL:'靈氣修仙饌' };
       const mythKey = isEmotional && isHeavy ? 'MH' : (!isProcessed && !isHeavy) ? 'NL' : isEmotional ? 'M' : 'P';
       return {
         id: `mock-${Date.now()}`,
         calculated_mbei: mbei,
-        merit_point: hasContext ? '+2 功德' : '+1 功德',
+        mbei_scores,
+        meritEarned,
+        merit_point: meritPointLabel(meritEarned),
         mythical_food_name: mythNames[mythKey],
         original_food_name: `（原：${food}）`,
         main_title: isHeavy && isProcessed ? '業障初現，警示之兆' :
@@ -269,46 +475,20 @@
     };
 
     const generateAIFortune = async (recordData) => {
-      if (!GEMINI_API_KEY) return getMockFortune(recordData);
-      const { mealType, mood, bodyFeeling, foodEmoji, mealTime, context } = recordData;
-      const moodText = typeof mood === 'number' ? MOOD_SCORE_LABELS[mood] : (mood || '普通');
-      const prompt = `你是掌管靈獸孵化池的「賽博玄學解籤師」。使用者會輸入最直白的飲食紀錄，你需要「自動推算 MBEI 屬性」、「賜予玄幻菜名」，並生成「能量觀測詩籤」。
-
-## 本次進食資料
-- 食物：${foodEmoji}
-- 爽度與身體感受：${moodText}、${bodyFeeling}（${(() => { const o = BODY_FEELING_OPTIONS.find(x=>x.label===bodyFeeling); return o ? BODY_FEELING_DESC[o.hLevel] : ''; })()}）
-- 情境與執念：${context && context.trim() ? context.trim() : '（未填）'}
-- 進食時間：${mealTime} ${mealType}
-
-## MBEI 推算規則（你必須自行推算）
-1. M/B（驅動力）：情境有強烈情緒/壓力/解饞，或爽度高且非規律正餐 → M；否則 → B
-2. N/P（食源性）：根據食物名稱常識。自然原型食材為主 → N；零食/高度加工/速食 → P
-3. H/L（身體負荷）：油膩/高碳/身體感受沉重 → H；清淡/蔬果/感受輕盈 → L
-4. R/V（規律性）：正餐時間 → R；宵夜/下午茶/隨性進食 → V
-
-## 御膳賜名
-提取食物核心，轉為修真/宮廷風格（例：雞肉飯 → 玉粒白羽膳；洋芋片 → 煉火金磚）。
-
-## 規則
-1. 絕不暴雷具體神獸名稱，只描繪「蛋的狀態」或「孵化池波動」
-2. 吃垃圾食物寫成「渡劫」「獻祭」，吃健康寫成「修仙」
-3. 不用現代營養學詞彙（卡路里、碳水等）
-4. 僅輸出 JSON
-
-## 輸出格式（Strict JSON）
-{"calculated_mbei":"四個字母(例:MNHR)","merit_point":"若情境與執念有填寫輸出'+2 功德'，否則輸出'+1 功德'","mythical_food_name":"四到六字的玄幻菜名","original_food_name":"（原：使用者輸入的食物）","main_title":"七字對聯","poem":"四句詩（五言或七言，結合食物與情緒帶點幽默吐槽）","explanation":"神解：一句話吐槽結合MBEI屬性與使用者情境","do":"宜：結合當下情境的幽默建議","next_meal":"下餐宜：為了靈獸蛋的健康給予下一餐玄學建議"}`;
+      const attachMeta = (fortune, source, error = null) => ({
+        ...fortune,
+        _aiSource: source,
+        _aiError: error,
+        _geminiSource: source,
+        _geminiError: error,
+      });
       try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents:[{ parts:[{ text: prompt }] }], generationConfig:{ responseMimeType:'application/json' } })
-        });
-        const data = await res.json();
-        const parsed = JSON.parse(data.candidates[0].content.parts[0].text);
-        return { id:`ai-${Date.now()}`, ...parsed };
+        const data = await callOpenAI({ action: 'fortune', recordData });
+        const normalized = normalizeFortune({ id: `ai-${Date.now()}`, ...data.fortune }, recordData);
+        return attachMeta(normalized, 'ai');
       } catch (e) {
-        console.error('Gemini error:', e);
-        return getMockFortune(recordData);
+        console.error('OpenAI fortune error:', e);
+        return attachMeta(normalizeFortune(getMockFortune(recordData), recordData), 'mock', e.message || '連線失敗');
       }
     };
 
@@ -325,6 +505,7 @@
     const AwardIcon = ({ size=20 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>;
     const ZapIcon = ({ size=18 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>;
     const CoffeeIcon = ({ size=12 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/></svg>;
+    const CameraIcon = ({ size=20 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>;
 
     // ── Small shared components ──
     function SidebarButton({ icon: Icon, label, active, onClick }) {
@@ -363,11 +544,12 @@
     }
 
     function IconGrid({ options, value, onChange }) {
+      const selected = value != null && value !== '';
       return (
         <div className="grid grid-cols-3 gap-3">
           {options.map(opt => (
-            <button key={opt.label} onClick={() => onChange(opt.label)}
-              className={cn("flex flex-col items-center gap-2 py-4 px-2 rounded-2xl border transition-all", value === opt.label ? "bg-ink text-white border-ink shadow-md" : "bg-white text-muted border-stroke")}>
+            <button key={opt.label} type="button" onClick={() => onChange(opt.label)}
+              className={cn("flex flex-col items-center gap-2 py-4 px-2 rounded-2xl border transition-all", selected && value === opt.label ? "bg-ink text-white border-ink shadow-md" : "bg-white text-muted border-stroke hover:border-jade/40")}>
               <span className="text-3xl">{opt.emoji}</span>
               <span className="text-xs font-bold tracking-tight leading-tight text-center">{opt.label}</span>
             </button>
@@ -624,28 +806,25 @@
       { branch:'亥', keyword:'備眠', time:'21:00 – 23:00', meridian:'三焦經', advice:'靜心備眠以養氣' },
     ];
 
-    function MBEIBars({ mbeiCode }) {
-      const DIMS = [
-        { left:'M', leftLabel:'魂', right:'B', rightLabel:'魄' },
-        { left:'N', leftLabel:'野', right:'P', rightLabel:'煉' },
-        { left:'L', leftLabel:'靈', right:'H', rightLabel:'煞' },
-        { left:'R', leftLabel:'曆', right:'V', rightLabel:'幻' },
-      ];
+    function MBEIBars({ mbeiCode, mbeiScores }) {
+      const scores = mbeiScores || scoresFromMbeiCode(mbeiCode);
       return (
         <div style={{ marginTop:10, paddingTop:10, borderTop:'1px solid rgba(149,211,195,0.08)', display:'flex', flexDirection:'column', gap:8 }}>
-          {DIMS.map((d, i) => {
-            const code = mbeiCode?.[i];
-            const isRight = code === d.right;
+          {MBEI_AXES.map((d) => {
+            const score = clampMbeiScore(scores[d.key]);
+            const pct = ((score + 50) / 100) * 100;
+            const isRight = score >= 0;
             return (
-              <div key={i} style={{ display:'flex', alignItems:'center', gap:8 }}>
-                <span style={{ fontSize:10, width:16, textAlign:'right', fontWeight:900, color: !isRight ? 'var(--jade)' : 'rgba(149,211,195,0.2)', fontFamily:"'Noto Serif TC',serif", flexShrink:0, transition:'color 0.3s' }}>{d.leftLabel}</span>
-                <div style={{ flex:1, position:'relative', height:3, borderRadius:2, background:'rgba(255,255,255,0.06)' }}>
-                  <div style={{ position:'absolute', left: isRight ? 'calc(85% - 5px)' : 'calc(15% - 5px)', top:'50%', marginTop:-5, width:10, height:10, borderRadius:'50%',
+              <div key={d.key} style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <span style={{ fontSize:10, width:16, textAlign:'right', fontWeight:900, color: !isRight ? 'var(--jade)' : 'rgba(149,211,195,0.2)', fontFamily:"'Noto Serif TC',serif", flexShrink:0 }}>{d.negLabel}</span>
+                <div style={{ flex:1, position:'relative', height:3, borderRadius:2, background:'rgba(255,255,255,0.06)', marginTop:10 }}>
+                  <div style={{ position:'absolute', left: `calc(${pct}% - 5px)`, top:'50%', marginTop:-5, width:10, height:10, borderRadius:'50%',
                     background: isRight ? 'var(--amber)' : 'var(--jade)',
                     boxShadow: isRight ? '0 0 8px rgba(200,160,80,0.6)' : '0 0 8px rgba(149,211,195,0.6)',
                     transition:'left 0.35s cubic-bezier(0.4,0,0.2,1)' }} />
+                  <span style={{ position:'absolute', right:0, top:-12, fontSize:9, color:'rgba(149,211,195,0.45)', fontFamily:'monospace' }}>{score > 0 ? '+' : ''}{score}</span>
                 </div>
-                <span style={{ fontSize:10, width:16, fontWeight:900, color: isRight ? 'var(--amber)' : 'rgba(200,184,138,0.2)', fontFamily:"'Noto Serif TC',serif", flexShrink:0, transition:'color 0.3s' }}>{d.rightLabel}</span>
+                <span style={{ fontSize:10, width:16, fontWeight:900, color: isRight ? 'var(--amber)' : 'rgba(200,184,138,0.2)', fontFamily:"'Noto Serif TC',serif", flexShrink:0 }}>{d.posLabel}</span>
               </div>
             );
           })}
@@ -653,7 +832,7 @@
       );
     }
 
-    function HomeView({ records, loginProfile }) {
+    function HomeView({ records, loginProfile, mealDrafts = [], onContinueDraft }) {
       const latestType = records[0] ? MBEI_TYPES[records[0].mbeiCode] : MBEI_TYPES['MPLR'];
       const isUnlocked = records.length >= 10;
       const card = { background:'#252016', border:'1px solid #3a3020', borderRadius:5, padding:'28px 24px', position:'relative', boxShadow:'0 8px 30px rgba(135,123,115,0.08)' };
@@ -670,6 +849,18 @@
 
       return (
         <div style={{ display:'flex', flexDirection:'column', gap:24, fontFamily:"'Noto Serif TC', serif", animation:'onboardFadeIn 0.6s ease-out' }}>
+          {mealDrafts.length > 0 && (
+            <div style={{ ...card, padding:'16px 20px', borderColor:'rgba(149,211,195,0.35)' }}>
+              <p style={{ fontSize:12, color:'var(--jade)', margin:'0 0 10px', fontWeight:700, letterSpacing:'0.15em' }}>你有 {mealDrafts.length} 餐待補食緒</p>
+              {mealDrafts.slice(0, 2).map(d => (
+                <div key={d.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginTop:8 }}>
+                  <span style={{ fontSize:15, color:'var(--cream)', fontWeight:700 }}>{d.whatFood} · {d.mealType}</span>
+                  <button type="button" onClick={() => onContinueDraft?.(d.id)}
+                    style={{ padding:'6px 14px', borderRadius:8, background:'var(--ink)', color:'white', fontSize:12, fontWeight:700, border:'none', cursor:'pointer' }}>繼續填寫</button>
+                </div>
+              ))}
+            </div>
+          )}
           {/* 頁首 */}
           <header style={{ paddingBottom:16, borderBottom:'1px solid rgba(149,211,195,0.1)' }}>
             <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', gap:12 }}>
@@ -799,15 +990,15 @@
                           <div onClick={() => setExpandedRecordId(expandedRecordId === r.id ? null : r.id)}
                             style={{ flex:1, background:'rgba(149,211,195,0.04)', border:'1px solid rgba(149,211,195,0.1)', borderRadius:5, padding:'12px 14px', marginBottom: i < todayRecords.length - 1 ? 8 : 0, cursor:'pointer' }}>
                             <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
-                              <span style={{ fontSize:22, lineHeight:1 }}>{r.foodEmoji || '🍽'}</span>
-                              <span style={{ fontSize:13, color:'var(--cream)', fontWeight:700 }}>{r.mealType}</span>
+                              <span style={{ fontSize:15, color:'var(--cream)', fontWeight:900, fontFamily:"'Noto Serif TC',serif" }}>{getRecordFood(r)}</span>
+                              <span style={{ fontSize:13, color:'var(--mist)', fontWeight:600 }}>· {r.mealType}</span>
                             </div>
                             <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                               <span style={{ fontSize:12, color: moodColor[r.mood] || 'var(--sand)', background:'rgba(149,211,195,0.07)', border:'1px solid rgba(149,211,195,0.12)', borderRadius:20, padding:'2px 10px' }}>{r.mood}</span>
                               <span style={{ fontSize:12, color:'var(--sand)', background:'rgba(200,184,138,0.08)', border:'1px solid rgba(200,184,138,0.15)', borderRadius:20, padding:'2px 10px' }}>{r.bodyFeeling}</span>
                               {r.context && <span style={{ fontSize:12, color:'var(--mist)', background:'rgba(168,197,191,0.06)', border:'1px solid rgba(168,197,191,0.1)', borderRadius:20, padding:'2px 10px' }}>{r.context}</span>}
                             </div>
-                            {expandedRecordId === r.id && <MBEIBars mbeiCode={r.mbeiCode} />}
+                            {expandedRecordId === r.id && <MBEIBars mbeiCode={r.mbeiCode} mbeiScores={r.mbeiScores || r.fortune?.mbei_scores} />}
                           </div>
                         </div>
                       ))}
@@ -832,7 +1023,7 @@
                           <div style={{ flex:1, minWidth:0 }}>
                             <p style={{ fontSize:13, color:'var(--blush)', fontWeight:700, margin:'0 0 4px', letterSpacing:'0.1em' }}>{r.fortune.main_title}</p>
                             <p style={{ fontSize:14, color:'var(--cream)', lineHeight:1.8, margin:'0 0 6px' }}>{(r.fortune.poem || '').split('\n')[0]}</p>
-                            <p style={{ fontSize:11, color:'var(--mist)', margin:0 }}>{r.date} · {r.mealType} · {r.foodEmoji}</p>
+                            <p style={{ fontSize:11, color:'var(--mist)', margin:0 }}>{r.date} · {r.mealType} · {getRecordFood(r)}</p>
                           </div>
                         </div>
                       ))}
@@ -1010,12 +1201,12 @@
                 <div className="space-y-1">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="font-black text-ink" style={{ fontFamily:"'Noto Serif TC',serif", fontSize:18, letterSpacing:'0.05em', marginBottom:2 }}>{r.foodEmoji || '這一餐'}</p>
+                      <p className="font-black text-ink" style={{ fontFamily:"'Noto Serif TC',serif", fontSize:18, letterSpacing:'0.05em', marginBottom:2 }}>{getRecordFood(r)}</p>
                       <p className="font-bold text-sm text-muted">{r.mealType} · {r.time} <span style={{fontSize:11,color:'var(--jade)',fontFamily:"'Noto Serif TC',serif",fontWeight:400,opacity:0.8}}>{getEarthlyBranch(r.time)}時</span></p>
                     </div>
-                    {r.fortune?.merit_point && (
+                    {getRecordMerit(r) > 0 && (
                       <span style={{ fontSize:11, fontWeight:900, color:'var(--amber)', fontFamily:"'Noto Serif TC',serif", letterSpacing:'0.05em' }}>
-                        {r.fortune.merit_point.match(/[+-]?\d+/)?.[0] ? (r.fortune.merit_point.match(/[+-]?\d+/)[0].startsWith('+') ? '' : '+') + r.fortune.merit_point.match(/[+-]?\d+/)[0] : r.fortune.merit_point} 功德
+                        +{getRecordMerit(r)} 功德
                       </span>
                     )}
                   </div>
@@ -1034,7 +1225,7 @@
                     {r.fortune.next_meal && <p className="text-[11px] text-amber font-serif">{r.fortune.next_meal}</p>}
                   </div>
                 )}
-                {expandedRecordId === r.id && <MBEIBars mbeiCode={r.mbeiCode} />}
+                {expandedRecordId === r.id && <MBEIBars mbeiCode={r.mbeiCode} mbeiScores={r.mbeiScores || r.fortune?.mbei_scores} />}
               </div>
             )) : (
               <div className="bg-white rounded-[5px] p-10 text-center border-2 border-dashed border-stroke text-muted text-sm font-bold">
@@ -1178,7 +1369,25 @@
         return (c[0]==='M' ? '魂動（情緒主導）' : '魄健（生理理性）') + '・' + (c[2]==='H' ? '煞氣（身體負荷重）' : '靈氣（身體輕盈）');
       })();
 
+      const hatchProgress = useMemo(() => {
+        const count = hatch.count || 0;
+        const days = hatch.daysSinceFirst || 0;
+        const recordPct = Math.min(count / 5, 1) * 50;
+        const dayPct = hatch.stage >= 2 ? Math.min(days / 7, 1) * 50 : 0;
+        const overall = hatch.stage === 0 ? 0 : hatch.stage >= 3 ? 100 : recordPct + dayPct;
+        const phaseIdx = hatch.stage <= 1 ? 0 : hatch.stage === 2 ? 1 : 2;
+        const nextMilestone = hatch.stage === 0
+          ? '記下第一餐，啟動孵化'
+          : hatch.stage === 1
+            ? `破殼進度 ${count}/5 筆 · 再 ${Math.max(0, 5 - count)} 筆進入破殼期`
+            : hatch.stage === 2
+              ? `完全體進度 ${Math.min(days, 7)}/7 天 · 再 ${Math.max(0, 7 - days)} 天顯形`
+              : '靈獸已完全降世';
+        return { overall, recordPct, dayPct, count, days, phaseIdx, nextMilestone };
+      }, [hatch]);
+
       const card = { background:'#252016', border:'1px solid #3a3020', borderRadius:5, boxShadow:'0 8px 30px rgba(135,123,115,0.08)' };
+      const serif = "'Noto Serif TC',serif";
 
       return (
         <div className="space-y-10 fade-in"
@@ -1200,24 +1409,47 @@
 
               {/* ── 靈獸孵化卡 ── */}
               <div style={{ ...card, overflow:'hidden' }}>
-                {/* 階段指示器 */}
-                <div style={{ padding:'20px 24px 0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                  <div style={{ display:'flex', gap:4, alignItems:'center' }}>
-                    {['混沌期','破殼期','完全體'].map((s,i) => (
-                      <React.Fragment key={i}>
-                        <div style={{ display:'flex', alignItems:'center', gap:5 }}>
-                          <div style={{ width:7, height:7, borderRadius:'50%',
-                            background: hatch.stage > i ? (hatch.stage===i+1 ? 'var(--jade)' : 'rgba(149,211,195,0.35)') : 'rgba(149,211,195,0.1)',
-                            boxShadow: hatch.stage===i+1 ? '0 0 8px rgba(149,211,195,0.6)' : 'none', transition:'all 0.3s' }} />
-                          <span style={{ fontSize:11, fontFamily:"'Noto Serif TC',serif", letterSpacing:'0.1em',
-                            color: hatch.stage===i+1 ? 'var(--jade)' : hatch.stage>i+1 ? 'rgba(149,211,195,0.35)' : 'rgba(149,211,195,0.15)',
-                            fontWeight: hatch.stage===i+1 ? 700 : 400 }}>{s}</span>
-                        </div>
-                        {i < 2 && <span style={{ fontSize:10, color:'rgba(149,211,195,0.15)', margin:'0 2px' }}>›</span>}
-                      </React.Fragment>
+                {/* 孵化進度長條 */}
+                <div style={{ padding:'20px 24px 8px' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:10 }}>
+                    <span style={{ fontSize:11, color:'var(--jade)', letterSpacing:'0.2em', fontWeight:700, fontFamily:serif }}>孵化進度</span>
+                    <span style={{ fontSize:22, fontWeight:900, color:'var(--cream)', fontFamily:serif, lineHeight:1 }}>
+                      {Math.round(hatchProgress.overall)}<span style={{ fontSize:12, color:'var(--mist)', fontWeight:600 }}>%</span>
+                    </span>
+                  </div>
+                  <div style={{ position:'relative', height:12, borderRadius:6, background:'rgba(149,211,195,0.08)', overflow:'hidden', border:'1px solid rgba(149,211,195,0.12)' }}>
+                    <div style={{
+                      height:'100%', width:`${hatchProgress.overall}%`, borderRadius:6, transition:'width 0.65s cubic-bezier(0.22,1,0.36,1)',
+                      background: hatchProgress.overall >= 100
+                        ? 'linear-gradient(90deg, #5a9e8a 0%, #95d3c3 50%, #d4a843 100%)'
+                        : 'linear-gradient(90deg, rgba(74,130,110,0.9) 0%, rgba(149,211,195,0.95) 100%)',
+                      boxShadow: hatchProgress.overall > 0 ? '0 0 14px rgba(149,211,195,0.35)' : 'none',
+                    }} />
+                    {[50, 100].map(pct => (
+                      <div key={pct} style={{ position:'absolute', left:`${pct}%`, top:0, bottom:0, width:1, background:'rgba(0,0,0,0.25)', transform:'translateX(-50%)', pointerEvents:'none' }} />
                     ))}
                   </div>
-                  <span style={{ fontSize:11, color:'var(--mist)', fontFamily:"'Noto Serif TC',serif" }}>{hatch.count} 筆紀錄</span>
+                  <div style={{ display:'flex', justifyContent:'space-between', marginTop:12, gap:4 }}>
+                    {['混沌期','破殼期','完全體'].map((s, i) => {
+                      const active = hatchProgress.phaseIdx === i;
+                      const done = hatchProgress.phaseIdx > i;
+                      return (
+                        <div key={s} style={{ flex:1, textAlign: i === 0 ? 'left' : i === 2 ? 'right' : 'center' }}>
+                          <span style={{
+                            fontSize:11, fontFamily:serif, letterSpacing:'0.08em', display:'block',
+                            color: active ? 'var(--jade)' : done ? 'rgba(149,211,195,0.55)' : 'rgba(149,211,195,0.2)',
+                            fontWeight: active ? 800 : 500,
+                          }}>{s}</span>
+                          {active && <span style={{ fontSize:9, color:'var(--amber)', fontFamily:serif }}>進行中</span>}
+                          {done && <span style={{ fontSize:9, color:'rgba(149,211,195,0.4)', fontFamily:serif }}>已達成</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p style={{ fontSize:12, color:'var(--sand)', fontFamily:serif, textAlign:'center', margin:'14px 0 0', lineHeight:1.6 }}>{hatchProgress.nextMilestone}</p>
+                  <div style={{ textAlign:'right', marginTop:10 }}>
+                    <span style={{ fontSize:11, color:'var(--mist)', fontFamily:serif }}>累計 {hatch.count} 筆紀錄</span>
+                  </div>
                 </div>
 
                 {/* 階段 0：尚無紀錄 */}
@@ -1241,13 +1473,11 @@
                       <p style={{ fontSize:15, color:'var(--cream)', lineHeight:1.9, fontFamily:"'Noto Serif TC',serif", margin:'0 0 18px' }}>
                         牠在迷霧中漸漸成形，<br />已感知到你的{stageClue}
                       </p>
-                      <div style={{ display:'flex', gap:8, alignItems:'center', justifyContent:'center' }}>
-                        {Array.from({length:5}).map((_,i) => (
-                          <div key={i} style={{ width:10, height:10, borderRadius:'50%',
-                            background: i < hatch.count ? 'var(--jade)' : 'rgba(149,211,195,0.12)',
-                            boxShadow: i < hatch.count ? '0 0 6px rgba(149,211,195,0.35)' : 'none', transition:'all 0.3s' }} />
-                        ))}
-                        <span style={{ fontSize:12, color:'var(--mist)', marginLeft:6, fontFamily:"'Noto Serif TC',serif" }}>{hatch.count}/5 筆可破殼</span>
+                      <div style={{ width:'100%', maxWidth:260 }}>
+                        <div style={{ height:8, borderRadius:4, background:'rgba(149,211,195,0.1)', overflow:'hidden', marginBottom:8 }}>
+                          <div style={{ height:'100%', width:`${Math.min(hatch.count/5,1)*100}%`, background:'linear-gradient(90deg, var(--jade), #b8e8dc)', borderRadius:4, transition:'width 0.5s', boxShadow:'0 0 10px rgba(149,211,195,0.3)' }} />
+                        </div>
+                        <p style={{ fontSize:13, color:'var(--jade)', margin:0, fontFamily:serif, fontWeight:700 }}>{hatch.count}/5 筆 · 距離破殼</p>
                       </div>
                     </div>
                   </div>
@@ -1585,20 +1815,223 @@
       );
     }
 
-    function RecordModal({ onClose, onSubmit, formData, setFormData, isLoading }) {
+    function RecordTrackPicker({ onClose, drafts, onPickTrack, onContinueDraft, onDeleteDraft }) {
+      const serif = "'Noto Serif TC',serif";
+      const trackCard = {
+        textAlign:'left', padding:'20px 22px', borderRadius:12, cursor:'pointer', width:'100%',
+        background:'rgba(0,0,0,0.2)', border:'2px solid rgba(149,211,195,0.15)', transition:'border 0.2s, background 0.2s',
+      };
+      return (
+        <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-0 md:p-8">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+          <div className="w-full max-w-lg bg-paper rounded-t-[5px] md:rounded-[5px] relative z-10 border-2 border-stroke shadow-2xl sheet-up p-8 md:p-10 space-y-5">
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 style={{ fontSize:28, fontFamily:serif, fontWeight:900, color:'var(--cream)', margin:0 }}>記錄這一餐</h3>
+                <p style={{ fontSize:15, color:'var(--mist)', margin:'6px 0 0' }}>選擇時機</p>
+              </div>
+              <button onClick={onClose} className="w-10 h-10 rounded-full bg-ink text-white flex items-center justify-center"><XIcon size={20} /></button>
+            </div>
+            <button type="button" onClick={() => onPickTrack('early')} style={trackCard}>
+              <p style={{ fontSize:22, fontWeight:900, color:'var(--jade)', margin:'0 0 4px', fontFamily:serif }}>🌿 先記食物</p>
+              <p style={{ fontSize:16, color:'var(--sand)', margin:0, lineHeight:1.45 }}>拍照存食物，吃完再補感受</p>
+            </button>
+            <button type="button" onClick={() => onPickTrack('after')} style={trackCard}>
+              <p style={{ fontSize:22, fontWeight:900, color:'var(--amber)', margin:'0 0 4px', fontFamily:serif }}>🍽 吃完再記</p>
+              <p style={{ fontSize:16, color:'var(--sand)', margin:0, lineHeight:1.45 }}>飯後一次記完</p>
+            </button>
+            {drafts.length > 0 && (
+              <div className="pt-2 border-t border-stroke/60 space-y-3">
+                <p style={{ fontSize:11, color:'var(--mist)', letterSpacing:'0.2em', margin:0, fontWeight:700 }}>待補食緒</p>
+                {drafts.map(d => (
+                  <div key={d.id} className="flex items-center gap-2 p-3 rounded-xl border border-jade/25 bg-parchment/30">
+                    {d.photoPreviewUrl && <img src={d.photoPreviewUrl} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />}
+                    <div className="flex-1 min-w-0">
+                      <p style={{ fontSize:14, fontWeight:700, color:'var(--cream)', margin:0, fontFamily:serif }}>{d.whatFood || '未命名餐點'}</p>
+                      <p style={{ fontSize:11, color:'var(--mist)', margin:'2px 0 0' }}>{d.mealType} · {d.mealTime}</p>
+                    </div>
+                    <button type="button" onClick={() => onContinueDraft(d.id)}
+                      style={{ padding:'8px 12px', borderRadius:8, background:'var(--ink)', color:'white', fontSize:12, fontWeight:700, border:'none', cursor:'pointer' }}>繼續</button>
+                    <button type="button" onClick={() => onDeleteDraft(d.id)} aria-label="刪除草稿"
+                      style={{ padding:'8px', background:'transparent', border:'none', color:'var(--clay)', cursor:'pointer', fontSize:18 }}>×</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    function RecordModal({ onClose, onSubmit, formData, setFormData, isLoading, onSchedulePrefetch, onClearPrefetch, prefetchStatus, recordMode, initialPhase, onSaveDraft, initialPhotoPreview }) {
       const setField = (field, value) => setFormData(prev => ({...prev, [field]: value}));
+      const galleryInputRef = React.useRef(null);
+      const cameraInputRef = React.useRef(null);
+      const [phase, setPhase] = React.useState(initialPhase || (recordMode === 'after' ? 'all' : 'food'));
+      const [photoPreview, setPhotoPreview] = React.useState(initialPhotoPreview || null);
+      const [photoSizeKB, setPhotoSizeKB] = React.useState(null);
+      const [recognizePhase, setRecognizePhase] = React.useState('idle');
+      const [recognizeError, setRecognizeError] = React.useState('');
+      const [confirmDraft, setConfirmDraft] = React.useState('');
+      const [foodConfirmed, setFoodConfirmed] = React.useState(() => !!formData.whatFood?.trim());
+
+      const showFoodSection = phase === 'food' || phase === 'all';
+      const showFeelingsSection = phase === 'feelings' || phase === 'all';
+      const isEarlyFoodStep = recordMode === 'early' && phase === 'food';
+      const moodSelected = typeof formData.mood === 'number' && formData.mood >= 1 && formData.mood <= 5;
+      const feelingsComplete = isFeelingsComplete(formData);
+      const serif = "'Noto Serif TC',serif";
+
+      const modalSubtitle = recordMode === 'early'
+        ? (phase === 'food' ? '先記食物' : '補上飯後感受')
+        : recordMode === 'continue' ? '補上飯後食緒' : '飯後一次記完';
+
+      React.useEffect(() => {
+        if (!showFeelingsSection || !foodConfirmed || !formData.whatFood?.trim() || !isFeelingsComplete(formData)) return;
+        const t = setTimeout(() => onSchedulePrefetch?.(formData), 1500);
+        return () => clearTimeout(t);
+      }, [showFeelingsSection, foodConfirmed, formData.whatFood, formData.mealType, formData.mood, formData.bodyFeeling, formData.mealTime, formData.context]);
+
+      React.useEffect(() => () => onClearPrefetch?.(), []);
+
+      React.useEffect(() => {
+        if (initialPhotoPreview) setPhotoPreview(initialPhotoPreview);
+      }, [initialPhotoPreview]);
+
+      React.useEffect(() => {
+        if (recordMode === 'continue' && formData.whatFood?.trim()) setFoodConfirmed(true);
+      }, [recordMode, formData.whatFood]);
+
+      const applyPhotoMealTime = (file, fromCamera) => {
+        if (!fromCamera) return;
+        const t = file.lastModified > 0 ? new Date(file.lastModified) : new Date();
+        const hh = String(t.getHours()).padStart(2, '0');
+        const mm = String(t.getMinutes()).padStart(2, '0');
+        setField('mealTime', `${hh}:${mm}`);
+      };
+
+      const handlePhotoFile = async (e, fromCamera = false) => {
+        const file = e.target.files?.[0];
+        e.target.value = '';
+        if (!file) return;
+        applyPhotoMealTime(file, fromCamera);
+        setRecognizeError('');
+        setRecognizePhase('compressing');
+        try {
+          const compressed = await compressImageFile(file);
+          setPhotoPreview(compressed.previewUrl);
+          setPhotoSizeKB(compressed.sizeKB);
+          setRecognizePhase('recognizing');
+          const name = await recognizeFoodFromImage(compressed.base64, compressed.mimeType);
+          setConfirmDraft(name);
+          setRecognizePhase('confirm');
+        } catch (err) {
+          setRecognizeError(err.message || '辨識失敗');
+          setRecognizePhase('error');
+        }
+      };
+
+      const confirmRecognition = () => {
+        const name = confirmDraft.trim();
+        if (!name) return;
+        setField('whatFood', name);
+        setFoodConfirmed(true);
+        setRecognizePhase('idle');
+        onSchedulePrefetch?.({ ...formData, whatFood: name });
+      };
+
+      const cancelRecognition = () => {
+        setRecognizePhase('idle');
+        setConfirmDraft('');
+        setPhotoPreview(null);
+        setPhotoSizeKB(null);
+      };
+
+      const onWhatFoodChange = (e) => {
+        const v = e.target.value;
+        setField('whatFood', v);
+        if (!v.trim()) setFoodConfirmed(false);
+      };
+
+      const onWhatFoodBlur = () => {
+        if (formData.whatFood?.trim() && recognizePhase === 'idle') setFoodConfirmed(true);
+      };
+
+      const isRecognizing = recognizePhase === 'compressing' || recognizePhase === 'recognizing';
+
       return (
         <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center overflow-hidden p-0 md:p-12">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-          <div className="w-full md:max-w-5xl h-[94vh] md:h-auto md:max-h-[90vh] bg-paper rounded-t-[5px] md:rounded-[5px] relative z-10 flex flex-col shadow-2xl border-t-8 md:border-8 border-ink overflow-hidden sheet-up">
+          <div className="w-full md:max-w-5xl h-[94vh] md:h-auto md:max-h-[90vh] bg-paper rounded-t-[5px] md:rounded-[5px] relative z-10 flex flex-col shadow-2xl overflow-hidden sheet-up cn-red-frame-modal">
+            <span className="cn-corner cn-corner-tl" aria-hidden="true" />
+            <span className="cn-corner cn-corner-tr" aria-hidden="true" />
+            <span className="cn-corner cn-corner-bl" aria-hidden="true" />
+            <span className="cn-corner cn-corner-br" aria-hidden="true" />
             <div className="paper-texture" style={{opacity:0.03}} />
             <div className="p-8 md:p-12 flex justify-between items-center border-b border-stroke shrink-0 bg-parchment/80 backdrop-blur-md relative z-10">
-              <div className="space-y-1"><h3 className="text-3xl font-serif font-black tracking-tighter text-ink">凝練食緒</h3><p className="text-[10px] font-black text-muted uppercase tracking-[0.3em]">CRAFTING DIETARY SPIRIT</p></div>
+              <div className="space-y-1">
+                <h3 className="text-3xl font-serif font-black tracking-tighter text-ink">凝練食緒</h3>
+                <p className="text-[10px] font-black text-muted uppercase tracking-[0.3em]">CRAFTING DIETARY SPIRIT</p>
+                <p className="text-xs font-semibold text-jade/90" style={{ fontFamily:serif, letterSpacing:'0.05em' }}>{modalSubtitle}</p>
+              </div>
               <button onClick={onClose} className="w-12 h-12 flex items-center justify-center bg-ink text-white rounded-full hover:scale-110 active:scale-90 transition-all shadow-lg"><XIcon size={24} /></button>
             </div>
-            <div className="flex-1 overflow-y-auto p-8 md:p-16 space-y-12 pb-64 md:pb-52 scrollbar-hide relative z-10">
-              <RecordSection title="這一餐吃了什麼？">
-                <input type="text" className="w-full rounded-[1.5rem] border-2 border-stroke bg-white px-6 py-4 text-lg font-semibold text-ink placeholder:text-[#B0A7A1] focus:outline-none focus:border-ink/30" placeholder="例如：牛肉麵、拿鐵、雞肉沙拉" value={formData.foodEmoji} onChange={e => setField('foodEmoji', e.target.value)} required />
+            <div className="flex-1 overflow-y-auto p-8 md:p-16 space-y-12 pb-44 md:pb-40 scrollbar-hide relative z-10">
+              {phase === 'feelings' && formData.whatFood?.trim() && (
+                <div className="p-4 rounded-[1.5rem] border border-jade/30 bg-parchment/40 flex items-center gap-3 flex-wrap">
+                  {photoPreview && <img src={photoPreview} alt="" className="w-14 h-14 rounded-xl object-cover border border-stroke shrink-0" />}
+                  <div className="flex-1 min-w-[120px]">
+                    <p style={{ fontSize:11, color:'var(--mist)', margin:'0 0 4px' }}>本餐食物</p>
+                    <p style={{ fontSize:18, fontWeight:900, color:'var(--ink)', margin:0, fontFamily:serif }}>{formData.whatFood}</p>
+                    <p style={{ fontSize:12, color:'var(--muted)', margin:'4px 0 0' }}>{formData.mealType} · {formData.mealTime}</p>
+                  </div>
+                  {(recordMode === 'early' || recordMode === 'continue') && (
+                    <button type="button" onClick={() => setPhase('food')} className="text-xs font-bold text-muted underline shrink-0">修改食物</button>
+                  )}
+                </div>
+              )}
+              {showFoodSection && (
+              <>
+              <RecordSection title={recordMode === 'after' ? '這一餐吃了什麼？（相簿或拍照）' : '這一餐吃了什麼？'}>
+                <input ref={galleryInputRef} type="file" accept="image/*" className="hidden" onChange={e => handlePhotoFile(e, false)} />
+                <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e => handlePhotoFile(e, true)} />
+                <div className="flex gap-2 flex-wrap">
+                  <input type="text" className="flex-1 min-w-[140px] rounded-[1.5rem] border-2 border-stroke bg-white px-6 py-4 text-lg font-semibold text-ink placeholder:text-[#B0A7A1] focus:outline-none focus:border-ink/30" placeholder="手動輸入食物名稱" value={formData.whatFood || ''} onChange={onWhatFoodChange} onBlur={onWhatFoodBlur} required={phase === 'food' || phase === 'all'} disabled={isRecognizing || phase === 'feelings'} />
+                  <button type="button" onClick={() => galleryInputRef.current?.click()} disabled={isRecognizing || phase === 'feelings'}
+                    className="shrink-0 px-4 h-14 rounded-[1.5rem] border-2 border-stroke bg-white text-sm font-bold text-ink hover:border-jade/50 disabled:opacity-50">相簿</button>
+                  <button type="button" onClick={() => cameraInputRef.current?.click()} disabled={isRecognizing || phase === 'feelings'}
+                    className="shrink-0 w-14 h-14 rounded-[1.5rem] border-2 border-stroke bg-white flex items-center justify-center text-ink hover:border-jade/50 disabled:opacity-50"
+                    title="開啟相機">
+                    {isRecognizing ? <span className="spin-loading text-xl">☯</span> : <CameraIcon size={22} />}
+                  </button>
+                </div>
+                {(photoPreview || photoSizeKB) && (
+                  <div className="mt-3 flex items-center gap-3">
+                    {photoPreview && <img src={photoPreview} alt="預覽" className="w-16 h-16 rounded-xl object-cover border border-stroke" />}
+                    {photoSizeKB != null && <span className="text-[11px] text-muted font-mono">已壓縮約 {photoSizeKB} KB</span>}
+                  </div>
+                )}
+                {recognizePhase === 'confirm' && (
+                  <div className="mt-4 p-4 rounded-[1.5rem] border-2 border-jade/40 bg-parchment/50 space-y-3">
+                    <p className="text-sm font-bold text-ink" style={{ fontFamily:"'Noto Serif TC',serif" }}>辨識結果，請確認或修改：</p>
+                    <input type="text" value={confirmDraft} onChange={e => setConfirmDraft(e.target.value)}
+                      className="w-full rounded-xl border-2 border-stroke bg-white px-4 py-3 text-base font-semibold text-ink focus:outline-none focus:border-jade/50" />
+                    <div className="flex gap-2">
+                      <button type="button" onClick={confirmRecognition}
+                        className="flex-1 py-2.5 rounded-xl bg-ink text-white text-sm font-bold hover:opacity-90">確認使用</button>
+                      <button type="button" onClick={cancelRecognition}
+                        className="px-4 py-2.5 rounded-xl border border-stroke text-sm font-bold text-muted hover:bg-parchment">重拍</button>
+                    </div>
+                  </div>
+                )}
+                {isRecognizing && (
+                  <p className="mt-2 text-xs text-muted font-semibold" style={{ fontFamily:"'Noto Serif TC',serif" }}>
+                    {recognizePhase === 'compressing' ? '正在壓縮圖片…' : 'AI 辨識食物中…'}
+                  </p>
+                )}
+                {recognizePhase === 'error' && recognizeError && (
+                  <p className="mt-2 text-sm text-clay font-semibold">{recognizeError}</p>
+                )}
               </RecordSection>
               <div className="grid md:grid-cols-2 gap-12 lg:gap-16">
                 <RecordSection title="餐別"><PillSelector options={['早餐','午餐','晚餐','宵夜','點心']} value={formData.mealType} onChange={v => setField('mealType', v)} /></RecordSection>
@@ -1607,40 +2040,53 @@
                     className="w-full rounded-[1.5rem] border-2 border-stroke bg-white px-5 py-4 text-lg font-semibold text-ink focus:outline-none focus:border-ink/30" />
                 </RecordSection>
               </div>
+              </>
+              )}
+              {(phase === 'food' || phase === 'all' || phase === 'feelings') && (
               <RecordSection title="情境與執念（選填）">
                 <div style={{ position:'relative' }}>
                   <textarea
                     value={formData.context || ''}
                     onChange={e => setField('context', e.target.value)}
-                    placeholder="被老闆罵？想犒賞自己？心情超差？隨便說說…填了有 +1 功德"
+                    placeholder="寫越多反思，功德越高（+1～+3）…被老闆罵？想犒賞自己？"
                     rows={2}
                     className="w-full rounded-[1.5rem] border-2 border-stroke bg-white px-6 py-4 text-base font-semibold text-ink placeholder:text-[#B0A7A1] focus:outline-none focus:border-ink/30 resize-none"
                   />
                   {formData.context?.trim() && (
-                    <span style={{ position:'absolute', right:16, bottom:14, fontSize:11, color:'var(--forest)', fontWeight:700, fontFamily:"'Noto Serif TC',serif" }}>+1 功德 ✦</span>
+                    <span style={{ position:'absolute', right:16, bottom:14, fontSize:11, color:'var(--forest)', fontWeight:700, fontFamily:"'Noto Serif TC',serif" }}>+{calcMeritFromContext(formData.context)} 功德 ✦</span>
                   )}
                 </div>
               </RecordSection>
+              )}
+              {showFeelingsSection && (
+              <>
+              {recordMode === 'after' && phase === 'all' && (
+                <p className="text-sm text-muted font-semibold -mt-4 mb-2" style={{ fontFamily:serif }}>請在吃完後填寫以下感受</p>
+              )}
               <div className="py-10 bg-parchment/30 rounded-[5px] px-8 md:px-12 border border-stroke/50 shadow-inner">
                 <RecordSection title="吃完這一餐，爽度如何？">
                   <div style={{ padding:'8px 4px 0' }}>
+                    {!moodSelected && (
+                      <p style={{ fontSize:12, color:'var(--mist)', margin:'0 0 10px', fontFamily:serif }}>請點選表情或拖動滑桿（必選）</p>
+                    )}
                     <div style={{ display:'flex', justifyContent:'space-between', marginBottom:12 }}>
                       {[1,2,3,4,5].map(n => (
-                        <span key={n} onClick={() => setField('mood', n)}
-                          style={{ fontSize: formData.mood === n ? 32 : 22, transition:'font-size 0.15s, opacity 0.15s',
-                            opacity: formData.mood === n ? 1 : 0.35, cursor:'pointer', userSelect:'none' }}>
+                        <span key={n} role="button" tabIndex={0} onClick={() => setField('mood', n)}
+                          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setField('mood', n); }}
+                          style={{ fontSize: moodSelected && formData.mood === n ? 32 : 22, transition:'font-size 0.15s, opacity 0.15s',
+                            opacity: moodSelected && formData.mood === n ? 1 : 0.35, cursor:'pointer', userSelect:'none' }}>
                           {MOOD_SCORE_EMOJIS[n]}
                         </span>
                       ))}
                     </div>
-                    <input type="range" min="1" max="5" step="1" value={formData.mood}
-                      onChange={e => setField('mood', parseInt(e.target.value))}
-                      style={{ width:'100%', accentColor:'var(--jade)', cursor:'pointer', height:6 }} />
+                    <input type="range" min="1" max="5" step="1" value={moodSelected ? formData.mood : 3}
+                      onChange={e => setField('mood', parseInt(e.target.value, 10))}
+                      style={{ width:'100%', accentColor: moodSelected ? 'var(--jade)' : 'var(--stroke)', cursor:'pointer', height:6, opacity: moodSelected ? 1 : 0.55 }} />
                     <div style={{ display:'flex', justifyContent:'space-between', marginTop:8 }}>
                       {[1,2,3,4,5].map(n => (
                         <span key={n} style={{ flex:1, textAlign:'center', fontSize:11,
-                          color: formData.mood === n ? 'var(--forest)' : '#B0A7A1',
-                          fontWeight: formData.mood === n ? 700 : 400, transition:'color 0.15s', fontFamily:"'Noto Serif TC',serif" }}>
+                          color: moodSelected && formData.mood === n ? 'var(--forest)' : '#B0A7A1',
+                          fontWeight: moodSelected && formData.mood === n ? 700 : 400, transition:'color 0.15s', fontFamily:serif }}>
                           {MOOD_SCORE_LABELS[n]}
                         </span>
                       ))}
@@ -1649,17 +2095,49 @@
                 </RecordSection>
               </div>
               <RecordSection title="吃完身體的感受？">
+                {!formData.bodyFeeling && (
+                  <p style={{ fontSize:12, color:'var(--mist)', margin:'0 0 8px', fontFamily:serif }}>請點選一項（必選）</p>
+                )}
                 <IconGrid options={BODY_FEELING_OPTIONS} value={formData.bodyFeeling} onChange={v => setField('bodyFeeling', v)} />
               </RecordSection>
+              {foodConfirmed && prefetchStatus === 'loading' && (
+                <p className="mt-2 text-xs text-jade font-semibold" style={{ fontFamily:serif }}>靈籤預熱中…</p>
+              )}
+              {foodConfirmed && prefetchStatus === 'ready' && (
+                <p className="mt-2 text-xs text-forest font-semibold" style={{ fontFamily:serif }}>靈籤已備妥，送出可更快顯示</p>
+              )}
+              {foodConfirmed && prefetchStatus === 'error' && (
+                <p className="mt-2 text-xs text-clay font-semibold" style={{ fontFamily:serif }}>AI 暫不可用，送出將使用離線示範籤（請檢查 Vercel 的 OPENAI_API_KEY）</p>
+              )}
+              </>
+              )}
             </div>
-            <div className="p-6 md:p-12 bg-parchment/90 backdrop-blur-xl absolute bottom-0 left-0 right-0 border-t-2 border-stroke z-20 flex justify-center">
-              <div className="max-w-md w-full">
-                <button onClick={onSubmit} disabled={isLoading || !formData.foodEmoji.trim()}
-                  className="inject-btn w-full text-white py-5 md:py-7 rounded-[5px] font-black text-xl md:text-2xl shadow-2xl flex items-center justify-center gap-4 relative overflow-hidden disabled:opacity-50"
+            <div className="p-4 md:p-6 bg-parchment/90 backdrop-blur-xl absolute bottom-0 left-0 right-0 border-t border-stroke z-20 flex justify-center">
+              <div className="max-w-md w-full space-y-2">
+                {isEarlyFoodStep ? (
+                  <>
+                    <button type="button" onClick={() => { if (!formData.whatFood?.trim()) return; onSaveDraft?.({ formData, photoPreview }); }}
+                      disabled={!formData.whatFood?.trim() || recognizePhase === 'confirm' || isRecognizing}
+                      className="w-full py-2.5 rounded-[5px] border border-stroke text-ink font-semibold text-sm hover:bg-parchment/50 disabled:opacity-50"
+                      style={{ fontFamily:serif }}>稍後再填食緒</button>
+                    <button type="button" onClick={() => {
+                      if (!formData.whatFood?.trim()) return;
+                      setFoodConfirmed(true);
+                      setPhase('feelings');
+                    }} disabled={!formData.whatFood?.trim() || recognizePhase === 'confirm' || isRecognizing}
+                      className="inject-btn w-full text-white py-3 rounded-[5px] font-bold text-sm shadow-md disabled:opacity-50"
+                      style={{ background:'linear-gradient(135deg,#1a1208 0%,#2d2010 50%,#1a1208 100%)', border:'1px solid rgba(212,168,67,0.35)', fontFamily:serif }}>
+                      現在繼續填感受
+                    </button>
+                  </>
+                ) : (
+                <button onClick={onSubmit} disabled={isLoading || !formData.whatFood?.trim() || !feelingsComplete || recognizePhase === 'confirm'}
+                  className="inject-btn w-full text-white py-3.5 rounded-[5px] font-bold text-base shadow-md flex items-center justify-center gap-2 relative overflow-hidden disabled:opacity-50"
                   style={{ background:'linear-gradient(135deg,#1a1208 0%,#2d2010 50%,#1a1208 100%)', border:'1px solid rgba(212,168,67,0.35)' }}>
                   <div className="absolute inset-0 paper-texture" style={{opacity:0.15}} />
-                  {isLoading ? <span className="spin-loading text-3xl">☯</span> : <span className="tracking-[0.4em]" style={{fontFamily:"'Noto Serif TC',serif"}}>注入孵化池</span>}
+                  {isLoading ? <span className="spin-loading text-xl">☯</span> : <span className="tracking-[0.25em] text-sm" style={{fontFamily:"'Noto Serif TC',serif"}}>注入孵化池</span>}
                 </button>
+                )}
               </div>
             </div>
           </div>
@@ -1667,9 +2145,27 @@
       );
     }
 
+    const GeminiSourceNotice = ({ fortune, variant = 'dark' }) => {
+      const src = fortune?._aiSource ?? fortune?._geminiSource;
+      if (!fortune || src !== 'mock') return null;
+      const serif = "'Noto Serif TC',serif";
+      const isLight = variant === 'light';
+      return (
+        <p style={{
+          fontSize:12, textAlign:'center', margin:'0 0 12px', padding:'8px 12px', borderRadius:8, fontFamily:serif, lineHeight:1.5,
+          color: isLight ? '#9e2a2b' : 'rgba(255,200,120,0.95)',
+          background: isLight ? 'rgba(212,168,67,0.12)' : 'rgba(0,0,0,0.25)',
+          border: isLight ? '1px solid rgba(158,42,43,0.2)' : 'none',
+        }}>
+          ⚠ {fortune._aiError || fortune._geminiError || '目前為離線示範籤文'}
+        </p>
+      );
+    };
+
     function FortuneSlip({ fortune, onClose }) {
       const poemLines = (fortune.poem || '').split('\n').filter(Boolean);
-      const hasMerit = fortune.merit_point?.startsWith('+2');
+      const meritN = fortune.meritEarned ?? (fortune.merit_point?.match(/\+(\d+)/) ? parseInt(fortune.merit_point.match(/\+(\d+)/)[1], 10) : 0);
+      const hasMerit = meritN >= 1;
       const serif = "'Noto Serif TC',serif";
       return (
         <div className="fortune-card">
@@ -1686,7 +2182,7 @@
               fontFamily:serif,
               boxShadow:'0 0 14px rgba(255,215,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
             }}>
-              {fortune.merit_point}
+              {fortune.merit_point || meritPointLabel(meritN)}
             </div>
           )}
 
@@ -1715,6 +2211,7 @@
 
               {/* Top rule */}
               <div style={{ width:'55%', height:1, background:'rgba(255,255,255,0.18)', marginBottom:20 }} />
+              <GeminiSourceNotice fortune={fortune} />
 
               {/* ── 御膳賜名 + 原名 + MBEI（橫排小字）── */}
               {fortune.mythical_food_name && (
@@ -1795,6 +2292,7 @@
                 </div>
               </div>
               <div className="flex-1 p-10 pt-4 space-y-8 relative z-10 overflow-y-auto scrollbar-hide">
+                <GeminiSourceNotice fortune={fortune} variant="light" />
                 <div className="space-y-6">
                   <div className="flex items-center gap-4 justify-center text-xs font-black text-muted/60 uppercase tracking-widest">
                     <span className="text-forest">餐後心情：{record.mood}</span><ChevronRightIcon size={12} /><span className="text-clay">{record.bodyFeeling}</span>
@@ -1834,17 +2332,149 @@
       const [activeTab, setActiveTab] = useState('home');
       const [showProfilePopup, setShowProfilePopup] = useState(false);
       const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+      const [showRecordPicker, setShowRecordPicker] = useState(false);
       const [isRecordOpen, setIsRecordOpen] = useState(false);
+      const [recordMode, setRecordMode] = useState(null);
+      const [editingDraftId, setEditingDraftId] = useState(null);
+      const [initialPhotoPreview, setInitialPhotoPreview] = useState(null);
+      const [mealDrafts, setMealDrafts] = useState(() => loadMealDrafts());
       const [isLoading, setIsLoading] = useState(false);
+      const [prefetchStatus, setPrefetchStatus] = useState('idle');
       const [showResult, setShowResult] = useState(false);
       const [latestRecord, setLatestRecord] = useState(null);
-      const [records, setRecords] = useState([]);
-      const [formData, setFormData] = useState(() => {
-        const now = new Date();
-        const hh = String(now.getHours()).padStart(2,'0');
-        const mm = String(now.getMinutes()).padStart(2,'0');
-        return { mealType:'午餐', mood:3, bodyFeeling:'暖心飽足', foodEmoji:'', mealTime:`${hh}:${mm}`, context:'' };
+      const [records, setRecords] = useState(() => {
+        const activeEmail = localStorage.getItem(ACTIVE_USER_KEY);
+        return activeEmail ? loadUserRecords(activeEmail) : [];
       });
+      const fortunePrefetchRef = React.useRef({ key: null, promise: null, result: null });
+      const prefetchInFlightKeyRef = React.useRef(null);
+      const [formData, setFormData] = useState(makeDefaultFormData);
+
+      React.useEffect(() => {
+        if (!splashDone || !loginProfile?.email) return;
+        saveUserRecords(loginProfile.email, records);
+      }, [records, loginProfile?.email, splashDone]);
+
+      const clearFortunePrefetch = () => {
+        fortunePrefetchRef.current = { key: null, promise: null, result: null };
+        prefetchInFlightKeyRef.current = null;
+        setPrefetchStatus('idle');
+      };
+
+      const scheduleFortunePrefetch = (data) => {
+        if (!data.whatFood?.trim() || !isFeelingsComplete(data)) return;
+        const moodText = MOOD_SCORE_LABELS[data.mood];
+        const payload = { ...data, whatFood: data.whatFood.trim(), mood: moodText };
+        const key = buildFortuneKey(payload);
+        const pf = fortunePrefetchRef.current;
+        if (pf.key === key && (pf.result || pf.promise)) return;
+        if (prefetchInFlightKeyRef.current === key) return;
+        prefetchInFlightKeyRef.current = key;
+        setPrefetchStatus('loading');
+        const entry = { key, promise: generateAIFortune(payload), result: null };
+        fortunePrefetchRef.current = entry;
+        entry.promise.then(r => {
+          if (prefetchInFlightKeyRef.current === key) prefetchInFlightKeyRef.current = null;
+          if (fortunePrefetchRef.current.key === key) {
+            fortunePrefetchRef.current.result = r;
+            setPrefetchStatus('ready');
+          }
+        }).catch(() => {
+          if (prefetchInFlightKeyRef.current === key) prefetchInFlightKeyRef.current = null;
+          if (fortunePrefetchRef.current.key === key) setPrefetchStatus('error');
+        });
+      };
+
+      const resolveFortune = async (data) => {
+        if (!isFeelingsComplete(data)) return getMockFortune(data);
+        const moodText = MOOD_SCORE_LABELS[data.mood];
+        const payload = { ...data, whatFood: data.whatFood.trim(), mood: moodText };
+        const key = buildFortuneKey(payload);
+        const pf = fortunePrefetchRef.current;
+        if (pf.key === key) {
+          if (pf.result) return pf.result;
+          if (pf.promise) {
+            try {
+              const r = await pf.promise;
+              if (fortunePrefetchRef.current.key === key) return r;
+            } catch { /* fall through */ }
+          }
+        }
+        return generateAIFortune(payload);
+      };
+
+      const openRecordModal = () => {
+        setMealDrafts(loadMealDrafts());
+        setShowRecordPicker(true);
+        setEditingDraftId(null);
+        setRecordMode(null);
+        setInitialPhotoPreview(null);
+      };
+
+      const closeRecordModal = () => {
+        clearFortunePrefetch();
+        setIsRecordOpen(false);
+        setShowRecordPicker(false);
+        setEditingDraftId(null);
+        setRecordMode(null);
+        setInitialPhotoPreview(null);
+      };
+
+      const pickRecordTrack = (track) => {
+        clearFortunePrefetch();
+        setRecordMode(track);
+        setFormData(makeDefaultFormData());
+        setInitialPhotoPreview(null);
+        setEditingDraftId(null);
+        setShowRecordPicker(false);
+        setIsRecordOpen(true);
+      };
+
+      const continueDraft = (id) => {
+        const d = loadMealDrafts().find(x => x.id === id);
+        if (!d) return;
+        clearFortunePrefetch();
+        setEditingDraftId(id);
+        setRecordMode('continue');
+        setFormData({
+          mealType: d.mealType || '午餐',
+          mood: typeof d.mood === 'number' ? d.mood : null,
+          bodyFeeling: d.bodyFeeling || null,
+          whatFood: d.whatFood || '',
+          mealTime: d.mealTime || makeDefaultFormData().mealTime,
+          context: d.context || '',
+        });
+        setInitialPhotoPreview(d.photoPreviewUrl || null);
+        setShowRecordPicker(false);
+        setIsRecordOpen(true);
+      };
+
+      const deleteDraft = (id) => {
+        const list = loadMealDrafts().filter(d => d.id !== id);
+        saveMealDrafts(list);
+        setMealDrafts(list);
+      };
+
+      const handleSaveDraft = ({ formData: fd, photoPreview }) => {
+        if (!fd.whatFood?.trim()) return;
+        const id = editingDraftId || String(Date.now());
+        const draft = {
+          id,
+          whatFood: fd.whatFood.trim(),
+          mealType: fd.mealType,
+          mealTime: fd.mealTime,
+          mood: fd.mood,
+          bodyFeeling: fd.bodyFeeling,
+          context: fd.context || '',
+          photoPreviewUrl: photoPreview || null,
+          createdAt: new Date().toISOString(),
+          track: 'early',
+        };
+        const list = [draft, ...loadMealDrafts().filter(d => d.id !== id)];
+        saveMealDrafts(list);
+        setMealDrafts(list);
+        closeRecordModal();
+      };
 
       const handleLogin = (profile) => {
         const normalized = normalizeEmail(profile.email);
@@ -1853,35 +2483,25 @@
         saveProfiles(profiles);
         localStorage.setItem(ACTIVE_USER_KEY, normalized);
         setLoginProfile(profile);
+        setRecords(loadUserRecords(normalized));
         setSplashDone(true);
       };
 
-      const handleLogout = () => { localStorage.removeItem(ACTIVE_USER_KEY); setLoginProfile(null); setSplashDone(false); };
-
-      const determineMBEI = (data) => {
-        let mbei = '';
-        // M/B：有情境文字或心情很爽 → M（情緒），否則 → B
-        mbei += (data.context && data.context.trim()) || data.mood >= 4 ? 'M' : 'B';
-        const bfOpt = BODY_FEELING_OPTIONS.find(o => o.label === data.bodyFeeling) || { n:false, hLevel:1 };
-        mbei += bfOpt.n ? 'N' : 'P';
-        mbei += bfOpt.hLevel >= 2 ? 'H' : 'L';
-        // R/V：時間自動判斷
-        const hour = parseInt((data.mealTime || '12:00').split(':')[0]);
-        const isV = data.mealType === '宵夜' ||
-          (data.mealType === '早餐' && (hour < 6 || hour >= 10)) ||
-          (data.mealType === '午餐' && (hour < 11 || hour >= 14)) ||
-          (data.mealType === '晚餐' && (hour < 17 || hour >= 21)) ||
-          (data.mealType === '點心' && (hour < 14 || hour >= 17));
-        mbei += isV ? 'V' : 'R';
-        return mbei;
+      const handleLogout = () => {
+        localStorage.removeItem(ACTIVE_USER_KEY);
+        setLoginProfile(null);
+        setRecords([]);
+        setSplashDone(false);
       };
 
       const handleRecord = async () => {
-        if (!formData.foodEmoji.trim()) return;
+        if (!formData.whatFood?.trim() || !isFeelingsComplete(formData)) return;
         setIsLoading(true);
-        const moodText = MOOD_SCORE_LABELS[formData.mood] || '普通';
-        const aiFortune = await generateAIFortune({ ...formData, foodEmoji: formData.foodEmoji.trim(), mood: moodText });
-        const mbeiCode = aiFortune?.calculated_mbei || determineMBEI(formData);
+        const moodText = MOOD_SCORE_LABELS[formData.mood];
+        const aiFortune = await resolveFortune(formData);
+        const mbeiScores = aiFortune?.mbei_scores || scoresFromMbeiCode(aiFortune?.calculated_mbei || determineMBEI(formData));
+        const mbeiCode = aiFortune?.calculated_mbei || mbeiCodeFromScores(mbeiScores) || determineMBEI(formData);
+        const meritEarned = aiFortune?.meritEarned ?? calcMeritFromContext(formData.context);
         const now = new Date();
         const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
         setTimeout(() => {
@@ -1889,22 +2509,40 @@
             id: Date.now().toString(),
             date: dateStr,
             time: formData.mealTime || new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
-            foodEmoji: formData.foodEmoji.trim(),
+            whatFood: formData.whatFood.trim(),
             mealType: formData.mealType,
             mealTime: formData.mealTime,
             mood: moodText,
             bodyFeeling: formData.bodyFeeling,
             context: formData.context || '',
+            meritEarned,
             mbeiCode,
+            mbeiScores,
             fortune: aiFortune || undefined,
           };
-          setRecords(prev => [newRecord, ...prev]);
+          const nextRecords = [newRecord, ...records];
+          setRecords(nextRecords);
           setLatestRecord(newRecord);
+          syncRecordToNotion(
+            newRecord,
+            loginProfile?.email || loginProfile?.name || '',
+            calcMeritTotal(nextRecords),
+          );
           setIsLoading(false);
+          if (editingDraftId) {
+            const list = loadMealDrafts().filter(d => d.id !== editingDraftId);
+            saveMealDrafts(list);
+            setMealDrafts(list);
+            setEditingDraftId(null);
+          }
+          clearFortunePrefetch();
           setIsRecordOpen(false);
+          setShowRecordPicker(false);
           setShowResult(true);
-        }, 800);
+        }, fortunePrefetchRef.current.result ? 200 : 800);
       };
+
+      const recordInitialPhase = recordMode === 'continue' ? 'feelings' : recordMode === 'early' ? 'food' : 'all';
 
       if (!splashDone) return <LoginGate onLogin={handleLogin} existingProfile={loginProfile} />;
 
@@ -1942,7 +2580,7 @@
                 })}
               </div>
               {/* 記錄按鈕 */}
-              <button onClick={() => setIsRecordOpen(true)}
+              <button onClick={openRecordModal}
                 style={{ width:'100%', background:'var(--crimson)', border:'2px solid rgba(255,180,160,0.2)', borderRadius:12,
                   padding:'14px 0', color:'var(--blush)', fontSize:14, fontWeight:800, fontFamily:"'Noto Serif TC', serif",
                   letterSpacing:'0.15em', cursor:'pointer',
@@ -1970,7 +2608,7 @@
             <main style={{ flex:1, position:'relative', zIndex:10, paddingBottom:120 }}
               className="scrollbar-hide md:pb-24">
               <div style={{ maxWidth:960, margin:'0 auto', padding:'32px 20px' }} className="md:p-12">
-                {activeTab === 'home' && <HomeView records={records} loginProfile={loginProfile} />}
+                {activeTab === 'home' && <HomeView records={records} loginProfile={loginProfile} mealDrafts={mealDrafts} onContinueDraft={continueDraft} />}
                 {activeTab === 'almanac' && <AlmanacView records={records} />}
                 {activeTab === 'insight' && <InsightView records={records} />}
                 {activeTab === 'profile' && <ProfileView records={records} loginProfile={loginProfile} onLogout={handleLogout} />}
@@ -1986,7 +2624,7 @@
               className="md:hidden">
               {['今日|home','曆卡|almanac', null, '食神|insight','功德|profile'].map((item, i) => {
                 if (!item) return (
-                  <button key="record" onClick={() => setIsRecordOpen(true)}
+                  <button key="record" onClick={openRecordModal}
                     style={{ width:52, height:40, background:'var(--crimson)', borderRadius:8,
                       border:'2px solid rgba(255,180,160,0.25)', display:'flex', alignItems:'center', justifyContent:'center',
                       color:'var(--blush)', fontSize:22, cursor:'pointer', flexShrink:0,
@@ -2003,7 +2641,31 @@
               })}
             </nav>
 
-            {isRecordOpen && <RecordModal onClose={() => setIsRecordOpen(false)} onSubmit={handleRecord} formData={formData} setFormData={setFormData} isLoading={isLoading} />}
+            {showRecordPicker && !isRecordOpen && (
+              <RecordTrackPicker
+                drafts={mealDrafts}
+                onClose={() => setShowRecordPicker(false)}
+                onPickTrack={pickRecordTrack}
+                onContinueDraft={continueDraft}
+                onDeleteDraft={deleteDraft}
+              />
+            )}
+            {isRecordOpen && recordMode && (
+              <RecordModal
+                onClose={closeRecordModal}
+                onSubmit={handleRecord}
+                formData={formData}
+                setFormData={setFormData}
+                isLoading={isLoading}
+                onSchedulePrefetch={scheduleFortunePrefetch}
+                onClearPrefetch={clearFortunePrefetch}
+                prefetchStatus={prefetchStatus}
+                recordMode={recordMode}
+                initialPhase={recordInitialPhase}
+                initialPhotoPreview={initialPhotoPreview}
+                onSaveDraft={handleSaveDraft}
+              />
+            )}
             {showResult && latestRecord && <ResultModal record={latestRecord} onClose={() => setShowResult(false)} totalRecords={records.length} />}
 
             {/* 個人資料彈跳popup（手機） */}
