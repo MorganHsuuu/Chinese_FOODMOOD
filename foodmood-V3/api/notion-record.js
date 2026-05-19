@@ -28,7 +28,7 @@ const MOOD_TEXT_TO_NUM = {
   很糟: 1, 不太好: 2, 普通: 3, 還不錯: 4, 很爽: 5,
 };
 
-let cachedTitleProp = null;
+let cachedDbSchema = null; // { titleProp, types: { '餐別': 'select', ... } }
 
 function rich(text) {
   const s = String(text ?? '').slice(0, 2000);
@@ -77,9 +77,8 @@ function buildFortuneText(fortune) {
   return parts.join('\n').slice(0, 2000);
 }
 
-async function resolveTitleProperty(apiKey, databaseId) {
-  if (COL.title) return COL.title;
-  if (cachedTitleProp) return cachedTitleProp;
+async function loadDatabaseSchema(apiKey, databaseId) {
+  if (cachedDbSchema) return cachedDbSchema;
 
   const res = await fetch(`https://api.notion.com/v1/databases/${databaseId.trim()}`, {
     headers: {
@@ -92,42 +91,72 @@ async function resolveTitleProperty(apiKey, databaseId) {
     throw new Error(data.message || '無法讀取 Notion 資料庫結構');
   }
 
-  const entry = Object.entries(data.properties || {}).find(([, p]) => p.type === 'title');
-  if (!entry) throw new Error('此資料庫沒有 Title 類型欄位，請在 Notion 新增一欄「標題」');
-  cachedTitleProp = entry[0];
-  return cachedTitleProp;
+  const types = {};
+  let titleProp = COL.title;
+  for (const [name, p] of Object.entries(data.properties || {})) {
+    types[name] = p.type;
+    if (p.type === 'title') titleProp = titleProp || name;
+  }
+  if (!titleProp) throw new Error('此資料庫沒有 Title 類型欄位，請在 Notion 新增一欄標題');
+
+  cachedDbSchema = { titleProp, types };
+  return cachedDbSchema;
 }
 
-function buildProperties(record, user, meritTotal, titlePropName) {
+/** 依 Notion 欄位實際類型寫入（避免 select / rich_text 搞錯） */
+function propForColumn(colName, value, types, { preferNumber = false } = {}) {
+  if (value == null || value === '') return null;
+  const t = types[colName];
+  if (!t) return propRichText(String(value));
+
+  if (t === 'title') return propTitle(String(value));
+  if (t === 'date') return propDate(String(value));
+  if (t === 'number') {
+    const n = preferNumber ? (typeof value === 'number' ? value : moodToNumber(value) ?? Number(value)) : Number(value);
+    return Number.isNaN(n) ? null : propNumber(n);
+  }
+  if (t === 'select') return propSelect(String(value));
+  if (t === 'multi_select') {
+    const s = String(value).trim();
+    return s ? { multi_select: [{ name: s.slice(0, 100) }] } : null;
+  }
+  if (t === 'rich_text' || t === 'url' || t === 'email') return propRichText(String(value));
+  return propRichText(String(value));
+}
+
+function buildProperties(record, user, meritTotal, schema) {
   const fortune = record.fortune || {};
   const scores = record.mbeiScores || fortune.mbei_scores || {};
   const merit = record.meritEarned ?? (fortune.merit_point?.match(/\+(\d+)/)
     ? parseInt(fortune.merit_point.match(/\+(\d+)/)[1], 10)
     : null);
+  const { titleProp, types } = schema;
 
   const title = (record.whatFood || record.foodEmoji || '未命名餐點').trim();
   const props = {
-    [titlePropName]: propTitle(title),
+    [titleProp]: propTitle(title),
   };
 
-  const setRich = (key, val) => { const p = propRichText(val); if (p) props[key] = p; };
-  const setNum = (key, val) => { const p = propNumber(val); if (p) props[key] = p; };
-  const setSelect = (key, val) => { const p = propSelect(val); if (p) props[key] = p; };
+  const set = (colKey, val, opts) => {
+    const colName = COL[colKey];
+    const p = propForColumn(colName, val, types, opts);
+    if (p) props[colName] = p;
+  };
 
-  if (record.date) props[COL.date] = propDate(record.date);
-  setRich(COL.time, record.mealTime || record.time);
-  setSelect(COL.mealType, record.mealType);
-  setNum(COL.mood, moodToNumber(record.mood));
-  setSelect(COL.bodyFeeling, record.bodyFeeling);
-  setNum(COL.merit, merit);
-  if (meritTotal != null) setNum(COL.meritTotal, meritTotal);
-  setNum(COL.mb, scores.MB);
-  setNum(COL.np, scores.NP);
-  setNum(COL.hl, scores.HL);
-  setNum(COL.rv, scores.RV);
-  setRich(COL.context, record.context);
-  setRich(COL.user, user);
-  setRich(COL.fortune, buildFortuneText(fortune));
+  set('date', record.date);
+  set('time', record.mealTime || record.time);
+  set('mealType', record.mealType);
+  set('mood', record.mood, { preferNumber: true });
+  set('bodyFeeling', record.bodyFeeling);
+  set('merit', merit);
+  set('meritTotal', meritTotal);
+  set('mb', scores.MB);
+  set('np', scores.NP);
+  set('hl', scores.HL);
+  set('rv', scores.RV);
+  set('context', record.context);
+  set('user', user);
+  set('fortune', buildFortuneText(fortune));
 
   return props;
 }
@@ -152,8 +181,8 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const titlePropName = await resolveTitleProperty(apiKey, databaseId);
-    const properties = buildProperties(record, user || '', meritTotal, titlePropName);
+    const schema = await loadDatabaseSchema(apiKey, databaseId);
+    const properties = buildProperties(record, user || '', meritTotal, schema);
 
     const notionRes = await fetch('https://api.notion.com/v1/pages', {
       method: 'POST',
@@ -178,7 +207,7 @@ module.exports = async (req, res) => {
       });
     }
 
-    return res.status(200).json({ ok: true, pageId: data.id, titleProperty: titlePropName });
+    return res.status(200).json({ ok: true, pageId: data.id, titleProperty: schema.titleProp });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: err.message || '伺服器錯誤' });
