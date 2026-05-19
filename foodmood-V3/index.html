@@ -295,14 +295,6 @@
       { id:'f8', title:'繁瑣過境，簡約之道', verse:['雜亂無度損耗元神','速成之物缺法自然','向內觀照簡化日常','自有一番天地氣量'], advice:['宜 簡化料理流程','宜 慢速細嚼三十下','忌 狼吞虎嚥'], fortuneType:'normal' },
     ];
 
-    const LEADERBOARD_DATA = [
-      { rank:1, name:'子安', points:4520, code:'MNHR' },
-      { rank:2, name:'JOSH', points:3880, code:'MNLV' },
-      { rank:3, name:'琳琳', points:3150, code:'MPHR' },
-      { rank:4, name:'BILLY', points:2890, code:'MNLR' },
-      { rank:5, name:'小薇', points:2460, code:'MNHV' },
-    ];
-
     // ── Utils ──
     const cn = (...classes) => classes.filter(Boolean).join(' ');
     const ACTIVE_USER_KEY = 'foodmood_active_user';
@@ -310,6 +302,11 @@
     const normalizeEmail = (email) => email.trim().toLowerCase();
     const loadProfiles = () => { try { const r = localStorage.getItem(PROFILES_KEY); return r ? JSON.parse(r) : {}; } catch { return {}; } };
     const saveProfiles = (p) => localStorage.setItem(PROFILES_KEY, JSON.stringify(p));
+    const findProfileByEmail = (email) => {
+      const key = normalizeEmail(email);
+      if (!key) return null;
+      return loadProfiles()[key] || null;
+    };
     const DRAFTS_KEY = 'foodmood_meal_drafts';
     const recordsStorageKey = (email) => `foodmood_records_${normalizeEmail(email)}`;
     const loadUserRecords = (email) => {
@@ -362,6 +359,25 @@
         console.warn('[Notion]', e.message);
         return { ok: false, error: e.message };
       }
+    };
+
+    const fetchNotionLeaderboard = async (email) => {
+      try {
+        const q = email ? `?email=${encodeURIComponent(email)}` : '';
+        const res = await fetch(`/api/notion-leaderboard${q}`);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) return { ok: false, error: data.error || `排行榜載入失敗 (${res.status})` };
+        return { ok: true, personal: data.personal || [], mbei: data.mbei || [], fetchedAt: data.fetchedAt };
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    };
+
+    const formatLeaderboardTime = (iso) => {
+      if (!iso) return '';
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return '';
+      return d.toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     };
 
     // ── Image compress & OpenAI vision ──
@@ -659,15 +675,47 @@
     }
 
     function LoginGate({ onLogin, existingProfile = null }) {
-      const [step, setStep] = useState('splash'); // 'splash' | 'leaving' | 'form'
+      const [step, setStep] = useState('splash'); // splash | leaving | choice | signin | register
+      const [authMode, setAuthMode] = useState(null); // 'signin' | 'register'
       const [form, setForm] = useState({ email:'', nickname:'', gender:'', age:'' });
+      const [formError, setFormError] = useState('');
       const isDesktop = window.innerWidth >= 768;
       const splashImg = isDesktop ? 'openspec/asset/png/login_desktop.jpg' : 'openspec/asset/png/onboarding_v2.jpg';
-      const submit = (e) => { e.preventDefault(); if (!form.email||!form.nickname||!form.gender||!form.age) return; onLogin(form); };
 
-      const goToForm = () => {
-        setStep('leaving');
-        setTimeout(() => setStep('form'), 600);
+      const goToStep = (next, mode = null) => {
+        setFormError('');
+        if (mode) setAuthMode(mode);
+        if (step === 'splash' || step === 'leaving') {
+          setStep('leaving');
+          setTimeout(() => setStep(next), 600);
+        } else {
+          setStep(next);
+        }
+      };
+
+      const submitSignIn = (e) => {
+        e.preventDefault();
+        setFormError('');
+        const email = normalizeEmail(form.email);
+        if (!email) { setFormError('請輸入 Email'); return; }
+        const profile = findProfileByEmail(email);
+        if (!profile) {
+          setFormError('找不到此 Email 的檔案，請確認或改為「建立新帳號」');
+          return;
+        }
+        onLogin({ ...profile, email });
+      };
+
+      const submitRegister = (e) => {
+        e.preventDefault();
+        setFormError('');
+        if (!form.email || !form.nickname || !form.gender || !form.age) return;
+        const email = normalizeEmail(form.email);
+        if (findProfileByEmail(email)) {
+          setFormError('此 Email 已註冊，請改用「已有帳號登入」');
+          return;
+        }
+        onLogin({ ...form, email });
       };
 
       const inputStyle = {
@@ -676,6 +724,17 @@
         outline:'none', fontFamily:"'Noto Serif TC', serif"
       };
       const labelStyle = { fontSize:13, fontWeight:700, letterSpacing:'0.15em', color:'var(--mist)', textTransform:'uppercase', display:'block', marginBottom:6 };
+      const panelBtnPrimary = {
+        width:'100%', background:'var(--crimson)', border:'2px solid rgba(255,180,160,0.2)',
+        borderRadius:12, padding:'14px 0', color:'var(--blush)', fontSize:13, fontWeight:800,
+        letterSpacing:'0.2em', fontFamily:"'Noto Serif TC', serif", cursor:'pointer',
+        boxShadow:'0 0 0 6px rgba(133,41,27,0.12), 0 8px 32px rgba(133,41,27,0.5)',
+      };
+      const panelBtnSecondary = {
+        width:'100%', background:'transparent', border:'1px solid rgba(149,211,195,0.35)',
+        borderRadius:12, padding:'13px 0', color:'var(--jade)', fontSize:13, fontWeight:700,
+        letterSpacing:'0.12em', fontFamily:"'Noto Serif TC', serif", cursor:'pointer',
+      };
 
       if (step === 'splash' || step === 'leaving') return (
         <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, zIndex:200, background:'var(--night)',
@@ -702,7 +761,8 @@
             </p>
 
             {existingProfile ? (
-              <button onClick={() => { setStep('leaving'); setTimeout(() => onLogin(existingProfile), 600); }}
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center' }}>
+              <button type="button" onClick={() => { setStep('leaving'); setTimeout(() => onLogin(existingProfile), 600); }}
                 style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:12, background:'none', border:'none', cursor:'pointer' }}>
                 <div style={{ width:96, height:96, background:'var(--forest)', borderRadius:'50%', border:'4px solid rgba(149,211,195,0.25)',
                   boxShadow:'0 0 0 8px rgba(74,107,93,0.15), 0 12px 40px rgba(74,107,93,0.6)',
@@ -716,8 +776,13 @@
                   Continue Journey
                 </span>
               </button>
+              <button type="button" onClick={() => goToStep('choice')}
+                style={{ marginTop:14, background:'none', border:'none', color:'var(--sand)', fontSize:12, fontFamily:"'Noto Serif TC', serif", letterSpacing:'0.08em', cursor:'pointer', textDecoration:'underline' }}>
+                使用其他帳號
+              </button>
+            </div>
             ) : (
-              <button onClick={goToForm} className="wax-seal-active"
+              <button type="button" onClick={() => goToStep('choice')} className="wax-seal-active"
                 style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:12, background:'none', border:'none', cursor:'pointer' }}>
                 <div style={{ width:96, height:96, background:'var(--crimson)', borderRadius:'50%', border:'4px solid rgba(255,180,160,0.25)',
                   boxShadow:'0 0 0 8px rgba(133,41,27,0.15), 0 12px 40px rgba(133,41,27,0.6)',
@@ -736,66 +801,113 @@
         </div>
       );
 
+      const isSignIn = step === 'signin';
+      const isRegister = step === 'register';
+      const isChoice = step === 'choice';
+      const panelTitle = isChoice ? '選擇你的方式' : isSignIn ? '已有帳號登入' : '建立新帳號';
+      const panelSubtitle = isChoice
+        ? '登入以載入既有紀錄，或建立全新食緒檔案'
+        : isSignIn
+          ? '輸入註冊時的 Email，將載入你的紀錄與設定'
+          : '填寫基本資料，開始記錄每一餐';
+
       return (
         <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'var(--night)', animation:'onboardFadeIn 0.8s ease-out' }}>
-          {/* 壁畫背景（淡化） */}
           <img src={splashImg} alt=""
             style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center', opacity:0.45 }} />
           <div style={{ position:'absolute', inset:0, background:'rgba(27,18,0,0.72)' }} />
 
-          {/* 登入面板：置中 */}
           <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', padding:'24px' }}>
             <div style={{ width:'100%', maxWidth:440, background:'rgba(21,13,0,0.88)', backdropFilter:'blur(20px)', border:'1px solid rgba(149,211,195,0.15)', borderRadius:5, padding:'40px 36px', position:'relative' }}>
-
-              {/* 角落金線 */}
               <div style={{ position:'absolute', top:20, left:20, width:28, height:28, borderTop:'1px solid rgba(149,211,195,0.65)', borderLeft:'1px solid rgba(149,211,195,0.65)' }} />
               <div style={{ position:'absolute', bottom:20, right:20, width:28, height:28, borderBottom:'1px solid rgba(149,211,195,0.65)', borderRight:'1px solid rgba(149,211,195,0.65)' }} />
 
-              {/* 標題 */}
               <div style={{ marginBottom:28, textAlign:'center' }}>
                 <p style={{ fontSize:13, letterSpacing:'0.25em', color:'var(--mist)', textTransform:'uppercase', fontFamily:"'Noto Serif TC', serif", marginBottom:10 }}>食緒曆 · FoodMood</p>
-                <h1 style={{ fontSize:24, fontFamily:"'Noto Serif TC', serif", fontWeight:900, color:'var(--jade)', letterSpacing:'0.1em', lineHeight:1.4, margin:0 }}>建立你的食緒檔案</h1>
-                <p style={{ marginTop:8, fontSize:13, color:'var(--sand)', fontFamily:"'Noto Serif TC', serif" }}>無需密碼，無需 Google</p>
+                <h1 style={{ fontSize:24, fontFamily:"'Noto Serif TC', serif", fontWeight:900, color:'var(--jade)', letterSpacing:'0.1em', lineHeight:1.4, margin:0 }}>{panelTitle}</h1>
+                <p style={{ marginTop:8, fontSize:13, color:'var(--sand)', fontFamily:"'Noto Serif TC', serif", lineHeight:1.6 }}>{panelSubtitle}</p>
               </div>
 
               <div style={{ height:1, background:'linear-gradient(to right, transparent, rgba(149,211,195,0.2), transparent)', marginBottom:24 }} />
 
-              {/* 表單 */}
-              <form onSubmit={submit} style={{ display:'flex', flexDirection:'column', gap:14 }}>
-                <div>
-                  <label style={labelStyle}>Email</label>
-                  <input style={inputStyle} type="email" placeholder="your@email.com" required
-                    value={form.email} onChange={e => setForm({...form,email:e.target.value})} />
+              {formError && (
+                <p style={{ margin:'0 0 16px', padding:'10px 14px', borderRadius:10, background:'rgba(133,41,27,0.25)', border:'1px solid rgba(255,180,160,0.25)', color:'var(--blush)', fontSize:13, fontFamily:"'Noto Serif TC', serif", lineHeight:1.5 }}>
+                  {formError}
+                </p>
+              )}
+
+              {isChoice && (
+                <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+                  <button type="button" className="wax-seal-active" onClick={() => goToStep('signin', 'signin')} style={panelBtnPrimary}>
+                    已有帳號登入
+                  </button>
+                  <button type="button" onClick={() => goToStep('register', 'register')} style={panelBtnSecondary}>
+                    建立新帳號
+                  </button>
+                  <button type="button" onClick={() => { setFormError(''); setStep('splash'); }}
+                    style={{ marginTop:8, background:'none', border:'none', color:'var(--mist)', fontSize:12, fontFamily:"'Noto Serif TC', serif", cursor:'pointer', textDecoration:'underline' }}>
+                    返回開場
+                  </button>
                 </div>
-                <div>
-                  <label style={labelStyle}>暱稱</label>
-                  <input style={inputStyle} type="text" placeholder="你的稱號" required
-                    value={form.nickname} onChange={e => setForm({...form,nickname:e.target.value})} />
-                </div>
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+              )}
+
+              {isSignIn && (
+                <form onSubmit={submitSignIn} style={{ display:'flex', flexDirection:'column', gap:14 }}>
                   <div>
-                    <label style={labelStyle}>性別</label>
-                    <GenderSelect value={form.gender} onChange={v => setForm({...form,gender:v})} />
+                    <label style={labelStyle}>Email</label>
+                    <input style={inputStyle} type="email" placeholder="註冊時使用的 Email" required autoFocus
+                      value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+                  </div>
+                  <button type="submit" className="wax-seal-active" style={{ ...panelBtnPrimary, marginTop:6 }}>登入食緒曆</button>
+                  <button type="button" onClick={() => { setFormError(''); goToStep('register', 'register'); }}
+                    style={{ background:'none', border:'none', color:'var(--jade)', fontSize:13, fontFamily:"'Noto Serif TC', serif", cursor:'pointer', textDecoration:'underline' }}>
+                    還沒有帳號？建立新帳號
+                  </button>
+                  <button type="button" onClick={() => { setFormError(''); goToStep('choice'); }}
+                    style={{ background:'none', border:'none', color:'var(--mist)', fontSize:12, fontFamily:"'Noto Serif TC', serif", cursor:'pointer' }}>
+                    ← 返回
+                  </button>
+                </form>
+              )}
+
+              {isRegister && (
+                <form onSubmit={submitRegister} style={{ display:'flex', flexDirection:'column', gap:14 }}>
+                  <div>
+                    <label style={labelStyle}>Email</label>
+                    <input style={inputStyle} type="email" placeholder="your@email.com" required autoFocus
+                      value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
                   </div>
                   <div>
-                    <label style={labelStyle}>年齡</label>
-                    <input style={inputStyle} type="number" min={1} max={120} placeholder="歲" required
-                      value={form.age} onChange={e => setForm({...form,age:e.target.value})} />
+                    <label style={labelStyle}>暱稱</label>
+                    <input style={inputStyle} type="text" placeholder="你的稱號" required
+                      value={form.nickname} onChange={e => setForm({ ...form, nickname: e.target.value })} />
                   </div>
-                </div>
-                <button type="submit" className="wax-seal-active"
-                  style={{ marginTop:6, width:'100%', background:'var(--crimson)', border:'2px solid rgba(255,180,160,0.2)',
-                    borderRadius:12, padding:'14px 0', color:'var(--blush)', fontSize:13, fontWeight:800,
-                    letterSpacing:'0.2em', fontFamily:"'Noto Serif TC', serif", cursor:'pointer',
-                    boxShadow:'0 0 0 6px rgba(133,41,27,0.12), 0 8px 32px rgba(133,41,27,0.5)' }}>
-                  進入食緒曆
-                </button>
-              </form>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                    <div>
+                      <label style={labelStyle}>性別</label>
+                      <GenderSelect value={form.gender} onChange={v => setForm({ ...form, gender: v })} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>年齡</label>
+                      <input style={inputStyle} type="number" min={1} max={120} placeholder="歲" required
+                        value={form.age} onChange={e => setForm({ ...form, age: e.target.value })} />
+                    </div>
+                  </div>
+                  <button type="submit" className="wax-seal-active" style={{ ...panelBtnPrimary, marginTop:6 }}>建立並進入</button>
+                  <button type="button" onClick={() => { setFormError(''); goToStep('signin', 'signin'); }}
+                    style={{ background:'none', border:'none', color:'var(--jade)', fontSize:13, fontFamily:"'Noto Serif TC', serif", cursor:'pointer', textDecoration:'underline' }}>
+                    已有帳號？改為登入
+                  </button>
+                  <button type="button" onClick={() => { setFormError(''); goToStep('choice'); }}
+                    style={{ background:'none', border:'none', color:'var(--mist)', fontSize:12, fontFamily:"'Noto Serif TC', serif", cursor:'pointer' }}>
+                    ← 返回
+                  </button>
+                </form>
+              )}
             </div>
           </div>
         </div>
       );
-    }
 
     const SHICHEN_DATA = [
       { branch:'子', keyword:'養膽', time:'23:00 – 01:00', meridian:'膽經', advice:'宜安睡以養陰血' },
@@ -1699,18 +1811,72 @@
       const encIdx = selectedCreature ? encCreatures.findIndex(c => c.code === selectedCreature.code) : 0;
       const goCreature = dir => setSelectedCreature(encCreatures[(encIdx + dir + encCreatures.length) % encCreatures.length]);
       const [rankTab, setRankTab] = useState('personal');
+      const [lbLoading, setLbLoading] = useState(true);
+      const [lbError, setLbError] = useState('');
+      const [lbFetchedAt, setLbFetchedAt] = useState(null);
+      const [notionPersonal, setNotionPersonal] = useState([]);
+      const [notionMbei, setNotionMbei] = useState([]);
+
+      React.useEffect(() => {
+        let cancelled = false;
+        setLbLoading(true);
+        setLbError('');
+        fetchNotionLeaderboard(loginProfile?.email).then((res) => {
+          if (cancelled) return;
+          if (res.ok) {
+            setNotionPersonal(res.personal);
+            setNotionMbei(res.mbei);
+            setLbFetchedAt(res.fetchedAt);
+          } else {
+            setLbError(res.error || '無法載入排行榜');
+            setNotionPersonal([]);
+            setNotionMbei([]);
+          }
+          setLbLoading(false);
+        });
+        return () => { cancelled = true; };
+      }, [loginProfile?.email]);
 
       const personalLeaderboard = useMemo(() => {
-        const seed = LEADERBOARD_DATA.slice(0,5).map((u,i) => ({...u, points: Math.max(5, 28-i*5), scoreLabel:'累積功德'}));
-        const userRow = { rank:0, name:loginProfile.nickname, points:calcMeritTotal(records), code:latestType.code, isUser:true, scoreLabel:'累積功德' };
-        return [...seed, userRow].sort((a,b)=>b.points-a.points).map((u,idx)=>({...u,rank:idx+1}));
-      }, [loginProfile.nickname, records, latestType.code]);
+        const rows = [...notionPersonal];
+        const key = normalizeEmail(loginProfile?.email || '');
+        const localPts = calcMeritTotal(records);
+        const code = latestType.code;
+        const idx = rows.findIndex((r) => normalizeEmail(r.email || '') === key);
+        if (idx >= 0) {
+          rows[idx] = {
+            ...rows[idx],
+            isUser: true,
+            name: rows[idx].name || loginProfile?.nickname || '修行者',
+            points: Math.max(rows[idx].points || 0, localPts),
+            code: rows[idx].code || code,
+            scoreLabel: '累積功德',
+          };
+        } else if (loginProfile?.nickname || localPts > 0) {
+          rows.push({
+            name: loginProfile?.nickname || '修行者',
+            email: key,
+            points: localPts,
+            code,
+            isUser: true,
+            scoreLabel: '累積功德',
+          });
+        }
+        return rows
+          .sort((a, b) => (b.points || 0) - (a.points || 0))
+          .map((u, i) => ({ ...u, rank: i + 1, scoreLabel: u.scoreLabel || '累積功德' }));
+      }, [notionPersonal, loginProfile, records, latestType.code]);
 
       const mbeiLeaderboard = useMemo(() => {
-        return Object.values(MBEI_TYPES).map((type,idx)=>({
-          name:`${type.creature}`, points:Math.max(15,96-idx*3), emoji:type.emoji, code:type.code, scoreLabel:'群體分'
-        })).sort((a,b)=>b.points-a.points).map((u,idx)=>({...u,rank:idx+1}));
-      }, []);
+        return notionMbei
+          .filter((u) => (u.points || 0) > 0)
+          .map((u, i) => ({
+            ...u,
+            rank: i + 1,
+            name: MBEI_TYPES[u.code]?.creature || u.name,
+            scoreLabel: '累積功德',
+          }));
+      }, [notionMbei]);
 
       const board = rankTab === 'personal' ? personalLeaderboard : mbeiLeaderboard;
 
@@ -1721,7 +1887,9 @@
               <section className="space-y-6">
                 <div className="flex items-center justify-between px-2">
                   <div className="flex items-center gap-3"><AwardIcon size={22} className="text-clay" /><h3 className="text-2xl font-serif font-black tracking-tighter text-ink">食修功德排行榜</h3></div>
-                  <span className="text-[10px] font-black text-muted uppercase tracking-widest opacity-60">更新於 5 分鐘前</span>
+                  <span className="text-[10px] font-black text-muted uppercase tracking-widest opacity-60">
+                    {lbLoading ? '載入中…' : lbFetchedAt ? `更新於 ${formatLeaderboardTime(lbFetchedAt)}` : ''}
+                  </span>
                 </div>
                 <div className="px-2">
                   <div className="inline-flex gap-2 w-full md:w-auto">
@@ -1729,21 +1897,32 @@
                     <button onClick={() => setRankTab('mbei')} className={cn("flex-1 px-5 py-2.5 rounded-xl text-xs font-black tracking-widest border-2 transition-all", rankTab==='mbei' ? "border-jade text-jade bg-jade/10" : "border-stroke text-muted bg-transparent")}>16型種類榜單</button>
                   </div>
                 </div>
+                {lbError && (
+                  <p className="px-2 text-sm text-clay font-semibold" style={{ fontFamily: "'Noto Serif TC', serif" }}>{lbError}</p>
+                )}
                 <div className="bg-white rounded-[5px] border-4 border-ink overflow-hidden shadow-2xl relative">
                   <div className="paper-texture" style={{opacity:0.02}} />
-                  {board.map(user => (
-                    <div key={user.rank} onClick={() => { setSelectedCreature(MBEI_TYPES[user.code]); setCreatureNavEnabled(false); }} style={{ cursor:'pointer' }} className={cn("flex items-center justify-between p-6 md:p-8 border-b border-parchment last:border-0 transition-colors", user.isUser ? "bg-clay/10 hover:bg-clay/15" : "hover:bg-parchment/30")}>
+                  {lbLoading && (
+                    <div className="p-12 text-center text-muted font-bold text-sm" style={{ fontFamily: "'Noto Serif TC', serif" }}>正在從 Notion 讀取功德榜…</div>
+                  )}
+                  {!lbLoading && board.length === 0 && (
+                    <div className="p-12 text-center text-muted font-bold text-sm" style={{ fontFamily: "'Noto Serif TC', serif" }}>尚無排行資料，送出紀錄後會出現在榜上</div>
+                  )}
+                  {!lbLoading && board.map(user => (
+                    <div key={`${rankTab}-${user.rank}-${user.name}-${user.code}`} onClick={() => { if (MBEI_TYPES[user.code]) { setSelectedCreature(MBEI_TYPES[user.code]); setCreatureNavEnabled(rankTab === 'mbei'); } }} style={{ cursor: MBEI_TYPES[user.code] ? 'pointer' : 'default' }} className={cn("flex items-center justify-between p-6 md:p-8 border-b border-parchment last:border-0 transition-colors", user.isUser ? "bg-clay/10 hover:bg-clay/15" : "hover:bg-parchment/30")}>
                       <div className="flex items-center gap-6">
                         <span className={cn("w-8 text-center font-serif font-black text-lg md:text-xl", user.rank===1?"text-amber":user.rank===2?"text-muted":user.rank===3?"text-clay":"text-stroke")}>{user.rank}</span>
                         <div style={{ width:44, height:55, borderRadius:5, overflow:'hidden', flexShrink:0, border:'1px solid rgba(234,228,217,0.5)', background:'var(--paper)' }}>
-                          <img src={CREATURE_IMG[user.code]} alt={user.name} style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />
+                          {CREATURE_IMG[user.code] && <img src={CREATURE_IMG[user.code]} alt={user.name} style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />}
                         </div>
                         <div>
-                          <p className="text-lg font-black text-ink flex items-center gap-2">{user.name}{rankTab==='personal'&&user.isUser&&<span className="text-[10px] bg-ink text-white px-3 py-0.5 rounded-full uppercase tracking-tighter font-black">這是你</span>}</p>
-                          <p className="text-xs text-muted font-bold uppercase tracking-widest">{rankTab==='personal'?'依暱稱統計 · 紀錄總次數':`${MBEI_TYPES[user.code]?.code || ''} 型格`}</p>
+                          <p className="text-lg font-black text-ink flex items-center gap-2">
+                            {user.name}
+                            {rankTab==='personal'&&user.isUser&&<span className="text-[10px] bg-ink text-white px-3 py-0.5 rounded-full uppercase tracking-tighter font-black">這是你</span>}
+                          </p>
                         </div>
                       </div>
-                      <div className="text-right"><p className="text-xl font-serif font-black text-ink">{user.points}</p><p className="text-[10px] font-black text-muted uppercase tracking-widest">{user.scoreLabel}</p></div>
+                      <div className="text-right"><p className="text-xl font-serif font-black text-ink">{user.points}</p><p className="text-[10px] font-black text-muted uppercase tracking-widest">{user.scoreLabel || '累積功德'}</p></div>
                     </div>
                   ))}
                 </div>
@@ -2489,7 +2668,7 @@
         };
         saveProfiles(profiles);
         localStorage.setItem(ACTIVE_USER_KEY, normalized);
-        setLoginProfile(profile);
+        setLoginProfile(profiles[normalized]);
         setRecords(loadUserRecords(normalized));
         setSplashDone(true);
       };
