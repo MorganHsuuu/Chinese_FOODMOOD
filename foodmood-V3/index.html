@@ -1865,8 +1865,7 @@
 
     function RecordModal({ onClose, onSubmit, formData, setFormData, isLoading, onSchedulePrefetch, onClearPrefetch, prefetchStatus, recordMode, initialPhase, onSaveDraft, initialPhotoPreview }) {
       const setField = (field, value) => setFormData(prev => ({...prev, [field]: value}));
-      const galleryInputRef = React.useRef(null);
-      const cameraInputRef = React.useRef(null);
+      const photoInputRef = React.useRef(null);
       const [phase, setPhase] = React.useState(initialPhase || (recordMode === 'after' ? 'all' : 'food'));
       const [photoPreview, setPhotoPreview] = React.useState(initialPhotoPreview || null);
       const [photoSizeKB, setPhotoSizeKB] = React.useState(null);
@@ -1902,19 +1901,18 @@
         if (recordMode === 'continue' && formData.whatFood?.trim()) setFoodConfirmed(true);
       }, [recordMode, formData.whatFood]);
 
-      const applyPhotoMealTime = (file, fromCamera) => {
-        if (!fromCamera) return;
+      const applyPhotoMealTime = (file) => {
         const t = file.lastModified > 0 ? new Date(file.lastModified) : new Date();
         const hh = String(t.getHours()).padStart(2, '0');
         const mm = String(t.getMinutes()).padStart(2, '0');
         setField('mealTime', `${hh}:${mm}`);
       };
 
-      const handlePhotoFile = async (e, fromCamera = false) => {
+      const handlePhotoFile = async (e) => {
         const file = e.target.files?.[0];
         e.target.value = '';
         if (!file) return;
-        applyPhotoMealTime(file, fromCamera);
+        applyPhotoMealTime(file);
         setRecognizeError('');
         setRecognizePhase('compressing');
         try {
@@ -1992,16 +1990,14 @@
               )}
               {showFoodSection && (
               <>
-              <RecordSection title={recordMode === 'after' ? '這一餐吃了什麼？（相簿或拍照）' : '這一餐吃了什麼？'}>
-                <input ref={galleryInputRef} type="file" accept="image/*" className="hidden" onChange={e => handlePhotoFile(e, false)} />
-                <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e => handlePhotoFile(e, true)} />
+              <RecordSection title={recordMode === 'after' ? '這一餐吃了什麼？（拍照或選照片）' : '這一餐吃了什麼？'}>
+                <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoFile} />
                 <div className="flex gap-2 flex-wrap">
                   <input type="text" className="flex-1 min-w-[140px] rounded-[1.5rem] border-2 border-stroke bg-white px-6 py-4 text-lg font-semibold text-ink placeholder:text-[#B0A7A1] focus:outline-none focus:border-ink/30" placeholder="手動輸入食物名稱" value={formData.whatFood || ''} onChange={onWhatFoodChange} onBlur={onWhatFoodBlur} required={phase === 'food' || phase === 'all'} disabled={isRecognizing || phase === 'feelings'} />
-                  <button type="button" onClick={() => galleryInputRef.current?.click()} disabled={isRecognizing || phase === 'feelings'}
-                    className="shrink-0 px-4 h-14 rounded-[1.5rem] border-2 border-stroke bg-white text-sm font-bold text-ink hover:border-jade/50 disabled:opacity-50">相簿</button>
-                  <button type="button" onClick={() => cameraInputRef.current?.click()} disabled={isRecognizing || phase === 'feelings'}
+                  <button type="button" onClick={() => photoInputRef.current?.click()} disabled={isRecognizing || phase === 'feelings'}
                     className="shrink-0 w-14 h-14 rounded-[1.5rem] border-2 border-stroke bg-white flex items-center justify-center text-ink hover:border-jade/50 disabled:opacity-50"
-                    title="開啟相機">
+                    title="拍照或選照片"
+                    aria-label="拍照或選照片">
                     {isRecognizing ? <span className="spin-loading text-xl">☯</span> : <CameraIcon size={22} />}
                   </button>
                 </div>
