@@ -20,7 +20,10 @@ const COL = {
   hl: process.env.NOTION_COL_HL || 'HL',
   rv: process.env.NOTION_COL_RV || 'RV',
   context: process.env.NOTION_COL_CONTEXT || '情境',
-  user: process.env.NOTION_COL_USER || 'USER 1',
+  email: process.env.NOTION_COL_EMAIL || 'Email',
+  nickname: process.env.NOTION_COL_NICKNAME || '暱稱',
+  gender: process.env.NOTION_COL_GENDER || '性別',
+  age: process.env.NOTION_COL_AGE || '年齡',
   fortune: process.env.NOTION_COL_FORTUNE || '詩籤',
 };
 
@@ -77,6 +80,20 @@ function buildFortuneText(fortune) {
   return parts.join('\n').slice(0, 2000);
 }
 
+/** 相容舊版只傳 email 字串 */
+function normalizeUser(user) {
+  if (!user) return { email: '', nickname: '', gender: '', age: '' };
+  if (typeof user === 'string') {
+    return { email: user.trim(), nickname: '', gender: '', age: '' };
+  }
+  return {
+    email: String(user.email || '').trim(),
+    nickname: String(user.nickname || '').trim(),
+    gender: String(user.gender || '').trim(),
+    age: user.age != null && user.age !== '' ? String(user.age) : '',
+  };
+}
+
 async function loadDatabaseSchema(apiKey, databaseId) {
   if (cachedDbSchema) return cachedDbSchema;
 
@@ -124,13 +141,14 @@ function propForColumn(colName, value, types, { preferNumber = false } = {}) {
   return propRichText(String(value));
 }
 
-function buildProperties(record, user, meritTotal, schema) {
+function buildProperties(record, user, meritTotal, schema, { includeDemographics = false } = {}) {
   const fortune = record.fortune || {};
   const scores = record.mbeiScores || fortune.mbei_scores || {};
   const merit = record.meritEarned ?? (fortune.merit_point?.match(/\+(\d+)/)
     ? parseInt(fortune.merit_point.match(/\+(\d+)/)[1], 10)
     : null);
   const { titleProp, types } = schema;
+  const profile = normalizeUser(user);
 
   const title = (record.whatFood || record.foodEmoji || '未命名餐點').trim();
   const props = {
@@ -155,7 +173,12 @@ function buildProperties(record, user, meritTotal, schema) {
   set('hl', scores.HL);
   set('rv', scores.RV);
   set('context', record.context);
-  set('user', user);
+  set('email', profile.email);
+  set('nickname', profile.nickname);
+  if (includeDemographics) {
+    set('gender', profile.gender);
+    set('age', profile.age, { preferNumber: true });
+  }
   set('fortune', buildFortuneText(fortune));
 
   return props;
@@ -175,14 +198,16 @@ module.exports = async (req, res) => {
   if (!apiKey) return res.status(503).json({ error: '未設定 NOTION_API_KEY' });
   if (!databaseId) return res.status(503).json({ error: '未設定 NOTION_DATABASE_ID' });
 
-  const { record, user, meritTotal } = req.body || {};
+  const { record, user, meritTotal, includeDemographics } = req.body || {};
   if (!record || !record.whatFood) {
     return res.status(400).json({ error: '缺少 record' });
   }
 
   try {
     const schema = await loadDatabaseSchema(apiKey, databaseId);
-    const properties = buildProperties(record, user || '', meritTotal, schema);
+    const properties = buildProperties(record, user, meritTotal, schema, {
+      includeDemographics: !!includeDemographics,
+    });
 
     const notionRes = await fetch('https://api.notion.com/v1/pages', {
       method: 'POST',
@@ -207,9 +232,17 @@ module.exports = async (req, res) => {
       });
     }
 
-    return res.status(200).json({ ok: true, pageId: data.id, titleProperty: schema.titleProp });
+    return res.status(200).json({
+      ok: true,
+      pageId: data.id,
+      titleProperty: schema.titleProp,
+      writtenColumns: Object.keys(properties),
+    });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: err.message || '伺服器錯誤' });
   }
 };
+
+module.exports.buildProperties = buildProperties;
+module.exports.COL = COL;

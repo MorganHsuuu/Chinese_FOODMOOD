@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>山真海胃 FoodMood</title>
+  <title>山真海胃 You are what you eat</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+TC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -339,12 +339,18 @@
       && BODY_FEELING_OPTIONS.some(o => o.label === fd.bodyFeeling);
 
     /** 透過 Vercel API 寫入 Notion（金鑰只在伺服器，不進瀏覽器） */
-    const syncRecordToNotion = async (record, userLabel, meritTotal) => {
+    const syncRecordToNotion = async (record, profile, meritTotal, { includeDemographics = false } = {}) => {
       try {
+        const user = profile ? {
+          email: profile.email || '',
+          nickname: profile.nickname || '',
+          gender: profile.gender || '',
+          age: profile.age ?? '',
+        } : '';
         const res = await fetch('/api/notion-record', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ record, user: userLabel || '', meritTotal }),
+          body: JSON.stringify({ record, user, meritTotal, includeDemographics }),
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
@@ -2475,7 +2481,12 @@
       const handleLogin = (profile) => {
         const normalized = normalizeEmail(profile.email);
         const profiles = loadProfiles();
-        profiles[normalized] = profile;
+        const prev = profiles[normalized];
+        profiles[normalized] = {
+          ...profile,
+          email: normalized,
+          notionDemographicsSynced: prev?.notionDemographicsSynced || false,
+        };
         saveProfiles(profiles);
         localStorage.setItem(ACTIVE_USER_KEY, normalized);
         setLoginProfile(profile);
@@ -2519,11 +2530,21 @@
           const nextRecords = [newRecord, ...records];
           setRecords(nextRecords);
           setLatestRecord(newRecord);
+          const includeDemographics = !loginProfile?.notionDemographicsSynced;
           syncRecordToNotion(
             newRecord,
-            loginProfile?.email || loginProfile?.name || '',
+            loginProfile,
             calcMeritTotal(nextRecords),
+            { includeDemographics },
           ).then(notionRes => {
+            if (notionRes?.ok && includeDemographics && loginProfile?.email) {
+              const key = normalizeEmail(loginProfile.email);
+              const profiles = loadProfiles();
+              const updated = { ...profiles[key], notionDemographicsSynced: true };
+              profiles[key] = updated;
+              saveProfiles(profiles);
+              setLoginProfile(updated);
+            }
             if (notionRes && !notionRes.ok) {
               console.warn('[Notion 未寫入]', notionRes.error);
             }
