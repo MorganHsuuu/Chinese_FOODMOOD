@@ -349,7 +349,7 @@
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
           console.warn('[Notion]', data.error || res.status);
-          return { ok: false, error: data.error };
+          return { ok: false, error: data.error || `Notion 同步失敗 (${res.status})` };
         }
         return { ok: true, pageId: data.pageId };
       } catch (e) {
@@ -2527,7 +2527,11 @@
             newRecord,
             loginProfile?.email || loginProfile?.name || '',
             calcMeritTotal(nextRecords),
-          );
+          ).then(notionRes => {
+            if (notionRes && !notionRes.ok) {
+              console.warn('[Notion 未寫入]', notionRes.error);
+            }
+          });
           setIsLoading(false);
           if (editingDraftId) {
             const list = loadMealDrafts().filter(d => d.id !== editingDraftId);

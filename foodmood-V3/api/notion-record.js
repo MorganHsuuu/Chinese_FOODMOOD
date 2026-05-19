@@ -1,16 +1,13 @@
 /**
- * Vercel Serverless：將食緒紀錄寫入 Notion 資料庫（結構化欄位）
- * 環境變數：
- *   NOTION_API_KEY
- *   NOTION_DATABASE_ID
- *   NOTION_TITLE_PROPERTY — 食物名稱欄（預設「標題」）
+ * Vercel Serverless：將食緒紀錄寫入 Notion 資料庫
+ * 環境變數：NOTION_API_KEY、NOTION_DATABASE_ID
+ * 選填：NOTION_TITLE_PROPERTY（不設則自動偵測資料庫的 Title 欄）
  */
 
 const NOTION_VERSION = '2022-06-28';
 
-/** 與 Notion 資料庫欄位名稱一致（可依實際欄位名用 env 覆寫） */
 const COL = {
-  title: process.env.NOTION_TITLE_PROPERTY || '標題',
+  title: process.env.NOTION_TITLE_PROPERTY || null,
   date: process.env.NOTION_COL_DATE || '日期',
   time: process.env.NOTION_COL_TIME || '時間',
   mealType: process.env.NOTION_COL_MEAL_TYPE || '餐別',
@@ -26,6 +23,12 @@ const COL = {
   user: process.env.NOTION_COL_USER || 'USER 1',
   fortune: process.env.NOTION_COL_FORTUNE || '詩籤',
 };
+
+const MOOD_TEXT_TO_NUM = {
+  很糟: 1, 不太好: 2, 普通: 3, 還不錯: 4, 很爽: 5,
+};
+
+let cachedTitleProp = null;
 
 function rich(text) {
   const s = String(text ?? '').slice(0, 2000);
@@ -53,11 +56,16 @@ function propDate(dateStr) {
   return { date: { start: d } };
 }
 
-/** Select 欄位（餐別／爽度／身體感受若為 Select 類型時使用） */
 function propSelect(name) {
   const s = String(name ?? '').trim();
   if (!s) return null;
   return { select: { name: s.slice(0, 100) } };
+}
+
+function moodToNumber(mood) {
+  if (typeof mood === 'number' && mood >= 1 && mood <= 5) return mood;
+  if (MOOD_TEXT_TO_NUM[mood] != null) return MOOD_TEXT_TO_NUM[mood];
+  return null;
 }
 
 function buildFortuneText(fortune) {
@@ -69,7 +77,28 @@ function buildFortuneText(fortune) {
   return parts.join('\n').slice(0, 2000);
 }
 
-function buildProperties(record, user, meritTotal) {
+async function resolveTitleProperty(apiKey, databaseId) {
+  if (COL.title) return COL.title;
+  if (cachedTitleProp) return cachedTitleProp;
+
+  const res = await fetch(`https://api.notion.com/v1/databases/${databaseId.trim()}`, {
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Notion-Version': NOTION_VERSION,
+    },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.message || '無法讀取 Notion 資料庫結構');
+  }
+
+  const entry = Object.entries(data.properties || {}).find(([, p]) => p.type === 'title');
+  if (!entry) throw new Error('此資料庫沒有 Title 類型欄位，請在 Notion 新增一欄「標題」');
+  cachedTitleProp = entry[0];
+  return cachedTitleProp;
+}
+
+function buildProperties(record, user, meritTotal, titlePropName) {
   const fortune = record.fortune || {};
   const scores = record.mbeiScores || fortune.mbei_scores || {};
   const merit = record.meritEarned ?? (fortune.merit_point?.match(/\+(\d+)/)
@@ -78,31 +107,17 @@ function buildProperties(record, user, meritTotal) {
 
   const title = (record.whatFood || record.foodEmoji || '未命名餐點').trim();
   const props = {
-    [COL.title]: propTitle(title),
+    [titlePropName]: propTitle(title),
   };
 
-  const setRich = (key, val) => {
-    const p = propRichText(val);
-    if (p) props[key] = p;
-  };
-  const setNum = (key, val) => {
-    const p = propNumber(val);
-    if (p) props[key] = p;
-  };
-  const setSelect = (key, val) => {
-    const p = propSelect(val);
-    if (p) props[key] = p;
-  };
-  const setDate = (key, val) => {
-    const p = propDate(val);
-    if (p) props[key] = p;
-  };
+  const setRich = (key, val) => { const p = propRichText(val); if (p) props[key] = p; };
+  const setNum = (key, val) => { const p = propNumber(val); if (p) props[key] = p; };
+  const setSelect = (key, val) => { const p = propSelect(val); if (p) props[key] = p; };
 
-  setDate(COL.date, record.date);
+  if (record.date) props[COL.date] = propDate(record.date);
   setRich(COL.time, record.mealTime || record.time);
-  // 若 Notion 欄位為「文字」用 rich_text；若為 Select 且 API 報錯，可改 env 或把欄位改成文字
   setSelect(COL.mealType, record.mealType);
-  setSelect(COL.mood, record.mood);
+  setNum(COL.mood, moodToNumber(record.mood));
   setSelect(COL.bodyFeeling, record.bodyFeeling);
   setNum(COL.merit, merit);
   if (meritTotal != null) setNum(COL.meritTotal, meritTotal);
@@ -113,37 +128,6 @@ function buildProperties(record, user, meritTotal) {
   setRich(COL.context, record.context);
   setRich(COL.user, user);
   setRich(COL.fortune, buildFortuneText(fortune));
-
-  return props;
-}
-
-/** Select 失敗時改寫 rich_text（欄位若是文字類型） */
-function fallbackRichTextProperties(record, user, meritTotal) {
-  const fortune = record.fortune || {};
-  const scores = record.mbeiScores || fortune.mbei_scores || {};
-  const merit = record.meritEarned ?? null;
-  const title = (record.whatFood || '未命名餐點').trim();
-
-  const props = { [COL.title]: propTitle(title) };
-  const add = (key, val, asNum = false) => {
-    if (val == null || val === '') return;
-    props[key] = asNum ? propNumber(val) : propRichText(val);
-  };
-
-  if (record.date) props[COL.date] = propDate(record.date);
-  add(COL.time, record.mealTime || record.time);
-  add(COL.mealType, record.mealType);
-  add(COL.mood, record.mood);
-  add(COL.bodyFeeling, record.bodyFeeling);
-  add(COL.merit, merit, true);
-  add(COL.meritTotal, meritTotal, true);
-  add(COL.mb, scores.MB, true);
-  add(COL.np, scores.NP, true);
-  add(COL.hl, scores.HL, true);
-  add(COL.rv, scores.RV, true);
-  add(COL.context, record.context);
-  add(COL.user, user);
-  add(COL.fortune, buildFortuneText(fortune));
 
   return props;
 }
@@ -167,41 +151,24 @@ module.exports = async (req, res) => {
     return res.status(400).json({ error: '缺少 record' });
   }
 
-  const userLabel = user || '';
-  let properties = buildProperties(record, userLabel, meritTotal);
-
-  const body = {
-    parent: { database_id: databaseId.trim() },
-    properties,
-  };
-
   try {
-    let notionRes = await fetch('https://api.notion.com/v1/pages', {
+    const titlePropName = await resolveTitleProperty(apiKey, databaseId);
+    const properties = buildProperties(record, user || '', meritTotal, titlePropName);
+
+    const notionRes = await fetch('https://api.notion.com/v1/pages', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Notion-Version': NOTION_VERSION,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        parent: { database_id: databaseId.trim() },
+        properties,
+      }),
     });
 
-    let data = await notionRes.json().catch(() => ({}));
-
-    // 欄位類型不符（例如餐別是文字卻送了 select）時改試 rich_text
-    if (!notionRes.ok && (data.code === 'validation_error' || notionRes.status === 400)) {
-      properties = fallbackRichTextProperties(record, userLabel, meritTotal);
-      notionRes = await fetch('https://api.notion.com/v1/pages', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Notion-Version': NOTION_VERSION,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ parent: { database_id: databaseId.trim() }, properties }),
-      });
-      data = await notionRes.json().catch(() => ({}));
-    }
+    const data = await notionRes.json().catch(() => ({}));
 
     if (!notionRes.ok) {
       console.error('Notion API error', data);
@@ -211,7 +178,7 @@ module.exports = async (req, res) => {
       });
     }
 
-    return res.status(200).json({ ok: true, pageId: data.id });
+    return res.status(200).json({ ok: true, pageId: data.id, titleProperty: titlePropName });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: err.message || '伺服器錯誤' });
