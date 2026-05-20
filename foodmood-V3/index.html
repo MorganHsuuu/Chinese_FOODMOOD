@@ -2049,7 +2049,7 @@
       );
     }
 
-    function RecordModal({ onClose, onSubmit, formData, setFormData, isLoading, onSchedulePrefetch, onClearPrefetch, prefetchStatus, recordMode, initialPhase, onSaveDraft, initialPhotoPreview }) {
+    function RecordModal({ onClose, onSubmit, formData, setFormData, isLoading, onSchedulePrefetch, onClearPrefetch, prefetchStatus, recordMode, initialPhase, onSaveDraft, initialPhotoPreview, onPhotoChange }) {
       const setField = (field, value) => setFormData(prev => ({...prev, [field]: value}));
       const photoInputRef = React.useRef(null);
       const [phase, setPhase] = React.useState(initialPhase || (recordMode === 'after' ? 'all' : 'food'));
@@ -2082,6 +2082,10 @@
       React.useEffect(() => {
         if (initialPhotoPreview) setPhotoPreview(initialPhotoPreview);
       }, [initialPhotoPreview]);
+
+      React.useEffect(() => {
+        onPhotoChange?.(photoPreview || null);
+      }, [photoPreview, onPhotoChange]);
 
       React.useEffect(() => {
         if (recordMode === 'continue' && formData.whatFood?.trim()) setFoodConfirmed(true);
@@ -2530,6 +2534,7 @@
       });
       const fortunePrefetchRef = React.useRef({ key: null, promise: null, result: null });
       const prefetchInFlightKeyRef = React.useRef(null);
+      const recordPhotoRef = React.useRef(null);
       const [formData, setFormData] = useState(makeDefaultFormData);
 
       React.useEffect(() => {
@@ -2591,6 +2596,7 @@
         setEditingDraftId(null);
         setRecordMode(null);
         setInitialPhotoPreview(null);
+        recordPhotoRef.current = null;
       };
 
       const closeRecordModal = () => {
@@ -2600,6 +2606,7 @@
         setEditingDraftId(null);
         setRecordMode(null);
         setInitialPhotoPreview(null);
+        recordPhotoRef.current = null;
       };
 
       const pickRecordTrack = (track) => {
@@ -2607,6 +2614,7 @@
         setRecordMode(track);
         setFormData(makeDefaultFormData());
         setInitialPhotoPreview(null);
+        recordPhotoRef.current = null;
         setEditingDraftId(null);
         setShowRecordPicker(false);
         setIsRecordOpen(true);
@@ -2626,7 +2634,9 @@
           mealTime: d.mealTime || makeDefaultFormData().mealTime,
           context: d.context || '',
         });
-        setInitialPhotoPreview(d.photoPreviewUrl || null);
+        const draftPhoto = d.photoPreviewUrl || null;
+        setInitialPhotoPreview(draftPhoto);
+        recordPhotoRef.current = draftPhoto;
         setShowRecordPicker(false);
         setIsRecordOpen(true);
       };
@@ -2692,6 +2702,7 @@
         const now = new Date();
         const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
         setTimeout(() => {
+          const mealPhoto = recordPhotoRef.current;
           const newRecord = {
             id: Date.now().toString(),
             date: dateStr,
@@ -2706,6 +2717,8 @@
             mbeiCode,
             mbeiScores,
             fortune: aiFortune || undefined,
+            photoPreviewUrl: mealPhoto || null,
+            photoDataUrl: mealPhoto && String(mealPhoto).startsWith('data:') ? mealPhoto : null,
           };
           const nextRecords = [newRecord, ...records];
           setRecords(nextRecords);
@@ -2736,6 +2749,7 @@
             setMealDrafts(list);
             setEditingDraftId(null);
           }
+          recordPhotoRef.current = null;
           clearFortunePrefetch();
           setIsRecordOpen(false);
           setShowRecordPicker(false);
@@ -2865,6 +2879,7 @@
                 initialPhase={recordInitialPhase}
                 initialPhotoPreview={initialPhotoPreview}
                 onSaveDraft={handleSaveDraft}
+                onPhotoChange={(url) => { recordPhotoRef.current = url; }}
               />
             )}
             {showResult && latestRecord && <ResultModal record={latestRecord} onClose={() => setShowResult(false)} totalRecords={records.length} />}

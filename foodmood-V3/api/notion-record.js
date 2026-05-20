@@ -25,6 +25,7 @@ const COL = {
   gender: process.env.NOTION_COL_GENDER || '性別',
   age: process.env.NOTION_COL_AGE || '年齡',
   fortune: process.env.NOTION_COL_FORTUNE || '詩籤',
+  photo: process.env.NOTION_COL_PHOTO || '餐點照片',
 };
 
 const MOOD_TEXT_TO_NUM = {
@@ -151,11 +152,52 @@ function propForColumn(colName, value, types, { preferNumber = false } = {}) {
   }
   if (t === 'email') return propEmail(String(value));
   if (t === 'url') return propUrl(String(value));
+  if (t === 'files') {
+    const s = String(value).trim();
+    if (!s || !/^https?:\/\//i.test(s)) return null;
+    return { files: [{ type: 'external', name: 'meal.jpg', external: { url: s } }] };
+  }
   if (t === 'rich_text') return propRichText(String(value));
   return propRichText(String(value));
 }
 
-function buildProperties(record, user, meritTotal, schema, { includeDemographics = false } = {}) {
+/** data URL 或既有 https 網址 → 可寫入 Notion 的公開 URL */
+async function resolvePhotoUrl(record) {
+  const candidates = [record.photoUrl, record.photoPreviewUrl, record.photoDataUrl].filter(Boolean);
+  for (const raw of candidates) {
+    const s = String(raw).trim();
+    if (/^https?:\/\//i.test(s)) return s;
+  }
+  const dataUrl = candidates.find((s) => String(s).startsWith('data:'));
+  if (!dataUrl) return null;
+
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  if (!token) {
+    console.warn('未設定 BLOB_READ_WRITE_TOKEN，略過餐點照片上傳');
+    return null;
+  }
+
+  const match = String(dataUrl).match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) return null;
+
+  try {
+    const { put } = require('@vercel/blob');
+    const mime = match[1];
+    const buffer = Buffer.from(match[2], 'base64');
+    const ext = mime.includes('png') ? 'png' : 'jpg';
+    const blob = await put(`meal-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`, buffer, {
+      access: 'public',
+      token,
+      contentType: mime,
+    });
+    return blob.url;
+  } catch (err) {
+    console.error('Blob upload failed', err);
+    return null;
+  }
+}
+
+function buildProperties(record, user, meritTotal, schema, { includeDemographics = false, photoUrl = null } = {}) {
   const fortune = record.fortune || {};
   const scores = record.mbeiScores || fortune.mbei_scores || {};
   const merit = record.meritEarned ?? (fortune.merit_point?.match(/\+(\d+)/)
@@ -194,6 +236,7 @@ function buildProperties(record, user, meritTotal, schema, { includeDemographics
     set('age', profile.age, { preferNumber: true });
   }
   set('fortune', buildFortuneText(fortune));
+  if (photoUrl) set('photo', photoUrl);
 
   return props;
 }
@@ -219,8 +262,10 @@ module.exports = async (req, res) => {
 
   try {
     const schema = await loadDatabaseSchema(apiKey, databaseId);
+    const photoUrl = await resolvePhotoUrl(record);
     const properties = buildProperties(record, user, meritTotal, schema, {
       includeDemographics: !!includeDemographics,
+      photoUrl,
     });
 
     const notionRes = await fetch('https://api.notion.com/v1/pages', {
@@ -251,6 +296,7 @@ module.exports = async (req, res) => {
       pageId: data.id,
       titleProperty: schema.titleProp,
       writtenColumns: Object.keys(properties),
+      photoUrl: photoUrl || null,
     });
   } catch (err) {
     console.error(err);
