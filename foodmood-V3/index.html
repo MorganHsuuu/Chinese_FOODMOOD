@@ -110,6 +110,54 @@
     .modal-up { animation: modalSlideUp 0.35s cubic-bezier(0.34,1.56,0.64,1); }
     @keyframes sheetSlideUp { from{opacity:0;transform:translateY(100%)} to{opacity:1;transform:translateY(0)} }
     .sheet-up { animation: sheetSlideUp 0.35s cubic-bezier(0.34,1.56,0.64,1); }
+    /* 凝練食緒／記錄選擇：神聖淡入、白光、呼吸感 */
+    @keyframes recordVeilIn { from{ opacity:0 } to{ opacity:1 } }
+    .record-overlay-veil { animation: recordVeilIn 0.7s ease-out both; }
+    @keyframes recordModalSacredIn {
+      0%   { opacity:0; transform:translateY(14px); filter:brightness(1.35) blur(2px); }
+      35%  { opacity:0.72; filter:brightness(1.12) blur(0); }
+      100% { opacity:1; transform:translateY(0); filter:brightness(1) blur(0); }
+    }
+    .record-modal-sacred {
+      animation: recordModalSacredIn 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+    }
+    @keyframes recordSacredGlow {
+      0%, 100% { opacity:0.28; }
+      50%      { opacity:0.62; }
+    }
+    .record-sacred-glow {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 8;
+      border-radius: inherit;
+      background:
+        radial-gradient(ellipse 90% 55% at 50% -5%, rgba(255, 252, 245, 0.22) 0%, transparent 58%),
+        radial-gradient(ellipse 70% 40% at 50% 100%, rgba(255, 248, 235, 0.08) 0%, transparent 55%);
+      animation: recordSacredGlow 5.5s ease-in-out 0.85s infinite;
+    }
+    @keyframes recordFabGlow {
+      0%, 100% { box-shadow: 0 4px 20px rgba(133,41,27,0.45), 0 0 0 rgba(255,248,235,0); }
+      50%      { box-shadow: 0 4px 24px rgba(133,41,27,0.5), 0 0 18px rgba(255,248,235,0.35); }
+    }
+    .record-fab-btn {
+      transition: opacity 0.4s ease, box-shadow 0.4s ease;
+      animation: recordFabGlow 3.5s ease-in-out infinite;
+    }
+    .record-fab-btn:active { opacity: 0.88; animation: none; }
+    @keyframes recordSacredFlash {
+      0%   { opacity:0.55; }
+      100% { opacity:0; }
+    }
+    .record-sacred-flash {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9;
+      border-radius: inherit;
+      background: radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.38) 0%, transparent 65%);
+      animation: recordSacredFlash 0.85s ease-out forwards;
+    }
     @keyframes progressBar { from{width:0} to{width:20%} }
     .progress-bar { animation: progressBar 1s ease-out forwards; }
     .hover-scale { transition: transform 0.2s; }
@@ -133,6 +181,7 @@
     .inject-btn { transition: box-shadow 0.3s, background 0.3s; }
     .inject-btn:hover:not(:disabled) { box-shadow: 0 0 32px rgba(212,168,67,0.2), 0 4px 24px rgba(0,0,0,0.4); }
     .inject-btn:active:not(:disabled) { transform: scale(0.98); }
+    .record-modal-sacred .inject-btn:active:not(:disabled) { transform: none; opacity: 0.88; }
     /* 中式朱紅框（凝練食緒彈窗） */
     .cn-red-frame-modal {
       border: 2px solid #9e2a2b !important;
@@ -156,6 +205,17 @@
     .cn-corner-tr { top: 6px; right: 6px; border-width: 2px 2px 0 0; }
     .cn-corner-bl { bottom: 6px; left: 6px; border-width: 0 0 2px 2px; }
     .cn-corner-br { bottom: 6px; right: 6px; border-width: 0 2px 2px 0; }
+    .cn-red-frame-modal input[type="time"] {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+    }
+    .cn-red-frame-modal input[type="time"]::-webkit-date-and-time-value {
+      min-width: 0;
+      text-align: left;
+    }
   </style>
   <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
@@ -584,9 +644,9 @@
 
     function RecordSection({ title, children }) {
       return (
-        <div className="space-y-4">
-          <h4 className="text-sm font-bold flex items-center gap-2"><span className="w-1.5 h-4 bg-clay rounded-full" />{title}</h4>
-          {children}
+        <div className="space-y-4 min-w-0 max-w-full">
+          <h4 className="text-sm font-bold flex items-center gap-2"><span className="w-1.5 h-4 bg-clay rounded-full shrink-0" />{title}</h4>
+          <div className="min-w-0 max-w-full">{children}</div>
         </div>
       );
     }
@@ -2011,8 +2071,10 @@
       };
       return (
         <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-0 md:p-8">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-          <div className="w-full max-w-lg bg-paper rounded-t-[5px] md:rounded-[5px] relative z-10 border-2 border-stroke shadow-2xl sheet-up p-8 md:p-10 space-y-5">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm record-overlay-veil" onClick={onClose} />
+          <div className="w-full max-w-lg bg-paper rounded-t-[5px] md:rounded-[5px] relative z-10 border-2 border-stroke shadow-2xl record-modal-sacred p-8 md:p-10 space-y-5 overflow-hidden">
+            <div className="record-sacred-flash" aria-hidden="true" />
+            <div className="record-sacred-glow" aria-hidden="true" />
             <div className="flex justify-between items-start">
               <div>
                 <h3 style={{ fontSize:28, fontFamily:serif, fontWeight:900, color:'var(--cream)', margin:0 }}>記錄這一餐</h3>
@@ -2181,8 +2243,10 @@
 
       return (
         <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center overflow-hidden p-2 md:p-12">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-          <div className="w-full max-w-lg md:max-w-3xl h-[88vh] md:h-auto md:max-h-[85vh] bg-paper rounded-t-[5px] md:rounded-[5px] relative z-10 flex flex-col shadow-2xl overflow-hidden sheet-up cn-red-frame-modal min-w-0">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm record-overlay-veil" onClick={onClose} />
+          <div className="w-full max-w-lg md:max-w-3xl h-[88vh] md:h-auto md:max-h-[85vh] bg-paper rounded-t-[5px] md:rounded-[5px] relative z-10 flex flex-col shadow-2xl overflow-hidden record-modal-sacred cn-red-frame-modal min-w-0">
+            <div className="record-sacred-flash" aria-hidden="true" />
+            <div className="record-sacred-glow" aria-hidden="true" />
             <span className="cn-corner cn-corner-tl" aria-hidden="true" />
             <span className="cn-corner cn-corner-tr" aria-hidden="true" />
             <span className="cn-corner cn-corner-bl" aria-hidden="true" />
@@ -2194,7 +2258,7 @@
                 <p className="hidden sm:block text-[10px] font-black text-muted uppercase tracking-[0.2em] truncate">CRAFTING DIETARY SPIRIT</p>
                 <p className="text-xs font-semibold text-jade/90 truncate" style={{ fontFamily:serif, letterSpacing:'0.05em' }}>{modalSubtitle}</p>
               </div>
-              <button onClick={onClose} className="w-10 h-10 md:w-12 md:h-12 shrink-0 flex items-center justify-center bg-ink text-white rounded-full hover:scale-110 active:scale-90 transition-all shadow-lg"><XIcon size={22} /></button>
+              <button onClick={onClose} className="w-10 h-10 md:w-12 md:h-12 shrink-0 flex items-center justify-center bg-ink text-white rounded-full hover:opacity-90 active:opacity-75 transition-opacity shadow-lg"><XIcon size={22} /></button>
             </div>
             <div
               ref={scrollRef}
@@ -2255,11 +2319,13 @@
                   <p className="mt-2 text-sm text-clay font-semibold">{recognizeError}</p>
                 )}
               </RecordSection>
-              <div className="grid md:grid-cols-2 gap-6 md:gap-10">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 min-w-0">
                 <RecordSection title="餐別"><PillSelector options={['早餐','午餐','晚餐','宵夜','點心']} value={formData.mealType} onChange={v => setField('mealType', v)} /></RecordSection>
                 <RecordSection title="幾點吃這餐">
-                  <input type="time" value={formData.mealTime} onChange={e => setField('mealTime', e.target.value)}
-                    className="w-full rounded-[1.5rem] border-2 border-stroke bg-white px-5 py-4 text-lg font-semibold text-ink focus:outline-none focus:border-ink/30" />
+                  <div className="min-w-0 w-full max-w-full overflow-hidden">
+                    <input type="time" value={formData.mealTime} onChange={e => setField('mealTime', e.target.value)}
+                      className="w-full max-w-full min-w-0 box-border rounded-[1.5rem] border-2 border-stroke bg-white px-3 py-3 md:px-5 md:py-4 text-base md:text-lg font-semibold text-ink focus:outline-none focus:border-ink/30" />
+                  </div>
                 </RecordSection>
               </div>
               </>
@@ -2847,7 +2913,7 @@
                   padding:'14px 0', color:'var(--blush)', fontSize:14, fontWeight:800, fontFamily:"'Noto Serif TC', serif",
                   letterSpacing:'0.15em', cursor:'pointer',
                   boxShadow:'0 0 0 4px rgba(133,41,27,0.12), 0 8px 24px rgba(133,41,27,0.4)' }}
-                className="wax-seal-active">
+                className="record-fab-btn">
                 ＋ 凝練食緒
               </button>
             </div>
@@ -2887,10 +2953,11 @@
               {['今日|home','曆卡|almanac', null, '食神|insight','功德|profile'].map((item, i) => {
                 if (!item) return (
                   <button key="record" onClick={openRecordModal}
+                    className="record-fab-btn"
                     style={{ width:52, height:40, background:'var(--crimson)', borderRadius:8,
                       border:'2px solid rgba(255,180,160,0.25)', display:'flex', alignItems:'center', justifyContent:'center',
                       color:'var(--blush)', fontSize:22, cursor:'pointer', flexShrink:0,
-                      boxShadow:'0 4px 20px rgba(133,41,27,0.6)' }}>+</button>
+                      boxShadow:'0 4px 20px rgba(133,41,27,0.45)' }}>+</button>
                 );
                 const [label, tab] = item.split('|');
                 return (
