@@ -5,7 +5,7 @@
  */
 
 const NOTION_VERSION = '2022-06-28';
-const { mbeiCodeFromScores, buildHatchSnapshot } = require('./notion-hatch');
+const { mbeiCodeFromScores, buildHatchSnapshot, buildCreatureCollectionFieldValue } = require('./notion-hatch');
 
 const COL = {
   title: process.env.NOTION_TITLE_PROPERTY || null,
@@ -27,9 +27,8 @@ const COL = {
   age: process.env.NOTION_COL_AGE || '年齡',
   fortune: process.env.NOTION_COL_FORTUNE || '詩籤',
   photo: process.env.NOTION_COL_PHOTO || '餐點照片',
-  recordCount: process.env.NOTION_COL_RECORD_COUNT || '累積筆數',
-  hatched: process.env.NOTION_COL_HATCHED || '已孵化',
-  creatureCode: process.env.NOTION_COL_CREATURE_CODE || '孵化靈獸',
+  /** 單欄彙總：筆數、解鎖、當前、各輪孵化（建議只建這一欄） */
+  creatureCollection: process.env.NOTION_COL_CREATURE_COLLECTION || '靈獸圖鑑',
 };
 
 const MOOD_TEXT_TO_NUM = {
@@ -255,19 +254,11 @@ async function queryUserRows(apiKey, databaseId, email, schema) {
 
 function hatchPropsFromSnapshot(snapshot, types) {
   const props = {};
-  const set = (colKey, val, opts) => {
-    const colName = COL[colKey];
-    if (!types[colName]) return;
-    const p = propForColumn(colName, val, types, opts);
-    if (p) props[colName] = p;
-  };
-  set('recordCount', snapshot.recordCount, { preferNumber: true });
-  set('hatched', snapshot.hatched);
-  if (snapshot.creatureName) {
-    set('creatureCode', `${snapshot.creatureName} (${snapshot.creatureCode})`);
-  } else {
-    set('creatureCode', '');
-  }
+  const colName = COL.creatureCollection;
+  if (!types[colName]) return props;
+  const value = buildCreatureCollectionFieldValue(snapshot);
+  const p = propForColumn(colName, value, types);
+  if (p) props[colName] = p;
   return props;
 }
 
