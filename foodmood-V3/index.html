@@ -179,6 +179,24 @@
     .hover-scale:hover { transform: scale(1.02); }
     .hover-scale:active { transform: scale(0.98); }
     @keyframes slide-up-fade { from{opacity:0;transform:translateY(20px) scale(0.95)} to{opacity:1;transform:translateY(0) scale(1)} }
+    @keyframes result-sheet-up { from{opacity:0;transform:translateY(100%)} to{opacity:1;transform:translateY(0)} }
+    .result-modal-sheet {
+      max-height: min(92dvh, 720px);
+      animation: result-sheet-up 0.38s cubic-bezier(0.2, 0.85, 0.25, 1) both;
+    }
+    @media (min-width: 640px) {
+      .result-modal-sheet { animation: slide-up-fade 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+    }
+    .result-modal-scroll {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+    .result-modal-footer {
+      padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+    }
     @keyframes aura-breathe { 0%,100%{opacity:0.25} 50%{opacity:0.9} }
     @keyframes mist-dissipate { 0%{opacity:1;transform:scale(1);filter:blur(0px)} 60%{opacity:0.6;transform:scale(1.15);filter:blur(6px)} 100%{opacity:0;transform:scale(1.35);filter:blur(16px)} }
     @keyframes red-flash { 0%{opacity:0} 25%{opacity:1} 75%{opacity:0.8} 100%{opacity:0} }
@@ -1139,27 +1157,34 @@
       if (!hatchType) return null;
       const serif = "'Noto Serif TC',serif";
       return (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 record-overlay-veil" onClick={onClose}>
+        <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center sm:p-4 record-overlay-veil" onClick={onClose}>
           <div className="record-sacred-flash" aria-hidden="true" style={{ position:'fixed', inset:0, borderRadius:0, pointerEvents:'none' }} />
           <div
             onClick={e => e.stopPropagation()}
-            className="relative w-full max-w-md text-center p-8 md:p-10 rounded-[5px] border-2 border-jade/40 record-modal-sacred"
-            style={{ background:'rgba(21,13,0,0.94)', boxShadow:'0 24px 80px rgba(0,0,0,0.75)' }}
+            className="result-modal-sheet relative z-10 w-full sm:max-w-md text-center flex flex-col max-h-[88dvh] rounded-t-[18px] sm:rounded-[5px] border-2 border-jade/40 record-modal-sacred overflow-hidden"
+            style={{ background:'rgba(21,13,0,0.96)', boxShadow:'0 24px 80px rgba(0,0,0,0.75)' }}
           >
-            <div className="record-sacred-glow" aria-hidden="true" />
-            <p style={{ fontSize:11, color:'var(--jade)', letterSpacing:'0.25em', fontWeight:700, fontFamily:serif, margin:'0 0 8px' }}>第 {cycleNumber} 輪 · 靈獸孵化</p>
-            <h3 style={{ fontSize:26, fontFamily:serif, fontWeight:900, color:'var(--cream)', margin:'0 0 20px' }}>山海靈獸顯形</h3>
-            <div style={{ position:'relative', margin:'0 auto 20px', width:180, height:220 }}>
-              <div className="hatch-celebration-aura" style={{ position:'absolute', inset:-24, background:'radial-gradient(circle, rgba(255,248,235,0.25) 0%, transparent 70%)', borderRadius:'50%', pointerEvents:'none' }} />
-              <img src={CREATURE_IMG[hatchType.code]} alt={hatchType.creature} className="hatch-celebration-img relative z-10" style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />
+            <div className="record-sacred-glow pointer-events-none" aria-hidden="true" />
+            <div className="sm:hidden flex justify-center pt-2 shrink-0">
+              <div style={{ width:40, height:4, borderRadius:2, background:'rgba(149,211,195,0.25)' }} />
             </div>
-            <p style={{ fontSize:13, color:'var(--amber)', fontFamily:serif, margin:'0 0 6px', letterSpacing:'0.12em' }}>{hatchType.code}</p>
-            <h4 style={{ fontSize:20, fontFamily:serif, fontWeight:900, color:'var(--cream)', margin:'0 0 12px' }}>{hatchType.creature} · {hatchType.name.split(' ')[0]}</h4>
-            <p style={{ fontSize:14, color:'var(--sand)', lineHeight:1.8, fontFamily:serif, margin:'0 0 24px' }}>「{hatchType.insight}」</p>
-            <p style={{ fontSize:12, color:'var(--mist)', fontFamily:serif, margin:'0 0 16px' }}>你的頭像已更新為此靈獸。再記滿 10 次將孵化下一隻。</p>
-            <button type="button" onClick={onClose} className="inject-btn w-full text-white py-3 rounded-[5px] font-bold text-sm" style={{ background:'linear-gradient(135deg,#1a1208 0%,#2d2010 50%,#1a1208 100%)', border:'1px solid rgba(212,168,67,0.35)', fontFamily:serif }}>
-              承接靈獸之力
-            </button>
+            <div className="result-modal-scroll px-5 py-4 sm:p-8 sm:pt-8 flex flex-col items-center">
+              <p style={{ fontSize:11, color:'var(--jade)', letterSpacing:'0.25em', fontWeight:700, fontFamily:serif, margin:'0 0 6px' }}>第 {cycleNumber} 輪 · 靈獸孵化</p>
+              <h3 style={{ fontSize:22, fontFamily:serif, fontWeight:900, color:'var(--cream)', margin:'0 0 14px' }}>山海靈獸顯形</h3>
+              <div style={{ position:'relative', margin:'0 auto 14px', width:140, height:172, flexShrink:0 }}>
+                <div className="hatch-celebration-aura" style={{ position:'absolute', inset:-20, background:'radial-gradient(circle, rgba(255,248,235,0.25) 0%, transparent 70%)', borderRadius:'50%', pointerEvents:'none' }} />
+                <img src={CREATURE_IMG[hatchType.code]} alt={hatchType.creature} className="hatch-celebration-img relative z-10" style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />
+              </div>
+              <p style={{ fontSize:12, color:'var(--amber)', fontFamily:serif, margin:'0 0 4px', letterSpacing:'0.12em' }}>{hatchType.code}</p>
+              <h4 style={{ fontSize:18, fontFamily:serif, fontWeight:900, color:'var(--cream)', margin:'0 0 10px' }}>{hatchType.creature} · {hatchType.name.split(' ')[0]}</h4>
+              <p style={{ fontSize:13, color:'var(--sand)', lineHeight:1.65, fontFamily:serif, margin:'0 0 12px', maxWidth:320 }}>「{hatchType.insight}」</p>
+              <p style={{ fontSize:11, color:'var(--mist)', fontFamily:serif, margin:0, lineHeight:1.6 }}>你的頭像已更新為此靈獸。再記滿 {HATCH_RECORDS_REQUIRED} 次將孵化下一隻。</p>
+            </div>
+            <div className="result-modal-footer shrink-0 px-5 pb-4 sm:px-8 sm:pb-6">
+              <button type="button" onClick={onClose} className="inject-btn w-full text-white py-3 rounded-[5px] font-bold text-sm" style={{ background:'linear-gradient(135deg,#1a1208 0%,#2d2010 50%,#1a1208 100%)', border:'1px solid rgba(212,168,67,0.35)', fontFamily:serif }}>
+                承接靈獸之力
+              </button>
+            </div>
           </div>
         </div>
       );
@@ -2231,15 +2256,21 @@
     function RecordTrackPicker({ onClose, drafts, onPickTrack, onContinueDraft, onDeleteDraft }) {
       const serif = "'Noto Serif TC',serif";
       const trackCard = {
-        textAlign:'left', padding:'20px 22px', borderRadius:12, cursor:'pointer', width:'100%',
-        background:'rgba(0,0,0,0.2)', border:'2px solid rgba(149,211,195,0.15)', transition:'border 0.2s, background 0.2s',
+        textAlign:'left', padding:'16px 18px', borderRadius:10, cursor:'pointer', width:'100%',
+        background:'rgba(149,211,195,0.05)', border:'1px solid rgba(149,211,195,0.14)',
+        transition:'background 0.15s ease',
       };
       return (
         <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-0 md:p-8">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm record-overlay-veil" onClick={onClose} />
-          <div className="w-full max-w-lg bg-paper rounded-t-[5px] md:rounded-[5px] relative z-10 border-2 border-stroke shadow-2xl record-modal-sacred p-8 md:p-10 space-y-5 overflow-hidden">
-            <div className="record-sacred-flash" aria-hidden="true" />
-            <div className="record-sacred-glow" aria-hidden="true" />
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" style={{ animation:'recordVeilIn 0.22s ease-out both' }} onClick={onClose} />
+          <div
+            className="w-full max-w-lg relative z-10 rounded-t-[16px] md:rounded-[5px] shadow-2xl p-6 md:p-8 space-y-4 result-modal-sheet"
+            style={{ background:'#252016', border:'1px solid rgba(149,211,195,0.12)', maxHeight:'none' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="md:hidden flex justify-center -mt-1 mb-1">
+              <div style={{ width:40, height:4, borderRadius:2, background:'rgba(149,211,195,0.2)' }} />
+            </div>
             <div className="flex justify-between items-start">
               <div>
                 <h3 style={{ fontSize:28, fontFamily:serif, fontWeight:900, color:'var(--cream)', margin:0 }}>記錄這一餐</h3>
@@ -2247,13 +2278,17 @@
               </div>
               <button onClick={onClose} className="w-10 h-10 rounded-full bg-ink text-white flex items-center justify-center"><XIcon size={20} /></button>
             </div>
-            <button type="button" onClick={() => onPickTrack('early')} style={trackCard}>
-              <p style={{ fontSize:22, fontWeight:900, color:'var(--jade)', margin:'0 0 4px', fontFamily:serif }}>🌿 先記食物</p>
-              <p style={{ fontSize:16, color:'var(--sand)', margin:0, lineHeight:1.45 }}>拍照存食物，吃完再補感受</p>
+            <button type="button" onClick={() => onPickTrack('early')} style={trackCard}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(149,211,195,0.1)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = trackCard.background; }}>
+              <p style={{ fontSize:20, fontWeight:900, color:'var(--jade)', margin:'0 0 4px', fontFamily:serif }}>🌿 先記食物</p>
+              <p style={{ fontSize:14, color:'var(--sand)', margin:0, lineHeight:1.5 }}>拍照存食物，吃完再補感受</p>
             </button>
-            <button type="button" onClick={() => onPickTrack('after')} style={trackCard}>
-              <p style={{ fontSize:22, fontWeight:900, color:'var(--amber)', margin:'0 0 4px', fontFamily:serif }}>🍽 吃完再記</p>
-              <p style={{ fontSize:16, color:'var(--sand)', margin:0, lineHeight:1.45 }}>飯後一次記完</p>
+            <button type="button" onClick={() => onPickTrack('after')} style={trackCard}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(149,211,195,0.1)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = trackCard.background; }}>
+              <p style={{ fontSize:20, fontWeight:900, color:'var(--amber)', margin:'0 0 4px', fontFamily:serif }}>🍽 吃完再記</p>
+              <p style={{ fontSize:14, color:'var(--sand)', margin:0, lineHeight:1.5 }}>飯後一次記完</p>
             </button>
             {drafts.length > 0 && (
               <div className="pt-2 border-t border-stroke/60 space-y-3">
@@ -2729,52 +2764,100 @@
 
     function ResultModal({ record, onClose, totalRecords }) {
       const type = MBEI_TYPES[record.mbeiCode];
-      const isUnlocked = totalRecords >= 10;
+      const isUnlocked = totalRecords >= HATCH_RECORDS_REQUIRED;
       const fortune = useMemo(() => record.fortune || getMockFortune(record), [record]);
+      const poemLines = fortune.poem ? fortune.poem.split('\n').filter(Boolean) : [];
 
       return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 md:p-8">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={onClose} />
           {!isUnlocked ? (
             <FortuneSlip fortune={fortune} onClose={onClose} />
           ) : (
-            <div className="w-full max-w-lg md:max-w-xl bg-white rounded-[5px] overflow-hidden relative shadow-2xl flex flex-col border-2 border-stroke modal-up">
-              <div className="paper-texture" style={{opacity:0.05}} />
-              <div className="bg-paper pt-16 pb-8 flex flex-col items-center gap-6 relative shrink-0">
-                <div className="absolute top-8 left-8 flex flex-col items-start gap-1"><span className="text-xs font-mono opacity-50">{record.date}</span><div className="seal text-sm">今日食緒</div></div>
-                <div className="absolute top-8 right-8"><button onClick={onClose} className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-md border border-stroke"><XIcon size={18} /></button></div>
-                <div style={{ width:128, height:160, borderRadius:5, overflow:'hidden', border:'4px solid #FAF8F5', boxShadow:'0 8px 32px rgba(0,0,0,0.15)', background:'var(--paper)' }}>
-                  <img src={CREATURE_IMG[record.mbeiCode]} alt={type.creature} style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />
+            <div
+              className="result-modal-sheet relative z-10 w-full sm:max-w-lg md:max-w-xl bg-white rounded-t-[18px] sm:rounded-[5px] overflow-hidden shadow-2xl flex flex-col border-2 border-stroke border-b-0 sm:border-b-2"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="paper-texture pointer-events-none" style={{ opacity: 0.05 }} />
+              {/* 拖曳把手（手機） */}
+              <div className="sm:hidden flex justify-center pt-2 pb-0 shrink-0">
+                <div style={{ width: 40, height: 4, borderRadius: 2, background: 'rgba(0,0,0,0.12)' }} />
+              </div>
+              {/* 固定頂部：角色摘要 */}
+              <div className="bg-paper px-4 pt-2 pb-3 sm:px-6 sm:pt-5 sm:pb-4 shrink-0 border-b border-stroke/25 relative z-10">
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <div className="flex flex-col items-start gap-0.5 min-w-0">
+                    <span className="text-[10px] font-mono opacity-50">{record.date}</span>
+                    <div className="seal text-xs">今日食緒</div>
+                  </div>
+                  <button type="button" onClick={onClose} aria-label="關閉"
+                    className="w-9 h-9 rounded-full bg-white flex items-center justify-center shadow-md border border-stroke shrink-0">
+                    <XIcon size={16} />
+                  </button>
                 </div>
-                <div className="text-center space-y-2 px-6">
-                  <p className="text-xs font-black text-muted uppercase tracking-[0.4em]">{record.mbeiCode}</p>
-                  <h3 className="text-3xl md:text-4xl font-serif font-black text-ink tracking-tighter">{type.name}</h3>
-                  <span className="bg-parchment px-3 py-1 rounded-full text-xs text-muted font-bold border border-stroke/50">{type.creature}</span>
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="shrink-0 rounded-[5px] overflow-hidden border-[3px] border-[#FAF8F5] shadow-md bg-[var(--paper)]"
+                    style={{ width: 72, height: 90, boxShadow: '0 4px 20px rgba(0,0,0,0.12)' }}>
+                    <img src={CREATURE_IMG[record.mbeiCode]} alt={type.creature} className="w-full h-full object-contain block" />
+                  </div>
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-[10px] font-black text-muted uppercase tracking-[0.35em] m-0">{record.mbeiCode}</p>
+                    <h3 className="text-lg sm:text-2xl font-serif font-black text-ink tracking-tight m-0 mt-1 leading-tight">{type.name}</h3>
+                    <span className="inline-block mt-1.5 bg-parchment px-2.5 py-0.5 rounded-full text-[11px] text-muted font-bold border border-stroke/50">{type.creature}</span>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5 mt-2.5 text-[10px] sm:text-xs font-black text-muted/70 uppercase tracking-wide justify-center sm:justify-start">
+                  <span className="text-forest">餐後心情：{record.mood}</span>
+                  <ChevronRightIcon size={10} />
+                  <span className="text-clay">{record.bodyFeeling}</span>
                 </div>
               </div>
-              <div className="flex-1 p-10 pt-4 space-y-8 relative z-10 overflow-y-auto scrollbar-hide">
+              {/* 可捲動內文 */}
+              <div className="result-modal-scroll scrollbar-hide px-4 py-3 sm:px-8 sm:py-5 space-y-3 sm:space-y-4 relative z-10 bg-white">
                 <GeminiSourceNotice fortune={fortune} variant="light" />
-                <div className="space-y-6">
-                  <div className="flex items-center gap-4 justify-center text-xs font-black text-muted/60 uppercase tracking-widest">
-                    <span className="text-forest">餐後心情：{record.mood}</span><ChevronRightIcon size={12} /><span className="text-clay">{record.bodyFeeling}</span>
-                  </div>
-                  <div className="bg-parchment p-8 rounded-[5px] border border-stroke space-y-6 shadow-inner">
-                    {fortune.poem && <p className="text-sm font-serif leading-relaxed text-ink text-center border-b border-stroke/40 pb-4">{fortune.poem.split('\n').map((l,i) => <span key={i}>{l}{i < fortune.poem.split('\n').length-1 && <br/>}</span>)}</p>}
-                    {fortune.explanation && <p className="text-xs text-muted font-serif leading-relaxed text-center">{fortune.explanation}</p>}
-                    <div className="flex gap-8">
-                      <div className="flex-1 space-y-2"><div className="flex items-center gap-2"><div className="w-1.5 h-3 bg-forest rounded-full" /><span className="text-[11px] font-black text-forest uppercase tracking-[0.2em]">宜行</span></div><p className="text-sm font-bold leading-relaxed text-ink">{fortune.do || '補水、慢食、靜心、深呼吸'}</p></div>
-                      <div className="flex-1 space-y-2"><div className="flex items-center gap-2"><div className="w-1.5 h-3 bg-clay rounded-full" /><span className="text-[11px] font-black text-clay uppercase tracking-[0.2em]">下餐建議</span></div><p className="text-sm font-bold leading-relaxed text-ink">{fortune.next_meal || '均衡飲食'}</p></div>
+                <div className="bg-parchment p-4 sm:p-6 rounded-[5px] border border-stroke space-y-3 sm:space-y-4 shadow-inner">
+                  {poemLines.length > 0 && (
+                    <p className="text-[13px] sm:text-sm font-serif leading-[1.75] text-ink text-center border-b border-stroke/40 pb-3 m-0">
+                      {poemLines.map((l, i) => (
+                        <span key={i}>{l}{i < poemLines.length - 1 && <br />}</span>
+                      ))}
+                    </p>
+                  )}
+                  {fortune.explanation && (
+                    <p className="text-[11px] sm:text-xs text-muted font-serif leading-relaxed text-center m-0">{fortune.explanation}</p>
+                  )}
+                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-6">
+                    <div className="flex-1 space-y-1.5 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-3 bg-forest rounded-full shrink-0" />
+                        <span className="text-[10px] sm:text-[11px] font-black text-forest uppercase tracking-[0.15em]">宜行</span>
+                      </div>
+                      <p className="text-[13px] sm:text-sm font-bold leading-snug text-ink m-0">{fortune.do || '補水、慢食、靜心、深呼吸'}</p>
                     </div>
-                    <div className="h-px bg-stroke w-full opacity-50" />
-                    <p className="text-base md:text-lg font-serif leading-relaxed text-ink border-l-4 border-amber pl-6 py-1">「{type.insight}」</p>
+                    <div className="flex-1 space-y-1.5 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-3 bg-clay rounded-full shrink-0" />
+                        <span className="text-[10px] sm:text-[11px] font-black text-clay uppercase tracking-[0.15em]">下餐建議</span>
+                      </div>
+                      <p className="text-[13px] sm:text-sm font-bold leading-snug text-ink m-0">{fortune.next_meal || '均衡飲食'}</p>
+                    </div>
                   </div>
+                  <div className="h-px bg-stroke w-full opacity-40" />
+                  <p className="text-sm sm:text-base font-serif leading-relaxed text-ink border-l-[3px] border-amber pl-3 sm:pl-5 py-0.5 m-0">「{type.insight}」</p>
                 </div>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 bg-white px-6 py-4 rounded-[5px] border border-stroke shadow-sm"><AwardIcon size={20} className="text-amber" /><span className="text-xs font-bold uppercase tracking-[0.2em] text-muted">成就解鎖：誠實記錄者</span></div>
-                  <button onClick={onClose} className="w-full py-6 text-ink font-black text-xs tracking-[0.4em] uppercase hover:opacity-100 opacity-60 transition-opacity">收納食緒曆卡</button>
+                <div className="flex items-center gap-2.5 bg-white px-3 py-2.5 sm:px-5 sm:py-3 rounded-[5px] border border-stroke shadow-sm">
+                  <AwardIcon size={18} className="text-amber shrink-0" />
+                  <span className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.15em] text-muted">成就解鎖：誠實記錄者</span>
                 </div>
               </div>
-              <div className="h-3 w-full bg-clay shrink-0" />
+              {/* 固定底部按鈕 */}
+              <div className="result-modal-footer shrink-0 px-4 pt-2 pb-3 sm:px-8 sm:py-4 border-t border-stroke/30 bg-paper relative z-10">
+                <button type="button" onClick={onClose}
+                  className="w-full py-3.5 sm:py-4 rounded-[5px] bg-ink text-white font-black text-xs tracking-[0.3em] uppercase hover:opacity-90 transition-opacity">
+                  收納食緒曆卡
+                </button>
+              </div>
+              <div className="h-1.5 sm:h-3 w-full bg-clay shrink-0" />
             </div>
           )}
         </div>
