@@ -238,6 +238,44 @@
     .cn-corner-tr { top: 6px; right: 6px; border-width: 2px 2px 0 0; }
     .cn-corner-bl { bottom: 6px; left: 6px; border-width: 0 0 2px 2px; }
     .cn-corner-br { bottom: 6px; right: 6px; border-width: 0 2px 2px 0; }
+    .body-feeling-spectrum-hint {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: rgba(176, 167, 161, 0.9);
+      margin: 0 2px 8px;
+    }
+    .body-feeling-spectrum-hint span:last-child { text-align: right; }
+    .body-feeling-row {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 2px 2px 6px;
+      scroll-snap-type: x proximity;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .body-feeling-row::-webkit-scrollbar { display: none; }
+    .body-feeling-card {
+      flex: 0 0 auto;
+      width: clamp(4.5rem, 17.5vw, 5.75rem);
+      scroll-snap-align: start;
+    }
+    .body-feeling-card:active { transform: scale(0.98); }
+    @media (min-width: 640px) {
+      .body-feeling-row {
+        overflow-x: visible;
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 10px;
+        padding: 0;
+      }
+      .body-feeling-card { width: auto; }
+    }
     .meal-time-row {
       display: flex;
       align-items: center;
@@ -325,15 +363,29 @@
     }
 
     // hLevel: 0=極輕盈 1=舒適 2=略沉 3=沉重 4=強烈不適
+    /** 由左至右：還想吃 → 吃得平衡 → 身體有反應 */
     const BODY_FEELING_OPTIONS = [
-      { label:'輕盈自在', emoji:'🌿', n:true,  hLevel:0 },
-      { label:'活力充沛', emoji:'⚡', n:true,  hLevel:0 },
-      { label:'暖心飽足', emoji:'🥰', n:false, hLevel:1 },
-      { label:'昏沉想睡', emoji:'💤', n:false, hLevel:2 },
-      { label:'頭昏腦脹', emoji:'🌀', n:false, hLevel:3 },
-      { label:'腸胃不適', emoji:'😣', n:false, hLevel:4 },
+      { label:'尚未滿足', emoji:'🥢', hint:'還想吃', n:false, hLevel:0, group:'unsatisfied' },
+      { label:'清爽無負擔', emoji:'🌿', hint:'沒脹', n:true,  hLevel:0, group:'balance' },
+      { label:'舒服滿足', emoji:'🥰', hint:'滿意', n:false, hLevel:1, group:'balance' },
+      { label:'昏沉腦鈍', emoji:'💤', hint:'想睡／頭重', n:false, hLevel:2, group:'react' },
+      { label:'腸胃不舒服', emoji:'😣', hint:'脹痛不適', n:false, hLevel:4, group:'react' },
     ];
+    const BODY_FEELING_LEGACY = {
+      '輕盈自在': '清爽無負擔', '活力充沛': '清爽無負擔', '暖心飽足': '舒服滿足',
+      '吃飽想睡': '昏沉腦鈍', '頭重腦慢': '昏沉腦鈍', '昏沉想睡': '昏沉腦鈍', '頭昏腦脹': '昏沉腦鈍',
+      '腸胃不適': '腸胃不舒服', '清爽無負擔': '清爽無負擔',
+    };
     const BODY_FEELING_DESC = ['身體極輕盈，能量充沛', '身體舒適，無明顯負擔', '身體略沉，有些倦意', '明顯沉重，腦袋混沌', '強烈不適，消化困難'];
+    const normalizeBodyFeeling = (label) => {
+      if (!label) return null;
+      if (BODY_FEELING_OPTIONS.some((o) => o.label === label)) return label;
+      return BODY_FEELING_LEGACY[label] || null;
+    };
+    const getBodyFeelingOption = (label) => {
+      const canon = normalizeBodyFeeling(label);
+      return BODY_FEELING_OPTIONS.find((o) => o.label === canon) || null;
+    };
     const MOTIVATION_OPTIONS = [
       { label:'情緒驅動', emoji:'💭', desc:'需要安慰、獎勵、排解情緒', mbei:'M' },
       { label:'身體需要', emoji:'💪', desc:'真的餓、補充體力、維持機能', mbei:'B' },
@@ -513,7 +565,7 @@
 
     const isFeelingsComplete = (fd) =>
       typeof fd.mood === 'number' && fd.mood >= 1 && fd.mood <= 5
-      && BODY_FEELING_OPTIONS.some(o => o.label === fd.bodyFeeling);
+      && !!normalizeBodyFeeling(fd.bodyFeeling);
 
     /** 透過 Vercel API 寫入 Notion（金鑰只在伺服器，不進瀏覽器） */
     const syncRecordToNotion = async (record, profile, meritTotal, { includeDemographics = false } = {}) => {
@@ -630,7 +682,7 @@
       let mbei = '';
       const moodNum = parseMoodToNumber(data.mood);
       mbei += (data.context && data.context.trim()) || moodNum >= 4 ? 'M' : 'B';
-      const bfOpt = BODY_FEELING_OPTIONS.find(o => o.label === data.bodyFeeling) || { n: false, hLevel: 1 };
+      const bfOpt = getBodyFeelingOption(data.bodyFeeling) || { n: false, hLevel: 1 };
       mbei += bfOpt.n ? 'N' : 'P';
       mbei += bfOpt.hLevel >= 2 ? 'H' : 'L';
       const hour = parseInt((data.mealTime || '12:00').split(':')[0], 10);
@@ -745,17 +797,52 @@
       );
     }
 
-    function IconGrid({ options, value, onChange }) {
-      const selected = value != null && value !== '';
+    function BodyFeelingGrid({ value, onChange }) {
+      const active = normalizeBodyFeeling(value);
+      const serif = "'Noto Serif TC',serif";
+
+      const idleCardCls = (group) => {
+        if (group === 'unsatisfied') return 'bg-parchment/25 text-muted border-stroke border-dashed hover:border-amber-600/35 hover:bg-amber-950/5';
+        if (group === 'react') return 'bg-white text-muted border-stroke/80 hover:border-clay/50 hover:bg-parchment/30';
+        return 'bg-white text-muted border-stroke hover:border-jade/45 hover:bg-parchment/20';
+      };
+
       return (
-        <div className="grid grid-cols-3 gap-3">
-          {options.map(opt => (
-            <button key={opt.label} type="button" onClick={() => onChange(opt.label)}
-              className={cn("flex flex-col items-center gap-2 py-4 px-2 rounded-2xl border transition-all", selected && value === opt.label ? "bg-ink text-white border-ink shadow-md" : "bg-white text-muted border-stroke hover:border-jade/40")}>
-              <span className="text-3xl">{opt.emoji}</span>
-              <span className="text-xs font-bold tracking-tight leading-tight text-center">{opt.label}</span>
-            </button>
-          ))}
+        <div className="body-feeling-grid min-w-0">
+          <p className="body-feeling-spectrum-hint" style={{ fontFamily: serif }}>
+            <span>還想吃</span>
+            <span aria-hidden="true" style={{ opacity: 0.35, letterSpacing: '0.2em' }}>← · · · →</span>
+            <span>身體不舒服</span>
+          </p>
+          <div className="body-feeling-row" role="listbox" aria-label="吃完身體的感受">
+            {BODY_FEELING_OPTIONS.map((opt) => {
+              const isOn = active === opt.label;
+              return (
+                <button
+                  key={opt.label}
+                  type="button"
+                  role="option"
+                  aria-selected={isOn}
+                  onClick={() => onChange(opt.label)}
+                  className={cn(
+                    'body-feeling-card flex flex-col items-center justify-center gap-1 min-h-[84px] md:min-h-[92px] rounded-2xl border-2 transition-all px-1 py-2.5',
+                    isOn ? 'bg-ink text-white border-ink shadow-md' : idleCardCls(opt.group),
+                  )}
+                >
+                  <span className="text-2xl leading-none">{opt.emoji}</span>
+                  <span className="text-[10px] md:text-[11px] font-bold leading-tight text-center w-full">{opt.label}</span>
+                  {opt.hint && (
+                    <span
+                      className={cn('text-[9px] leading-none text-center', isOn ? 'text-white/70' : 'text-muted/75')}
+                      style={{ fontFamily: serif }}
+                    >
+                      {opt.hint}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
       );
     }
@@ -2417,7 +2504,7 @@
       const updateScrollEnd = React.useCallback(() => {
         const el = scrollRef.current;
         if (!el) return;
-        const threshold = 40;
+        const threshold = 96;
         const atEnd = el.scrollHeight - el.scrollTop - el.clientHeight <= threshold;
         setScrolledToEnd(atEnd);
       }, []);
@@ -2442,7 +2529,7 @@
       const canSubmit = scrolledToEnd && foodReady && feelingsComplete && !isLoading;
 
       return (
-        <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center overflow-hidden p-2 md:p-12">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden p-2 md:p-12">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm record-overlay-veil" onClick={onClose} />
           <div className="w-full max-w-lg md:max-w-3xl h-[88vh] md:h-auto md:max-h-[85vh] bg-paper rounded-t-[5px] md:rounded-[5px] relative z-10 flex flex-col shadow-2xl overflow-hidden record-modal-sacred cn-red-frame-modal min-w-0">
             <div className="record-sacred-flash" aria-hidden="true" />
@@ -2583,7 +2670,7 @@
                 {!formData.bodyFeeling && (
                   <p style={{ fontSize:12, color:'var(--mist)', margin:'0 0 8px', fontFamily:serif }}>請點選一項（必選）</p>
                 )}
-                <IconGrid options={BODY_FEELING_OPTIONS} value={formData.bodyFeeling} onChange={v => setField('bodyFeeling', v)} />
+                <BodyFeelingGrid value={formData.bodyFeeling} onChange={v => setField('bodyFeeling', v)} />
               </RecordSection>
               {foodConfirmed && prefetchStatus === 'loading' && (
                 <p className="mt-2 text-xs text-jade font-semibold" style={{ fontFamily:serif }}>靈籤預熱中…</p>
@@ -2597,13 +2684,8 @@
               </>
               )}
 
-              {/* 操作按鈕：隨內容捲動，滑到底且填完才可按 */}
-              <div className="pt-6 mt-2 border-t border-stroke/40 space-y-2 min-w-0">
-                {!scrolledToEnd && (
-                  <p className="text-center text-xs text-muted font-semibold py-1" style={{ fontFamily:serif }}>
-                    ↓ 請滑至最下方，確認填寫完成後即可送出
-                  </p>
-                )}
+              {/* 操作按鈕：隨內容捲動，接近底部且填完才可按 */}
+              <div className="pt-3 border-t border-stroke/40 space-y-2 min-w-0">
                 {isEarlyFoodStep ? (
                   <>
                     <button type="button" onClick={() => { if (!canSaveDraft) return; onSaveDraft?.({ formData, photoPreview }); }}

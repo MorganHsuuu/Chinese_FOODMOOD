@@ -26,7 +26,7 @@ const payload1 = {
     mealTime: '18:30',
     mealType: '晚餐',
     mood: '很爽',
-    bodyFeeling: '暖心飽足',
+    bodyFeeling: '舒服滿足',
     meritEarned: 3,
     mbeiScores: { MB: 10, NP: -5, HL: 20, RV: 15 },
     context: '這是一段超過十五個字的情境反思測試內容',

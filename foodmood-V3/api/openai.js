@@ -42,8 +42,15 @@ const BODY_FEELING_DESC = {
   4: '強烈不適，消化困難',
 };
 
+const BODY_FEELING_LABEL_DESC = {
+  '尚未滿足': '食量未滿，身體仍期待更多能量',
+  '昏沉腦鈍': '飯後昏沉或腦袋鈍重，精神降速',
+};
+
 const BODY_FEELING_H = {
-  '輕盈自在': 0, '活力充沛': 0, '暖心飽足': 1, '昏沉想睡': 2, '頭昏腦脹': 3, '腸胃不適': 4,
+  '清爽無負擔': 0, '舒服滿足': 1, '尚未滿足': 0, '昏沉腦鈍': 2, '腸胃不舒服': 4,
+  '輕盈自在': 0, '活力充沛': 0, '暖心飽足': 1, '吃飽想睡': 2, '頭重腦慢': 2,
+  '昏沉想睡': 2, '頭昏腦脹': 2, '腸胃不適': 4,
 };
 
 const MBEI_AXES = [
@@ -109,7 +116,7 @@ function buildFortunePrompt(recordData) {
     ? ({ 1: '很糟', 2: '不太好', 3: '普通', 4: '還不錯', 5: '很爽' }[mood] || '普通')
     : (mood || '普通');
   const hLevel = BODY_FEELING_H[bodyFeeling] ?? 1;
-  const bodyDesc = BODY_FEELING_DESC[hLevel] || '';
+  const bodyDesc = BODY_FEELING_LABEL_DESC[bodyFeeling] || BODY_FEELING_DESC[hLevel] || '';
 
   return `你是掌管靈獸孵化池的「賽博玄學解籤師」。使用者會輸入最直白的飲食紀錄，你需要「自動推算 MBEI 屬性」、「賜予玄幻菜名」，並生成「能量觀測詩籤」。
 

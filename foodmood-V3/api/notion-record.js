@@ -5,6 +5,7 @@
  */
 
 const NOTION_VERSION = '2022-06-28';
+const { mbeiCodeFromScores, buildHatchSnapshot } = require('./notion-hatch');
 
 const COL = {
   title: process.env.NOTION_TITLE_PROPERTY || null,
@@ -26,6 +27,9 @@ const COL = {
   age: process.env.NOTION_COL_AGE || '年齡',
   fortune: process.env.NOTION_COL_FORTUNE || '詩籤',
   photo: process.env.NOTION_COL_PHOTO || '餐點照片',
+  recordCount: process.env.NOTION_COL_RECORD_COUNT || '累積筆數',
+  hatched: process.env.NOTION_COL_HATCHED || '已孵化',
+  creatureCode: process.env.NOTION_COL_CREATURE_CODE || '孵化靈獸',
 };
 
 const MOOD_TEXT_TO_NUM = {
@@ -151,6 +155,7 @@ function propForColumn(colName, value, types, { preferNumber = false } = {}) {
     return s ? { multi_select: [{ name: s.slice(0, 100) }] } : null;
   }
   if (t === 'email') return propEmail(String(value));
+  if (t === 'checkbox') return { checkbox: !!value };
   if (t === 'url') return propUrl(String(value));
   if (t === 'files') {
     const s = String(value).trim();
@@ -197,7 +202,97 @@ async function resolvePhotoUrl(record) {
   }
 }
 
-function buildProperties(record, user, meritTotal, schema, { includeDemographics = false, photoUrl = null } = {}) {
+function readPageRow(page, emailCol, dateCol, scoreCols) {
+  const p = page.properties || {};
+  const readNum = (prop) => (prop?.type === 'number' && prop.number != null ? Number(prop.number) : null);
+  const readDate = (prop) => (prop?.type === 'date' && prop.date?.start ? prop.date.start : page.created_time || '');
+  const scores = {
+    MB: readNum(p[scoreCols.mb]),
+    NP: readNum(p[scoreCols.np]),
+    HL: readNum(p[scoreCols.hl]),
+    RV: readNum(p[scoreCols.rv]),
+  };
+  return {
+    date: readDate(p[dateCol]),
+    code: mbeiCodeFromScores(scores),
+  };
+}
+
+function emailFilter(email, emailCol, types) {
+  const t = types[emailCol];
+  if (t === 'email') return { property: emailCol, email: { equals: email } };
+  return { property: emailCol, rich_text: { equals: email } };
+}
+
+async function queryUserRows(apiKey, databaseId, email, schema) {
+  if (!email) return { rows: [], pageIds: [] };
+  const rows = [];
+  const pageIds = [];
+  let cursor;
+  const filter = { filter: emailFilter(email, COL.email, schema.types) };
+  do {
+    const body = { page_size: 100, ...filter };
+    if (cursor) body.start_cursor = cursor;
+    const res = await fetch(`https://api.notion.com/v1/databases/${databaseId.trim()}/query`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Notion-Version': NOTION_VERSION,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || 'Notion 查詢使用者紀錄失敗');
+    for (const page of data.results || []) {
+      pageIds.push(page.id);
+      rows.push(readPageRow(page, COL.email, COL.date, COL));
+    }
+    cursor = data.has_more ? data.next_cursor : null;
+  } while (cursor);
+  return { rows, pageIds };
+}
+
+function hatchPropsFromSnapshot(snapshot, types) {
+  const props = {};
+  const set = (colKey, val, opts) => {
+    const colName = COL[colKey];
+    if (!types[colName]) return;
+    const p = propForColumn(colName, val, types, opts);
+    if (p) props[colName] = p;
+  };
+  set('recordCount', snapshot.recordCount, { preferNumber: true });
+  set('hatched', snapshot.hatched);
+  if (snapshot.creatureName) {
+    set('creatureCode', `${snapshot.creatureName} (${snapshot.creatureCode})`);
+  } else {
+    set('creatureCode', '');
+  }
+  return props;
+}
+
+async function patchPageProperties(apiKey, pageId, properties) {
+  if (!Object.keys(properties).length) return;
+  const res = await fetch(`https://api.notion.com/v1/pages/${pageId}`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Notion-Version': NOTION_VERSION,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ properties }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) console.warn('[Notion patch hatch]', data.message || res.status);
+}
+
+async function syncHatchSnapshotToUserPages(apiKey, schema, snapshot, pageIds) {
+  const props = hatchPropsFromSnapshot(snapshot, schema.types);
+  if (!Object.keys(props).length) return;
+  await Promise.all(pageIds.map((id) => patchPageProperties(apiKey, id, props)));
+}
+
+function buildProperties(record, user, meritTotal, schema, { includeDemographics = false, photoUrl = null, hatchSnapshot = null } = {}) {
   const fortune = record.fortune || {};
   const scores = record.mbeiScores || fortune.mbei_scores || {};
   const merit = record.meritEarned ?? (fortune.merit_point?.match(/\+(\d+)/)
@@ -237,6 +332,7 @@ function buildProperties(record, user, meritTotal, schema, { includeDemographics
   }
   set('fortune', buildFortuneText(fortune));
   if (photoUrl) set('photo', photoUrl);
+  if (hatchSnapshot) Object.assign(props, hatchPropsFromSnapshot(hatchSnapshot, types));
 
   return props;
 }
@@ -263,9 +359,26 @@ module.exports = async (req, res) => {
   try {
     const schema = await loadDatabaseSchema(apiKey, databaseId);
     const photoUrl = await resolvePhotoUrl(record);
+    const profile = normalizeUser(user);
+    const email = profile.email;
+
+    let existingPageIds = [];
+    let hatchSnapshot = null;
+    if (email && schema.types[COL.email]) {
+      const { rows: existingRows, pageIds } = await queryUserRows(apiKey, databaseId, email, schema);
+      existingPageIds = pageIds;
+      const scores = record.mbeiScores || record.fortune?.mbei_scores || {};
+      const nextRows = [
+        ...existingRows.map((r) => ({ date: r.date, code: r.code })),
+        { date: record.date || new Date().toISOString().slice(0, 10), code: mbeiCodeFromScores(scores) },
+      ];
+      hatchSnapshot = buildHatchSnapshot(nextRows);
+    }
+
     const properties = buildProperties(record, user, meritTotal, schema, {
       includeDemographics: !!includeDemographics,
       photoUrl,
+      hatchSnapshot,
     });
 
     const notionRes = await fetch('https://api.notion.com/v1/pages', {
@@ -291,12 +404,17 @@ module.exports = async (req, res) => {
       });
     }
 
+    if (hatchSnapshot && existingPageIds.length) {
+      await syncHatchSnapshotToUserPages(apiKey, schema, hatchSnapshot, existingPageIds);
+    }
+
     return res.status(200).json({
       ok: true,
       pageId: data.id,
       titleProperty: schema.titleProp,
       writtenColumns: Object.keys(properties),
       photoUrl: photoUrl || null,
+      hatchSnapshot: hatchSnapshot || null,
     });
   } catch (err) {
     console.error(err);
