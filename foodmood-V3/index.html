@@ -133,27 +133,29 @@
     .inject-btn { transition: box-shadow 0.3s, background 0.3s; }
     .inject-btn:hover:not(:disabled) { box-shadow: 0 0 32px rgba(212,168,67,0.2), 0 4px 24px rgba(0,0,0,0.4); }
     .inject-btn:active:not(:disabled) { transform: scale(0.98); }
-    /* 中式朱紅框 */
+    /* 中式朱紅框（凝練食緒彈窗） */
     .cn-red-frame-modal {
-      border: 3px solid #9e2a2b !important;
+      border: 2px solid #9e2a2b !important;
       box-shadow:
         inset 0 0 0 1px #d4503c,
-        inset 0 0 0 5px rgba(37, 29, 18, 0.92),
-        0 12px 48px rgba(0, 0, 0, 0.55);
+        inset 0 0 0 3px rgba(37, 29, 18, 0.92),
+        0 8px 32px rgba(0, 0, 0, 0.5);
+      max-width: 100%;
+      box-sizing: border-box;
     }
     .cn-red-frame-modal > .cn-corner {
       position: absolute;
-      width: 16px;
-      height: 16px;
+      width: 12px;
+      height: 12px;
       border-color: #d4503c;
       border-style: solid;
       pointer-events: none;
       z-index: 30;
     }
-    .cn-corner-tl { top: 8px; left: 8px; border-width: 3px 0 0 3px; }
-    .cn-corner-tr { top: 8px; right: 8px; border-width: 3px 3px 0 0; }
-    .cn-corner-bl { bottom: 8px; left: 8px; border-width: 0 0 3px 3px; }
-    .cn-corner-br { bottom: 8px; right: 8px; border-width: 0 3px 3px 0; }
+    .cn-corner-tl { top: 6px; left: 6px; border-width: 2px 0 0 2px; }
+    .cn-corner-tr { top: 6px; right: 6px; border-width: 2px 2px 0 0; }
+    .cn-corner-bl { bottom: 6px; left: 6px; border-width: 0 0 2px 2px; }
+    .cn-corner-br { bottom: 6px; right: 6px; border-width: 0 2px 2px 0; }
   </style>
   <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
@@ -2147,28 +2149,62 @@
 
       const isRecognizing = recognizePhase === 'compressing' || recognizePhase === 'recognizing';
 
+      const scrollRef = React.useRef(null);
+      const [scrolledToEnd, setScrolledToEnd] = React.useState(false);
+
+      const updateScrollEnd = React.useCallback(() => {
+        const el = scrollRef.current;
+        if (!el) return;
+        const threshold = 40;
+        const atEnd = el.scrollHeight - el.scrollTop - el.clientHeight <= threshold;
+        setScrolledToEnd(atEnd);
+      }, []);
+
+      React.useEffect(() => {
+        setScrolledToEnd(false);
+        requestAnimationFrame(() => updateScrollEnd());
+      }, [phase, updateScrollEnd]);
+
+      React.useEffect(() => {
+        updateScrollEnd();
+        const el = scrollRef.current;
+        if (!el) return;
+        const ro = new ResizeObserver(() => updateScrollEnd());
+        ro.observe(el);
+        return () => ro.disconnect();
+      }, [updateScrollEnd, phase, showFoodSection, showFeelingsSection, formData.whatFood, formData.mood, formData.bodyFeeling, recognizePhase, photoPreview]);
+
+      const foodReady = !!formData.whatFood?.trim() && recognizePhase !== 'confirm' && !isRecognizing;
+      const canSaveDraft = scrolledToEnd && foodReady;
+      const canContinueFeelings = scrolledToEnd && foodReady;
+      const canSubmit = scrolledToEnd && foodReady && feelingsComplete && !isLoading;
+
       return (
-        <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center overflow-hidden p-0 md:p-12">
+        <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center overflow-hidden p-2 md:p-12">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-          <div className="w-full md:max-w-5xl h-[94vh] md:h-auto md:max-h-[90vh] bg-paper rounded-t-[5px] md:rounded-[5px] relative z-10 flex flex-col shadow-2xl overflow-hidden sheet-up cn-red-frame-modal">
+          <div className="w-full max-w-lg md:max-w-3xl h-[88vh] md:h-auto md:max-h-[85vh] bg-paper rounded-t-[5px] md:rounded-[5px] relative z-10 flex flex-col shadow-2xl overflow-hidden sheet-up cn-red-frame-modal min-w-0">
             <span className="cn-corner cn-corner-tl" aria-hidden="true" />
             <span className="cn-corner cn-corner-tr" aria-hidden="true" />
             <span className="cn-corner cn-corner-bl" aria-hidden="true" />
             <span className="cn-corner cn-corner-br" aria-hidden="true" />
             <div className="paper-texture" style={{opacity:0.03}} />
-            <div className="p-8 md:p-12 flex justify-between items-center border-b border-stroke shrink-0 bg-parchment/80 backdrop-blur-md relative z-10">
-              <div className="space-y-1">
-                <h3 className="text-3xl font-serif font-black tracking-tighter text-ink">凝練食緒</h3>
-                <p className="text-[10px] font-black text-muted uppercase tracking-[0.3em]">CRAFTING DIETARY SPIRIT</p>
-                <p className="text-xs font-semibold text-jade/90" style={{ fontFamily:serif, letterSpacing:'0.05em' }}>{modalSubtitle}</p>
+            <div className="p-4 md:p-8 flex justify-between items-start gap-3 border-b border-stroke shrink-0 bg-parchment/80 backdrop-blur-md relative z-10 min-w-0">
+              <div className="space-y-0.5 min-w-0 flex-1">
+                <h3 className="text-2xl md:text-3xl font-serif font-black tracking-tighter text-ink">凝練食緒</h3>
+                <p className="hidden sm:block text-[10px] font-black text-muted uppercase tracking-[0.2em] truncate">CRAFTING DIETARY SPIRIT</p>
+                <p className="text-xs font-semibold text-jade/90 truncate" style={{ fontFamily:serif, letterSpacing:'0.05em' }}>{modalSubtitle}</p>
               </div>
-              <button onClick={onClose} className="w-12 h-12 flex items-center justify-center bg-ink text-white rounded-full hover:scale-110 active:scale-90 transition-all shadow-lg"><XIcon size={24} /></button>
+              <button onClick={onClose} className="w-10 h-10 md:w-12 md:h-12 shrink-0 flex items-center justify-center bg-ink text-white rounded-full hover:scale-110 active:scale-90 transition-all shadow-lg"><XIcon size={22} /></button>
             </div>
-            <div className="flex-1 overflow-y-auto p-8 md:p-16 space-y-12 pb-44 md:pb-40 scrollbar-hide relative z-10">
+            <div
+              ref={scrollRef}
+              onScroll={updateScrollEnd}
+              className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-10 space-y-8 md:space-y-10 pb-6 scrollbar-hide relative z-10 min-w-0"
+            >
               {phase === 'feelings' && formData.whatFood?.trim() && (
                 <div className="p-4 rounded-[1.5rem] border border-jade/30 bg-parchment/40 flex items-center gap-3 flex-wrap">
                   {photoPreview && <img src={photoPreview} alt="" className="w-14 h-14 rounded-xl object-cover border border-stroke shrink-0" />}
-                  <div className="flex-1 min-w-[120px]">
+                  <div className="flex-1 min-w-0">
                     <p style={{ fontSize:11, color:'var(--mist)', margin:'0 0 4px' }}>本餐食物</p>
                     <p style={{ fontSize:18, fontWeight:900, color:'var(--ink)', margin:0, fontFamily:serif }}>{formData.whatFood}</p>
                     <p style={{ fontSize:12, color:'var(--muted)', margin:'4px 0 0' }}>{formData.mealType} · {formData.mealTime}</p>
@@ -2182,8 +2218,8 @@
               <>
               <RecordSection title={recordMode === 'after' ? '這一餐吃了什麼？（拍照或選照片）' : '這一餐吃了什麼？'}>
                 <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoFile} />
-                <div className="flex gap-2 flex-wrap">
-                  <input type="text" className="flex-1 min-w-[140px] rounded-[1.5rem] border-2 border-stroke bg-white px-6 py-4 text-lg font-semibold text-ink placeholder:text-[#B0A7A1] focus:outline-none focus:border-ink/30" placeholder="手動輸入食物名稱" value={formData.whatFood || ''} onChange={onWhatFoodChange} onBlur={onWhatFoodBlur} required={phase === 'food' || phase === 'all'} disabled={isRecognizing || phase === 'feelings'} />
+                <div className="flex gap-2 flex-wrap min-w-0">
+                  <input type="text" className="flex-1 min-w-0 w-full rounded-[1.5rem] border-2 border-stroke bg-white px-4 md:px-6 py-3 md:py-4 text-base md:text-lg font-semibold text-ink placeholder:text-[#B0A7A1] focus:outline-none focus:border-ink/30" placeholder="手動輸入食物名稱" value={formData.whatFood || ''} onChange={onWhatFoodChange} onBlur={onWhatFoodBlur} required={phase === 'food' || phase === 'all'} disabled={isRecognizing || phase === 'feelings'} />
                   <button type="button" onClick={() => photoInputRef.current?.click()} disabled={isRecognizing || phase === 'feelings'}
                     className="shrink-0 w-14 h-14 rounded-[1.5rem] border-2 border-stroke bg-white flex items-center justify-center text-ink hover:border-jade/50 disabled:opacity-50"
                     title="拍照或選照片"
@@ -2219,7 +2255,7 @@
                   <p className="mt-2 text-sm text-clay font-semibold">{recognizeError}</p>
                 )}
               </RecordSection>
-              <div className="grid md:grid-cols-2 gap-12 lg:gap-16">
+              <div className="grid md:grid-cols-2 gap-6 md:gap-10">
                 <RecordSection title="餐別"><PillSelector options={['早餐','午餐','晚餐','宵夜','點心']} value={formData.mealType} onChange={v => setField('mealType', v)} /></RecordSection>
                 <RecordSection title="幾點吃這餐">
                   <input type="time" value={formData.mealTime} onChange={e => setField('mealTime', e.target.value)}
@@ -2249,7 +2285,7 @@
               {recordMode === 'after' && phase === 'all' && (
                 <p className="text-sm text-muted font-semibold -mt-4 mb-2" style={{ fontFamily:serif }}>請在吃完後填寫以下感受</p>
               )}
-              <div className="py-10 bg-parchment/30 rounded-[5px] px-8 md:px-12 border border-stroke/50 shadow-inner">
+              <div className="py-6 md:py-10 bg-parchment/30 rounded-[5px] px-4 md:px-10 border border-stroke/50 shadow-inner min-w-0">
                 <RecordSection title="吃完這一餐，爽度如何？">
                   <div style={{ padding:'8px 4px 0' }}>
                     {!moodSelected && (
@@ -2297,32 +2333,43 @@
               )}
               </>
               )}
-            </div>
-            <div className="p-4 md:p-6 bg-parchment/90 backdrop-blur-xl absolute bottom-0 left-0 right-0 border-t border-stroke z-20 flex justify-center">
-              <div className="max-w-md w-full space-y-2">
+
+              {/* 操作按鈕：隨內容捲動，滑到底且填完才可按 */}
+              <div className="pt-6 mt-2 border-t border-stroke/40 space-y-2 min-w-0">
+                {!scrolledToEnd && (
+                  <p className="text-center text-xs text-muted font-semibold py-1" style={{ fontFamily:serif }}>
+                    ↓ 請滑至最下方，確認填寫完成後即可送出
+                  </p>
+                )}
                 {isEarlyFoodStep ? (
                   <>
-                    <button type="button" onClick={() => { if (!formData.whatFood?.trim()) return; onSaveDraft?.({ formData, photoPreview }); }}
-                      disabled={!formData.whatFood?.trim() || recognizePhase === 'confirm' || isRecognizing}
-                      className="w-full py-2.5 rounded-[5px] border border-stroke text-ink font-semibold text-sm hover:bg-parchment/50 disabled:opacity-50"
+                    <button type="button" onClick={() => { if (!canSaveDraft) return; onSaveDraft?.({ formData, photoPreview }); }}
+                      disabled={!canSaveDraft}
+                      className="w-full py-2.5 rounded-[5px] border border-stroke text-ink font-semibold text-sm hover:bg-parchment/50 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
                       style={{ fontFamily:serif }}>稍後再填食緒</button>
                     <button type="button" onClick={() => {
-                      if (!formData.whatFood?.trim()) return;
+                      if (!canContinueFeelings) return;
                       setFoodConfirmed(true);
                       setPhase('feelings');
-                    }} disabled={!formData.whatFood?.trim() || recognizePhase === 'confirm' || isRecognizing}
-                      className="inject-btn w-full text-white py-3 rounded-[5px] font-bold text-sm shadow-md disabled:opacity-50"
+                    }} disabled={!canContinueFeelings}
+                      className="inject-btn w-full text-white py-3 rounded-[5px] font-bold text-sm shadow-md disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
                       style={{ background:'linear-gradient(135deg,#1a1208 0%,#2d2010 50%,#1a1208 100%)', border:'1px solid rgba(212,168,67,0.35)', fontFamily:serif }}>
                       現在繼續填感受
                     </button>
                   </>
                 ) : (
-                <button onClick={onSubmit} disabled={isLoading || !formData.whatFood?.trim() || !feelingsComplete || recognizePhase === 'confirm'}
-                  className="inject-btn w-full text-white py-3.5 rounded-[5px] font-bold text-base shadow-md flex items-center justify-center gap-2 relative overflow-hidden disabled:opacity-50"
+                <button onClick={onSubmit} disabled={!canSubmit || recognizePhase === 'confirm'}
+                  className="inject-btn w-full text-white py-3.5 rounded-[5px] font-bold text-base shadow-md flex items-center justify-center gap-2 relative overflow-hidden disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
                   style={{ background:'linear-gradient(135deg,#1a1208 0%,#2d2010 50%,#1a1208 100%)', border:'1px solid rgba(212,168,67,0.35)' }}>
                   <div className="absolute inset-0 paper-texture" style={{opacity:0.15}} />
                   {isLoading ? <span className="spin-loading text-xl">☯</span> : <span className="tracking-[0.25em] text-sm" style={{fontFamily:"'Noto Serif TC',serif"}}>注入孵化池</span>}
                 </button>
+                )}
+                {scrolledToEnd && !isEarlyFoodStep && !feelingsComplete && (
+                  <p className="text-center text-xs text-muted font-semibold" style={{ fontFamily:serif }}>請完成爽度與身體感受（必選）</p>
+                )}
+                {scrolledToEnd && isEarlyFoodStep && !foodReady && (
+                  <p className="text-center text-xs text-muted font-semibold" style={{ fontFamily:serif }}>請先輸入食物名稱</p>
                 )}
               </div>
             </div>
