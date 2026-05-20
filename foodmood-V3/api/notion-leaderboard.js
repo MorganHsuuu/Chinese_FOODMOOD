@@ -152,13 +152,14 @@ function buildLeaderboards(rows, currentEmail) {
     }
     if (latestMeritTotal != null) points = latestMeritTotal;
 
+    const hatched = recordCount >= HATCH_RECORDS_REQUIRED;
     personalMap[key] = {
       email,
       name: userRows.find((r) => r.nickname)?.nickname || email.split('@')[0] || '修行者',
       points,
-      code: hatchedCode || userRows[userRows.length - 1]?.code || 'MPLR',
+      code: hatched ? (hatchedCode || userRows[userRows.length - 1]?.code || 'MPLR') : null,
       recordCount,
-      hatched: recordCount >= HATCH_RECORDS_REQUIRED,
+      hatched,
     };
   }
 
