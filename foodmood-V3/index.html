@@ -145,6 +145,17 @@
       animation: recordFabGlow 3.5s ease-in-out infinite;
     }
     .record-fab-btn:active { opacity: 0.88; animation: none; }
+    @keyframes hatchReveal {
+      0%   { opacity:0; transform:scale(0.88); filter:brightness(1.5) blur(8px); }
+      40%  { opacity:1; transform:scale(1.02); filter:brightness(1.15) blur(0); }
+      100% { opacity:1; transform:scale(1); filter:brightness(1) blur(0); }
+    }
+    @keyframes hatchAuraPulse {
+      0%, 100% { opacity:0.35; transform:scale(1); }
+      50%      { opacity:0.75; transform:scale(1.08); }
+    }
+    .hatch-celebration-img { animation: hatchReveal 1.4s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+    .hatch-celebration-aura { animation: hatchAuraPulse 3s ease-in-out 0.5s infinite; }
     @keyframes recordSacredFlash {
       0%   { opacity:0; transform:scale(0.99); }
       18%  { opacity:0.38; transform:scale(1); }
@@ -279,6 +290,21 @@
       BPHR:'openspec/asset/png/16.png', BPHV:'openspec/asset/png/10.png',
       BPLR:'openspec/asset/png/14.png', BPLV:'openspec/asset/png/9.png',
     };
+    const BEGIN_AVATAR_IMG = 'openspec/asset/png/begin.png';
+
+    function HatchPortrait({ hatchState, style, className }) {
+      const hatched = hatchState?.avatarType;
+      const src = hatched ? CREATURE_IMG[hatched.code] : BEGIN_AVATAR_IMG;
+      const alt = hatched ? hatched.creature : '靈獸待孵化';
+      return (
+        <img
+          src={src}
+          alt={alt}
+          className={className}
+          style={{ width:'100%', height:'100%', objectFit:'contain', display:'block', ...style }}
+        />
+      );
+    }
 
     // hLevel: 0=極輕盈 1=舒適 2=略沉 3=沉重 4=強烈不適
     const BODY_FEELING_OPTIONS = [
@@ -364,6 +390,59 @@
       let streak = 0, d = new Date();
       while (dateSet.has(toStr(d))) { streak++; d.setDate(d.getDate() - 1); }
       return streak;
+    };
+
+    const HATCH_RECORDS_REQUIRED = 10;
+
+    const dominantTypeFromRecords = (batch) => {
+      if (!batch?.length) return null;
+      const freq = {};
+      batch.forEach(r => { freq[r.mbeiCode] = (freq[r.mbeiCode] || 0) + 1; });
+      const topCode = Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0] || 'MPLR';
+      return MBEI_TYPES[topCode] || MBEI_TYPES.MPLR;
+    };
+
+    const getHatchState = (records = []) => {
+      const sortedAsc = [...records].sort((a, b) => new Date(a.date) - new Date(b.date));
+      const total = sortedAsc.length;
+      const completedCycles = Math.floor(total / HATCH_RECORDS_REQUIRED);
+      const progressInCycle = total % HATCH_RECORDS_REQUIRED;
+      const avatarBatch = completedCycles > 0
+        ? sortedAsc.slice((completedCycles - 1) * HATCH_RECORDS_REQUIRED, completedCycles * HATCH_RECORDS_REQUIRED)
+        : [];
+      const currentCycleBatch = progressInCycle > 0
+        ? sortedAsc.slice(completedCycles * HATCH_RECORDS_REQUIRED)
+        : [];
+      const hatchedType = dominantTypeFromRecords(avatarBatch);
+      const formingType = dominantTypeFromRecords(currentCycleBatch.length ? currentCycleBatch : sortedAsc);
+      const recordsToNext = progressInCycle === 0 && completedCycles > 0
+        ? HATCH_RECORDS_REQUIRED
+        : HATCH_RECORDS_REQUIRED - progressInCycle;
+      const progressPct = progressInCycle === 0 && completedCycles > 0
+        ? 100
+        : Math.round((progressInCycle / HATCH_RECORDS_REQUIRED) * 100);
+      let stage = 0;
+      if (total === 0) stage = 0;
+      else if (completedCycles === 0) stage = 1;
+      else if (progressInCycle === 0) stage = 3;
+      else stage = 2;
+      return {
+        total,
+        completedCycles,
+        progressInCycle,
+        progressPct,
+        recordsToNext,
+        stage,
+        hatchedType,
+        formingType,
+        avatarType: hatchedType,
+        displayType: hatchedType || formingType || MBEI_TYPES.MPLR,
+        cycleNumber: Math.max(1, completedCycles + (progressInCycle > 0 ? 1 : 0)),
+        hasHatched: completedCycles >= 1,
+        justHatched: progressInCycle === 0 && completedCycles > 0,
+        unlockedCodes: new Set(records.map(r => r.mbeiCode)),
+        currentCycleType: formingType,
+      };
     };
     const MOOD_SCORE_EMOJIS = {1:'😫', 2:'😕', 3:'😐', 4:'😊', 5:'😄'};
 
@@ -1056,9 +1135,40 @@
       );
     }
 
+    function HatchCelebrationModal({ hatchType, cycleNumber, onClose }) {
+      if (!hatchType) return null;
+      const serif = "'Noto Serif TC',serif";
+      return (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 record-overlay-veil" onClick={onClose}>
+          <div className="record-sacred-flash" aria-hidden="true" style={{ position:'fixed', inset:0, borderRadius:0, pointerEvents:'none' }} />
+          <div
+            onClick={e => e.stopPropagation()}
+            className="relative w-full max-w-md text-center p-8 md:p-10 rounded-[5px] border-2 border-jade/40 record-modal-sacred"
+            style={{ background:'rgba(21,13,0,0.94)', boxShadow:'0 24px 80px rgba(0,0,0,0.75)' }}
+          >
+            <div className="record-sacred-glow" aria-hidden="true" />
+            <p style={{ fontSize:11, color:'var(--jade)', letterSpacing:'0.25em', fontWeight:700, fontFamily:serif, margin:'0 0 8px' }}>第 {cycleNumber} 輪 · 靈獸孵化</p>
+            <h3 style={{ fontSize:26, fontFamily:serif, fontWeight:900, color:'var(--cream)', margin:'0 0 20px' }}>山海靈獸顯形</h3>
+            <div style={{ position:'relative', margin:'0 auto 20px', width:180, height:220 }}>
+              <div className="hatch-celebration-aura" style={{ position:'absolute', inset:-24, background:'radial-gradient(circle, rgba(255,248,235,0.25) 0%, transparent 70%)', borderRadius:'50%', pointerEvents:'none' }} />
+              <img src={CREATURE_IMG[hatchType.code]} alt={hatchType.creature} className="hatch-celebration-img relative z-10" style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />
+            </div>
+            <p style={{ fontSize:13, color:'var(--amber)', fontFamily:serif, margin:'0 0 6px', letterSpacing:'0.12em' }}>{hatchType.code}</p>
+            <h4 style={{ fontSize:20, fontFamily:serif, fontWeight:900, color:'var(--cream)', margin:'0 0 12px' }}>{hatchType.creature} · {hatchType.name.split(' ')[0]}</h4>
+            <p style={{ fontSize:14, color:'var(--sand)', lineHeight:1.8, fontFamily:serif, margin:'0 0 24px' }}>「{hatchType.insight}」</p>
+            <p style={{ fontSize:12, color:'var(--mist)', fontFamily:serif, margin:'0 0 16px' }}>你的頭像已更新為此靈獸。再記滿 10 次將孵化下一隻。</p>
+            <button type="button" onClick={onClose} className="inject-btn w-full text-white py-3 rounded-[5px] font-bold text-sm" style={{ background:'linear-gradient(135deg,#1a1208 0%,#2d2010 50%,#1a1208 100%)', border:'1px solid rgba(212,168,67,0.35)', fontFamily:serif }}>
+              承接靈獸之力
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     function HomeView({ records, loginProfile, mealDrafts = [], onContinueDraft }) {
-      const latestType = records[0] ? MBEI_TYPES[records[0].mbeiCode] : MBEI_TYPES['MPLR'];
-      const isUnlocked = records.length >= 10;
+      const hatch = useMemo(() => getHatchState(records), [records]);
+      const displayType = hatch.avatarType || hatch.formingType || MBEI_TYPES.MPLR;
+      const isUnlocked = hatch.hasHatched;
       const card = { background:'#252016', border:'1px solid #3a3020', borderRadius:5, padding:'28px 24px', position:'relative', boxShadow:'0 8px 30px rgba(135,123,115,0.08)' };
       const now = new Date();
       const hh = String(now.getHours()).padStart(2,'0');
@@ -1100,12 +1210,14 @@
           <section style={{ ...card, padding:'24px 24px' }}>
             <div style={{ display:'flex', gap:20, alignItems:'center' }}>
               <div style={{ width:110, height:138, borderRadius:8, overflow:'hidden', border:'2px solid rgba(149,211,195,0.25)', flexShrink:0, background:'var(--paper)', boxShadow:'0 6px 24px rgba(0,0,0,0.35)' }}>
-                <img src={CREATURE_IMG[latestType.code]} alt={latestType.creature} style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />
+                <HatchPortrait hatchState={hatch} />
               </div>
               <div style={{ flex:1, minWidth:0 }}>
                 <p style={{ fontSize:11, color:'var(--mist)', letterSpacing:'0.2em', marginBottom:4, fontWeight:500 }}>今日食修者</p>
                 <h3 style={{ fontSize:20, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color:'white', margin:'0 0 8px', letterSpacing:'0.05em' }}>{loginProfile?.nickname || '修行者'}</h3>
-                <div style={{ display:'inline-block', background:'rgba(149,211,195,0.08)', border:'1px solid rgba(149,211,195,0.15)', borderRadius:10, padding:'3px 12px', fontSize:11, color:'var(--sand)', marginBottom:14 }}>{latestType.name}</div>
+                <div style={{ display:'inline-block', background:'rgba(149,211,195,0.08)', border:'1px solid rgba(149,211,195,0.15)', borderRadius:10, padding:'3px 12px', fontSize:11, color:'var(--sand)', marginBottom:14 }}>
+                  {hatch.avatarType ? hatch.avatarType.name : `${hatch.progressInCycle}/${HATCH_RECORDS_REQUIRED} 孵化中`}
+                </div>
                 <div style={{ display:'flex', gap:20 }}>
                   <div>
                     <p style={{ fontSize:9, color:'var(--mist)', letterSpacing:'0.15em', marginBottom:3, fontWeight:700, textTransform:'uppercase' }}>累積功德</p>
@@ -1171,13 +1283,13 @@
             <section style={card}>
               <div style={{ display:'flex', gap:20, alignItems:'center' }}>
                 <div style={{ width:72, height:90, borderRadius:5, overflow:'hidden', border:'1px solid rgba(149,211,195,0.2)', flexShrink:0 }}>
-                  <img src={CREATURE_IMG[latestType.code]} alt={latestType.creature} style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />
+                  <img src={CREATURE_IMG[displayType.code]} alt={displayType.creature} style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />
                 </div>
                 <div style={{ flex:1 }}>
-                  <p style={{ fontSize:13, color:'var(--mist)', letterSpacing:'0.15em', marginBottom:6, fontWeight:500 }}>已照見 · 型格</p>
-                  <div style={{ display:'inline-block', background:'rgba(149,211,195,0.08)', border:'1px solid rgba(149,211,195,0.15)', borderRadius:10, padding:'2px 10px', fontSize:13, color:'var(--sand)', marginBottom:8, fontWeight:500 }}>{latestType.creature}</div>
-                  <h3 style={{ fontSize:20, fontFamily:"'Noto Serif TC', serif", fontWeight:900, color:'var(--jade)', letterSpacing:'0.05em', margin:'0 0 10px' }}>{latestType.code}｜{latestType.name}</h3>
-                  <p style={{ fontSize:15, color:'var(--sand)', lineHeight:1.8, borderLeft:'3px solid rgba(217,138,91,0.5)', paddingLeft:12 }}>「{latestType.insight}」</p>
+                  <p style={{ fontSize:13, color:'var(--mist)', letterSpacing:'0.15em', marginBottom:6, fontWeight:500 }}>已孵化 · 第 {hatch.completedCycles} 輪靈獸</p>
+                  <div style={{ display:'inline-block', background:'rgba(149,211,195,0.08)', border:'1px solid rgba(149,211,195,0.15)', borderRadius:10, padding:'2px 10px', fontSize:13, color:'var(--sand)', marginBottom:8, fontWeight:500 }}>{displayType.creature}</div>
+                  <h3 style={{ fontSize:20, fontFamily:"'Noto Serif TC', serif", fontWeight:900, color:'var(--jade)', letterSpacing:'0.05em', margin:'0 0 10px' }}>{displayType.code}｜{displayType.name}</h3>
+                  <p style={{ fontSize:15, color:'var(--sand)', lineHeight:1.8, borderLeft:'3px solid rgba(217,138,91,0.5)', paddingLeft:12 }}>「{displayType.insight}」</p>
                 </div>
               </div>
             </section>
@@ -1263,13 +1375,20 @@
             <section style={{ ...card, padding:'36px 24px 40px' }}>
               <div style={{ display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center', gap:18 }}>
                 <div style={{ width:80, height:80, borderRadius:'50%', border:'1px solid rgba(149,211,195,0.25)', display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(149,211,195,0.04)' }}>
-                  <span style={{ fontSize:19, fontFamily:"'Noto Serif TC', serif", fontWeight:900, color:'var(--jade)' }}>{records.length}<span style={{ opacity:0.3 }}>/</span>10</span>
+                  <span style={{ fontSize:19, fontFamily:"'Noto Serif TC', serif", fontWeight:900, color:'var(--jade)' }}>{hatch.progressInCycle}<span style={{ opacity:0.3 }}>/</span>{HATCH_RECORDS_REQUIRED}</span>
                 </div>
                 <div>
                   <h3 style={{ fontSize:18, fontFamily:"'Noto Serif TC', serif", fontWeight:900, color:'var(--jade)', letterSpacing:'0.1em', marginBottom:10 }}>靈光凝練中</h3>
-                  <p style={{ fontSize:14, color:'var(--sand)', lineHeight:2, opacity:0.8 }}>尚需 {10 - records.length} 次食緒紀錄<br />即可照見你的食緒型格</p>
+                  <p style={{ fontSize:14, color:'var(--sand)', lineHeight:2, opacity:0.8 }}>尚需 {hatch.recordsToNext} 次食緒紀錄<br />即可孵化你的山海靈獸</p>
                 </div>
               </div>
+            </section>
+          )}
+          {isUnlocked && hatch.progressInCycle > 0 && (
+            <section style={{ ...card, padding:'16px 20px' }}>
+              <p style={{ fontSize:13, color:'var(--sand)', margin:0, fontFamily:"'Noto Serif TC',serif", lineHeight:1.7 }}>
+                本輪靈獸已顯形為 <strong style={{ color:'var(--jade)' }}>{hatch.avatarType?.creature}</strong>。再記 {hatch.recordsToNext} 次將孵化下一隻（{hatch.progressInCycle}/{HATCH_RECORDS_REQUIRED}）。
+              </p>
             </section>
           )}
         </div>
@@ -1564,28 +1683,7 @@
       const encIdx = selectedCreature ? encCreatures.findIndex(c => c.code === selectedCreature.code) : 0;
       const goCreature = dir => setSelectedCreature(encCreatures[(encIdx + dir + encCreatures.length) % encCreatures.length]);
 
-      const hatch = useMemo(() => {
-        if (!records.length) return { stage: 0, count: 0, unlockedCodes: new Set(), weekCode: null };
-        const sorted = [...records].sort((a,b) => new Date(a.date) - new Date(b.date));
-        const daysSinceFirst = Math.floor((new Date() - new Date(sorted[0].date)) / 86400000);
-        const count = records.length;
-        const freq = {};
-        records.forEach(r => { freq[r.mbeiCode] = (freq[r.mbeiCode]||0)+1; });
-        const topCode = Object.entries(freq).sort((a,b)=>b[1]-a[1])[0]?.[0] || 'MPLR';
-        const dominantType = MBEI_TYPES[topCode] || MBEI_TYPES['MPLR'];
-        const mCount = records.filter(r=>r.mbeiCode[0]==='M').length;
-        const firstLetter = mCount > count/2 ? 'M' : 'B';
-        const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate()-7);
-        const weekRecords = records.filter(r=>new Date(r.date)>=weekAgo);
-        const stage = daysSinceFirst >= 7 ? 3 : count >= 5 ? 2 : 1;
-        // 解鎖紀錄
-        const unlockedCodes = new Set(records.map(r => r.mbeiCode));
-        // 本週主型格
-        const weekFreq = {};
-        weekRecords.forEach(r => { weekFreq[r.mbeiCode] = (weekFreq[r.mbeiCode]||0)+1; });
-        const weekCode = weekRecords.length > 0 ? (Object.entries(weekFreq).sort((a,b)=>b[1]-a[1])[0]?.[0] || null) : null;
-        return { stage, dominantType, daysSinceFirst, count, firstLetter, weekRecords, unlockedCodes, weekCode };
-      }, [records]);
+      const hatch = useMemo(() => getHatchState(records), [records]);
 
       const latest = records[0];
       const stageClue = !latest ? '' : (()=>{
@@ -1594,20 +1692,19 @@
       })();
 
       const hatchProgress = useMemo(() => {
-        const count = hatch.count || 0;
-        const days = hatch.daysSinceFirst || 0;
-        const recordPct = Math.min(count / 5, 1) * 50;
-        const dayPct = hatch.stage >= 2 ? Math.min(days / 7, 1) * 50 : 0;
-        const overall = hatch.stage === 0 ? 0 : hatch.stage >= 3 ? 100 : recordPct + dayPct;
-        const phaseIdx = hatch.stage <= 1 ? 0 : hatch.stage === 2 ? 1 : 2;
         const nextMilestone = hatch.stage === 0
           ? '記下第一餐，啟動孵化'
           : hatch.stage === 1
-            ? `破殼進度 ${count}/5 筆 · 再 ${Math.max(0, 5 - count)} 筆進入破殼期`
+            ? `本輪孵化 ${hatch.progressInCycle}/${HATCH_RECORDS_REQUIRED} 筆 · 再 ${hatch.recordsToNext} 筆顯形`
             : hatch.stage === 2
-              ? `完全體進度 ${Math.min(days, 7)}/7 天 · 再 ${Math.max(0, 7 - days)} 天顯形`
-              : '靈獸已完全降世';
-        return { overall, recordPct, dayPct, count, days, phaseIdx, nextMilestone };
+              ? `已孵化 ${hatch.completedCycles} 輪 · 下一隻進度 ${hatch.progressInCycle}/${HATCH_RECORDS_REQUIRED}（再 ${hatch.recordsToNext} 筆）`
+              : `第 ${hatch.completedCycles} 輪靈獸已顯形 · 再記 ${HATCH_RECORDS_REQUIRED} 次孵化下一隻`;
+        return {
+          overall: hatch.progressPct,
+          phaseIdx: hatch.stage <= 1 ? 0 : hatch.stage === 2 ? 1 : 2,
+          nextMilestone,
+          count: hatch.total,
+        };
       }, [hatch]);
 
       const card = { background:'#252016', border:'1px solid #3a3020', borderRadius:5, boxShadow:'0 8px 30px rgba(135,123,115,0.08)' };
@@ -1649,12 +1746,12 @@
                         : 'linear-gradient(90deg, rgba(74,130,110,0.9) 0%, rgba(149,211,195,0.95) 100%)',
                       boxShadow: hatchProgress.overall > 0 ? '0 0 14px rgba(149,211,195,0.35)' : 'none',
                     }} />
-                    {[50, 100].map(pct => (
+                    {[100].map(pct => (
                       <div key={pct} style={{ position:'absolute', left:`${pct}%`, top:0, bottom:0, width:1, background:'rgba(0,0,0,0.25)', transform:'translateX(-50%)', pointerEvents:'none' }} />
                     ))}
                   </div>
                   <div style={{ display:'flex', justifyContent:'space-between', marginTop:12, gap:4 }}>
-                    {['混沌期','破殼期','完全體'].map((s, i) => {
+                    {['凝聚中','靈獸顯形','下一輪'].map((s, i) => {
                       const active = hatchProgress.phaseIdx === i;
                       const done = hatchProgress.phaseIdx > i;
                       return (
@@ -1679,94 +1776,91 @@
                 {/* 階段 0：尚無紀錄 */}
                 {hatch.stage === 0 && (
                   <div style={{ padding:'48px 24px', textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center', gap:16 }}>
-                    <span style={{ fontSize:64 }}>🥚</span>
+                    <div style={{ width:120, height:150 }}>
+                      <HatchPortrait hatchState={hatch} />
+                    </div>
                     <h3 style={{ fontSize:20, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color:'var(--jade)', margin:0 }}>靈獸尚未降世</h3>
                     <p style={{ fontSize:15, color:'var(--sand)', lineHeight:1.8, margin:0 }}>記下第一餐，你的山海靈獸將從這裡開始孵化</p>
                   </div>
                 )}
 
-                {/* 階段 1：混沌期 */}
+                {/* 階段 1：凝聚中 */}
                 {hatch.stage === 1 && (
                   <div style={{ padding:'32px 24px', display:'flex', flexDirection:'column', alignItems:'center', gap:20 }}>
-                    <div style={{ position:'relative', display:'inline-block' }}>
-                      <span className="float-glow" style={{ fontSize:72, lineHeight:1.2, display:'block' }}>🥚</span>
+                    <div style={{ position:'relative', display:'inline-block', width:130, height:160 }}>
+                      <div className="float-glow" style={{ width:'100%', height:'100%' }}>
+                        <HatchPortrait hatchState={hatch} />
+                      </div>
                       <div style={{ position:'absolute', inset:-20, background:'radial-gradient(circle, rgba(149,211,195,0.07) 0%, transparent 70%)', borderRadius:'50%', pointerEvents:'none' }} />
                     </div>
                     <div style={{ textAlign:'center', maxWidth:280 }}>
-                      <p style={{ fontSize:11, color:'var(--jade)', letterSpacing:'0.2em', fontWeight:700, fontFamily:"'Noto Serif TC',serif", margin:'0 0 10px' }}>混沌期 · 靈氣凝聚中</p>
+                      <p style={{ fontSize:11, color:'var(--jade)', letterSpacing:'0.2em', fontWeight:700, fontFamily:"'Noto Serif TC',serif", margin:'0 0 10px' }}>凝聚中 · 靈氣匯聚</p>
                       <p style={{ fontSize:15, color:'var(--cream)', lineHeight:1.9, fontFamily:"'Noto Serif TC',serif", margin:'0 0 18px' }}>
                         牠在迷霧中漸漸成形，<br />已感知到你的{stageClue}
                       </p>
                       <div style={{ width:'100%', maxWidth:260 }}>
                         <div style={{ height:8, borderRadius:4, background:'rgba(149,211,195,0.1)', overflow:'hidden', marginBottom:8 }}>
-                          <div style={{ height:'100%', width:`${Math.min(hatch.count/5,1)*100}%`, background:'linear-gradient(90deg, var(--jade), #b8e8dc)', borderRadius:4, transition:'width 0.5s', boxShadow:'0 0 10px rgba(149,211,195,0.3)' }} />
+                          <div style={{ height:'100%', width:`${hatch.progressPct}%`, background:'linear-gradient(90deg, var(--jade), #b8e8dc)', borderRadius:4, transition:'width 0.5s', boxShadow:'0 0 10px rgba(149,211,195,0.3)' }} />
                         </div>
-                        <p style={{ fontSize:13, color:'var(--jade)', margin:0, fontFamily:serif, fontWeight:700 }}>{hatch.count}/5 筆 · 距離破殼</p>
+                        <p style={{ fontSize:13, color:'var(--jade)', margin:0, fontFamily:serif, fontWeight:700 }}>{hatch.progressInCycle}/{HATCH_RECORDS_REQUIRED} 筆 · 距離孵化</p>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* 階段 2：破殼期 */}
-                {hatch.stage === 2 && hatch.dominantType && (
+                {/* 階段 2：已孵化，下一輪凝聚中 */}
+                {hatch.stage === 2 && hatch.currentCycleType && (
                   <div style={{ padding:'32px 24px', display:'flex', flexDirection:'column', alignItems:'center', gap:20 }}>
-                    <div style={{ position:'relative', width:120, height:150, flexShrink:0 }}>
-                      <img src={CREATURE_IMG[hatch.dominantType.code]} alt="?"
-                        style={{ width:'100%', height:'100%', objectFit:'contain', filter:'blur(16px) brightness(0.45)', display:'block' }} />
-                      <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                        <span style={{ fontSize:36, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color:'var(--jade)', textShadow:'0 0 16px rgba(149,211,195,0.6)' }}>?</span>
+                    <div style={{ display:'flex', gap:16, alignItems:'center', flexWrap:'wrap', justifyContent:'center' }}>
+                      {hatch.avatarType && (
+                        <div style={{ textAlign:'center' }}>
+                          <p style={{ fontSize:10, color:'var(--jade)', margin:'0 0 8px', fontFamily:serif }}>當前頭像靈獸</p>
+                          <div style={{ width:88, height:110, borderRadius:5, overflow:'hidden', border:'2px solid rgba(149,211,195,0.25)' }}>
+                            <img src={CREATURE_IMG[hatch.avatarType.code]} alt={hatch.avatarType.creature} style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />
+                          </div>
+                          <p style={{ fontSize:12, color:'var(--sand)', margin:'8px 0 0', fontFamily:serif }}>{hatch.avatarType.creature}</p>
+                        </div>
+                      )}
+                      <div style={{ position:'relative', width:100, height:125, flexShrink:0 }}>
+                        <img src={CREATURE_IMG[hatch.currentCycleType.code]} alt="?"
+                          style={{ width:'100%', height:'100%', objectFit:'contain', filter:'blur(14px) brightness(0.5)', display:'block' }} />
+                        <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                          <span style={{ fontSize:32, fontFamily:serif, fontWeight:900, color:'var(--jade)' }}>?</span>
+                        </div>
                       </div>
                     </div>
                     <div style={{ textAlign:'center', maxWidth:300 }}>
-                      <p style={{ fontSize:11, color:'var(--amber)', letterSpacing:'0.2em', fontWeight:700, fontFamily:"'Noto Serif TC',serif", margin:'0 0 12px' }}>破殼期 · 型態漸顯</p>
-                      <div style={{ padding:'14px 20px', background:'rgba(149,211,195,0.05)', border:'1px solid rgba(149,211,195,0.12)', borderRadius:5, marginBottom:12 }}>
-                        <p style={{ fontSize:12, color:'var(--mist)', letterSpacing:'0.1em', margin:'0 0 6px', fontFamily:"'Noto Serif TC',serif" }}>第一維度已顯影</p>
-                        <p style={{ fontSize:22, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color:'var(--jade)', margin:'0 0 8px' }}>
-                          {hatch.firstLetter === 'M' ? 'M・魂系' : 'B・魄系'}
-                          <span style={{ color:'rgba(149,211,195,0.2)', fontSize:16 }}> ??</span>
-                        </p>
-                        <p style={{ fontSize:13, color:'var(--sand)', lineHeight:1.7, fontFamily:"'Noto Serif TC',serif", margin:0 }}>
-                          {hatch.firstLetter === 'M' ? '你以情入食——飲食常受心緒牽引' : '你以身入食——理性管理飲食節奏'}
-                        </p>
-                      </div>
-                      <p style={{ fontSize:12, color:'var(--mist)', fontFamily:"'Noto Serif TC',serif" }}>再 {Math.max(0, 7-hatch.daysSinceFirst)} 天解鎖完全體</p>
+                      <p style={{ fontSize:11, color:'var(--amber)', letterSpacing:'0.2em', fontWeight:700, fontFamily:serif, margin:'0 0 12px' }}>下一輪凝聚中</p>
+                      <p style={{ fontSize:13, color:'var(--sand)', lineHeight:1.7, fontFamily:serif, margin:0 }}>
+                        再 {hatch.recordsToNext} 筆紀錄將孵化新靈獸（本輪暫估 {hatch.currentCycleType.creature}）
+                      </p>
                     </div>
                   </div>
                 )}
 
-                {/* 階段 3：完全體 */}
-                {hatch.stage >= 3 && hatch.dominantType && (
+                {/* 階段 3：本輪已孵化顯形 */}
+                {hatch.stage >= 3 && hatch.avatarType && (
                   <div style={{ padding:'28px 24px' }}>
                     <div style={{ display:'flex', gap:20, alignItems:'flex-start', marginBottom:16 }}>
                       <div style={{ flexShrink:0 }}>
-                        <div style={{ width:100, height:125, borderRadius:5, overflow:'hidden', border:'2px solid rgba(149,211,195,0.2)', boxShadow:'0 8px 32px rgba(0,0,0,0.4)' }}>
-                          <img src={CREATURE_IMG[hatch.dominantType.code]} alt={hatch.dominantType.creature} style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />
+                        <div className="hatch-celebration-img" style={{ width:100, height:125, borderRadius:5, overflow:'hidden', border:'2px solid rgba(149,211,195,0.2)', boxShadow:'0 8px 32px rgba(0,0,0,0.4)' }}>
+                          <img src={CREATURE_IMG[hatch.avatarType.code]} alt={hatch.avatarType.creature} style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />
                         </div>
                         <div style={{ textAlign:'center', marginTop:6 }}>
-                          <span style={{ fontSize:10, color:'var(--jade)', fontFamily:"'JetBrains Mono',monospace", fontWeight:700, background:'rgba(149,211,195,0.1)', padding:'2px 8px', borderRadius:4 }}>{hatch.dominantType.code}</span>
+                          <span style={{ fontSize:10, color:'var(--jade)', fontFamily:"'JetBrains Mono',monospace", fontWeight:700, background:'rgba(149,211,195,0.1)', padding:'2px 8px', borderRadius:4 }}>{hatch.avatarType.code}</span>
                         </div>
                       </div>
                       <div style={{ flex:1, minWidth:0 }}>
-                        <p style={{ fontSize:11, color:'var(--jade)', letterSpacing:'0.2em', fontWeight:700, fontFamily:"'Noto Serif TC',serif", margin:'0 0 8px' }}>完全體 · 靈獸降世</p>
-                        <h3 style={{ fontSize:22, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color:'var(--cream)', margin:'0 0 8px' }}>{hatch.dominantType.name}</h3>
-                        <span style={{ fontSize:12, color:'var(--sand)', background:'rgba(200,184,138,0.08)', border:'1px solid rgba(200,184,138,0.15)', borderRadius:20, padding:'3px 12px', fontFamily:"'Noto Serif TC',serif" }}>{hatch.dominantType.creature}</span>
-                        <p style={{ fontSize:14, color:'var(--sand)', lineHeight:1.8, marginTop:12, borderLeft:'3px solid rgba(217,138,91,0.5)', paddingLeft:12, fontFamily:"'Noto Serif TC',serif" }}>「{hatch.dominantType.insight}」</p>
+                        <p style={{ fontSize:11, color:'var(--jade)', letterSpacing:'0.2em', fontWeight:700, fontFamily:serif, margin:'0 0 8px' }}>第 {hatch.completedCycles} 輪 · 靈獸顯形</p>
+                        <h3 style={{ fontSize:22, fontFamily:serif, fontWeight:900, color:'var(--cream)', margin:'0 0 8px' }}>{hatch.avatarType.name}</h3>
+                        <span style={{ fontSize:12, color:'var(--sand)', background:'rgba(200,184,138,0.08)', border:'1px solid rgba(200,184,138,0.15)', borderRadius:20, padding:'3px 12px', fontFamily:serif }}>{hatch.avatarType.creature}</span>
+                        <p style={{ fontSize:14, color:'var(--sand)', lineHeight:1.8, marginTop:12, borderLeft:'3px solid rgba(217,138,91,0.5)', paddingLeft:12, fontFamily:serif }}>「{hatch.avatarType.insight}」</p>
                       </div>
                     </div>
                     <div style={{ padding:'14px 16px', background:'rgba(149,211,195,0.04)', border:'1px solid rgba(149,211,195,0.08)', borderRadius:5 }}>
-                      {hatch.weekRecords.length > 0 ? (
-                        <>
-                          <p style={{ fontSize:11, color:'var(--jade)', letterSpacing:'0.15em', margin:'0 0 8px', fontFamily:"'Noto Serif TC',serif", fontWeight:700 }}>本週食緒摘要</p>
-                          <p style={{ fontSize:14, color:'var(--sand)', lineHeight:1.9, fontFamily:"'Noto Serif TC',serif", margin:0 }}>
-                            本週 {hatch.weekRecords.length} 次紀錄，主要型格為 {hatch.dominantType.code}。
-                            {hatch.weekRecords.filter(r=>r.mbeiCode[0]==='M').length > hatch.weekRecords.length/2
-                              ? ' 情緒主導你的飲食選擇，留意心情與食欲的連動。'
-                              : ' 飲食相對理性規律，繼續保持。'}
-                          </p>
-                        </>
-                      ) : (
-                        <p style={{ fontSize:13, color:'var(--mist)', fontFamily:"'Noto Serif TC',serif", margin:0 }}>近 7 天尚無紀錄，持續記錄才能看見本週食緒。</p>
-                      )}
+                      <p style={{ fontSize:13, color:'var(--mist)', fontFamily:serif, margin:0, lineHeight:1.8 }}>
+                        此靈獸由最近 {HATCH_RECORDS_REQUIRED} 次紀錄孵化而成，已設為你的頭像。再記滿 {HATCH_RECORDS_REQUIRED} 次將開啟下一輪並可能換成新靈獸。
+                      </p>
                     </div>
                   </div>
                 )}
@@ -1786,17 +1880,17 @@
               <div style={{ display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:8 }}>
                 {Object.values(MBEI_TYPES).map(type => {
                   const isUnlocked = hatch.unlockedCodes?.has(type.code);
-                  const isWeek = type.code === hatch.weekCode;
+                  const isCurrent = type.code === (hatch.avatarType?.code || hatch.currentCycleType?.code);
                   return (
                     <div key={type.code}
                       onClick={() => isUnlocked && (setSelectedCreature(type), setCreatureNavEnabled(true))}
-                      style={{ background: isWeek ? 'rgba(149,211,195,0.07)' : 'rgba(21,13,0,0.6)',
-                        border: isWeek ? '1px solid rgba(149,211,195,0.4)' : isUnlocked ? '1px solid rgba(149,211,195,0.15)' : '1px solid rgba(149,211,195,0.06)',
+                      style={{ background: isCurrent ? 'rgba(149,211,195,0.07)' : 'rgba(21,13,0,0.6)',
+                        border: isCurrent ? '1px solid rgba(149,211,195,0.4)' : isUnlocked ? '1px solid rgba(149,211,195,0.15)' : '1px solid rgba(149,211,195,0.06)',
                         borderRadius:5, padding:'10px', display:'flex', gap:10, alignItems:'flex-start',
                         cursor: isUnlocked ? 'pointer' : 'default', position:'relative',
                         opacity: isUnlocked ? 1 : 0.35, transition:'border-color 0.2s, opacity 0.2s' }}>
-                      {isWeek && (
-                        <div style={{ position:'absolute', top:5, right:5, fontSize:8, fontWeight:900, color:'var(--jade)', background:'rgba(149,211,195,0.15)', border:'1px solid rgba(149,211,195,0.3)', borderRadius:3, padding:'1px 4px', fontFamily:"'Noto Serif TC',serif", letterSpacing:'0.1em' }}>本週</div>
+                      {isCurrent && (
+                        <div style={{ position:'absolute', top:5, right:5, fontSize:8, fontWeight:900, color:'var(--jade)', background:'rgba(149,211,195,0.15)', border:'1px solid rgba(149,211,195,0.3)', borderRadius:3, padding:'1px 4px', fontFamily:"'Noto Serif TC',serif", letterSpacing:'0.1em' }}>本輪</div>
                       )}
                       <div style={{ width:38, height:48, flexShrink:0, borderRadius:4, overflow:'hidden', border:'1px solid rgba(149,211,195,0.12)', position:'relative' }}>
                         <img src={CREATURE_IMG[type.code]} alt={type.creature} style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />
@@ -1807,8 +1901,8 @@
                         )}
                       </div>
                       <div style={{ flex:1, minWidth:0 }}>
-                        <span style={{ fontSize:9, fontWeight:700, color: isWeek ? 'var(--jade)' : 'var(--mist)', background:'rgba(149,211,195,0.1)', border:'1px solid rgba(149,211,195,0.15)', borderRadius:4, padding:'1px 5px', fontFamily:"'Noto Serif TC',serif", letterSpacing:'0.05em', display:'inline-block', marginBottom:3 }}>{type.code}</span>
-                        <h4 style={{ fontSize:12, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color: isWeek ? 'var(--jade)' : 'var(--cream)', letterSpacing:'0.05em', margin:'0 0 3px', lineHeight:1.3 }}>{type.name.split(' ')[0]}</h4>
+                        <span style={{ fontSize:9, fontWeight:700, color: isCurrent ? 'var(--jade)' : 'var(--mist)', background:'rgba(149,211,195,0.1)', border:'1px solid rgba(149,211,195,0.15)', borderRadius:4, padding:'1px 5px', fontFamily:"'Noto Serif TC',serif", letterSpacing:'0.05em', display:'inline-block', marginBottom:3 }}>{type.code}</span>
+                        <h4 style={{ fontSize:12, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color: isCurrent ? 'var(--jade)' : 'var(--cream)', letterSpacing:'0.05em', margin:'0 0 3px', lineHeight:1.3 }}>{type.name.split(' ')[0]}</h4>
                         <p style={{ fontSize:10, color:'var(--sand)', lineHeight:1.4, fontFamily:"'Noto Serif TC',serif", margin:0, opacity:0.7, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{type.insight}</p>
                       </div>
                     </div>
@@ -1844,20 +1938,20 @@
                   <div style={{ flex:1, overflowY:'auto', padding:'16px 20px', display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(240px, 1fr))', gap:10, alignContent:'start' }} className="scrollbar-hide">
                     {Object.values(MBEI_TYPES).map(type => {
                       const isUnlocked = hatch.unlockedCodes?.has(type.code);
-                      const isWeek = type.code === hatch.weekCode;
+                      const isCurrent = type.code === (hatch.avatarType?.code || hatch.currentCycleType?.code);
                       return (
                         <div key={type.code}
                           onClick={() => isUnlocked && (setSelectedCreature(type), setCreatureNavEnabled(true))}
-                          style={{ background: isWeek ? 'rgba(149,211,195,0.07)' : 'rgba(21,13,0,0.8)',
-                            border: isWeek ? '1px solid rgba(149,211,195,0.4)' : isUnlocked ? '1px solid rgba(149,211,195,0.15)' : '1px solid rgba(149,211,195,0.08)',
+                          style={{ background: isCurrent ? 'rgba(149,211,195,0.07)' : 'rgba(21,13,0,0.8)',
+                            border: isCurrent ? '1px solid rgba(149,211,195,0.4)' : isUnlocked ? '1px solid rgba(149,211,195,0.15)' : '1px solid rgba(149,211,195,0.08)',
                             borderRadius:5, padding:'12px', display:'flex', gap:10, alignItems:'flex-start',
                             transition:'border-color 0.2s, background 0.2s',
                             cursor: isUnlocked ? 'pointer' : 'default', position:'relative',
                             opacity: isUnlocked ? 1 : 0.38 }}
-                          onMouseEnter={e => isUnlocked && (e.currentTarget.style.borderColor = isWeek ? 'rgba(149,211,195,0.6)' : 'rgba(149,211,195,0.35)')}
-                          onMouseLeave={e => isUnlocked && (e.currentTarget.style.borderColor = isWeek ? 'rgba(149,211,195,0.4)' : 'rgba(149,211,195,0.15)')}>
-                          {isWeek && (
-                            <div style={{ position:'absolute', top:6, right:6, fontSize:9, fontWeight:900, color:'var(--jade)', background:'rgba(149,211,195,0.15)', border:'1px solid rgba(149,211,195,0.3)', borderRadius:4, padding:'2px 5px', fontFamily:"'Noto Serif TC',serif", letterSpacing:'0.1em' }}>本週</div>
+                          onMouseEnter={e => isUnlocked && (e.currentTarget.style.borderColor = isCurrent ? 'rgba(149,211,195,0.6)' : 'rgba(149,211,195,0.35)')}
+                          onMouseLeave={e => isUnlocked && (e.currentTarget.style.borderColor = isCurrent ? 'rgba(149,211,195,0.4)' : 'rgba(149,211,195,0.15)')}>
+                          {isCurrent && (
+                            <div style={{ position:'absolute', top:6, right:6, fontSize:9, fontWeight:900, color:'var(--jade)', background:'rgba(149,211,195,0.15)', border:'1px solid rgba(149,211,195,0.3)', borderRadius:4, padding:'2px 5px', fontFamily:"'Noto Serif TC',serif", letterSpacing:'0.1em' }}>本輪</div>
                           )}
                           <div style={{ width:44, height:56, flexShrink:0, borderRadius:4, overflow:'hidden', border:'1px solid rgba(149,211,195,0.15)', position:'relative' }}>
                             <img src={CREATURE_IMG[type.code]} alt={type.creature}
@@ -1870,9 +1964,9 @@
                           </div>
                           <div style={{ flex:1, minWidth:0 }}>
                             <div style={{ display:'flex', alignItems:'center', gap:5, marginBottom:4, flexWrap:'wrap' }}>
-                              <span style={{ fontSize:10, fontWeight:700, color: isWeek ? 'var(--jade)' : 'var(--mist)', background:'rgba(149,211,195,0.1)', border:'1px solid rgba(149,211,195,0.2)', borderRadius:5, padding:'1px 6px', fontFamily:"'Noto Serif TC',serif", letterSpacing:'0.05em' }}>{type.code}</span>
+                              <span style={{ fontSize:10, fontWeight:700, color: isCurrent ? 'var(--jade)' : 'var(--mist)', background:'rgba(149,211,195,0.1)', border:'1px solid rgba(149,211,195,0.2)', borderRadius:5, padding:'1px 6px', fontFamily:"'Noto Serif TC',serif", letterSpacing:'0.05em' }}>{type.code}</span>
                             </div>
-                            <h4 style={{ fontSize:13, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color: isWeek ? 'var(--jade)' : 'var(--cream)', letterSpacing:'0.05em', margin:'0 0 4px', lineHeight:1.3 }}>{type.name.split(' ')[0]}</h4>
+                            <h4 style={{ fontSize:13, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color: isCurrent ? 'var(--jade)' : 'var(--cream)', letterSpacing:'0.05em', margin:'0 0 4px', lineHeight:1.3 }}>{type.name.split(' ')[0]}</h4>
                             <p style={{ fontSize:11, color:'var(--sand)', lineHeight:1.5, fontFamily:"'Noto Serif TC',serif", margin:0, opacity:0.75, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{type.insight}</p>
                           </div>
                         </div>
@@ -1909,7 +2003,8 @@
     }
 
     function ProfileView({ records, loginProfile, onLogout }) {
-      const latestType = records[0] ? MBEI_TYPES[records[0].mbeiCode] : MBEI_TYPES['MPLR'];
+      const hatch = useMemo(() => getHatchState(records), [records]);
+      const latestType = hatch.avatarType || hatch.formingType || (records[0] ? MBEI_TYPES[records[0].mbeiCode] : MBEI_TYPES['MPLR']);
       const [selectedCreature, setSelectedCreature] = useState(null);
       const [creatureNavEnabled, setCreatureNavEnabled] = useState(true);
       const touchStartX = React.useRef(null);
@@ -1947,7 +2042,7 @@
         const rows = [...notionPersonal];
         const key = normalizeEmail(loginProfile?.email || '');
         const localPts = calcMeritTotal(records);
-        const code = latestType.code;
+        const code = hatch.avatarType?.code || latestType.code;
         const idx = rows.findIndex((r) => normalizeEmail(r.email || '') === key);
         if (idx >= 0) {
           rows[idx] = {
@@ -1955,7 +2050,7 @@
             isUser: true,
             name: rows[idx].name || loginProfile?.nickname || '修行者',
             points: Math.max(rows[idx].points || 0, localPts),
-            code: rows[idx].code || code,
+            code: hatch.hasHatched ? code : (rows[idx].code || code),
             scoreLabel: '累積功德',
           };
         } else if (loginProfile?.nickname || localPts > 0) {
@@ -1963,7 +2058,7 @@
             name: loginProfile?.nickname || '修行者',
             email: key,
             points: localPts,
-            code,
+            code: hatch.hasHatched ? code : latestType.code,
             isUser: true,
             scoreLabel: '累積功德',
           });
@@ -1971,16 +2066,16 @@
         return rows
           .sort((a, b) => (b.points || 0) - (a.points || 0))
           .map((u, i) => ({ ...u, rank: i + 1, scoreLabel: u.scoreLabel || '累積功德' }));
-      }, [notionPersonal, loginProfile, records, latestType.code]);
+      }, [notionPersonal, loginProfile, records, hatch, latestType.code]);
 
       const mbeiLeaderboard = useMemo(() => {
         return notionMbei
-          .filter((u) => (u.points || 0) > 0)
+          .filter((u) => (u.userCount || u.points || 0) > 0)
           .map((u, i) => ({
             ...u,
             rank: i + 1,
             name: MBEI_TYPES[u.code]?.creature || u.name,
-            scoreLabel: '累積功德',
+            scoreLabel: u.scoreLabel || '修行者人數',
           }));
       }, [notionMbei]);
 
@@ -2000,7 +2095,7 @@
                 <div className="px-2">
                   <div className="inline-flex gap-2 w-full md:w-auto">
                     <button onClick={() => setRankTab('personal')} className={cn("flex-1 px-5 py-2.5 rounded-xl text-xs font-black tracking-widest border-2 transition-all", rankTab==='personal' ? "border-jade text-jade bg-jade/10" : "border-stroke text-muted bg-transparent")}>個人榜單</button>
-                    <button onClick={() => setRankTab('mbei')} className={cn("flex-1 px-5 py-2.5 rounded-xl text-xs font-black tracking-widest border-2 transition-all", rankTab==='mbei' ? "border-jade text-jade bg-jade/10" : "border-stroke text-muted bg-transparent")}>16型種類榜單</button>
+                    <button onClick={() => setRankTab('mbei')} className={cn("flex-1 px-5 py-2.5 rounded-xl text-xs font-black tracking-widest border-2 transition-all", rankTab==='mbei' ? "border-jade text-jade bg-jade/10" : "border-stroke text-muted bg-transparent")}>角色排行榜</button>
                   </div>
                 </div>
                 {lbError && (
@@ -2022,13 +2117,23 @@
                           {CREATURE_IMG[user.code] && <img src={CREATURE_IMG[user.code]} alt={user.name} style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />}
                         </div>
                         <div>
+                          <div>
                           <p className="text-lg font-black text-ink flex items-center gap-2">
                             {user.name}
                             {rankTab==='personal'&&user.isUser&&<span className="text-[10px] bg-ink text-white px-3 py-0.5 rounded-full uppercase tracking-tighter font-black">這是你</span>}
                           </p>
+                          {rankTab==='personal' && user.code && MBEI_TYPES[user.code] && (
+                            <p className="text-xs text-muted font-semibold mt-1" style={{ fontFamily: "'Noto Serif TC', serif" }}>
+                              孵化靈獸 · {MBEI_TYPES[user.code].creature}
+                            </p>
+                          )}
+                          </div>
                         </div>
                       </div>
-                      <div className="text-right"><p className="text-xl font-serif font-black text-ink">{user.points}</p><p className="text-[10px] font-black text-muted uppercase tracking-widest">{user.scoreLabel || '累積功德'}</p></div>
+                      <div className="text-right">
+                        <p className="text-xl font-serif font-black text-ink">{rankTab === 'mbei' ? (user.userCount ?? user.points) : user.points}</p>
+                        <p className="text-[10px] font-black text-muted uppercase tracking-widest">{user.scoreLabel || '累積功德'}</p>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -2680,6 +2785,7 @@
       const [isLoading, setIsLoading] = useState(false);
       const [prefetchStatus, setPrefetchStatus] = useState('idle');
       const [showResult, setShowResult] = useState(false);
+      const [hatchCelebration, setHatchCelebration] = useState(null);
       const [latestRecord, setLatestRecord] = useState(null);
       const [records, setRecords] = useState(() => {
         const activeEmail = localStorage.getItem(ACTIVE_USER_KEY);
@@ -2906,7 +3012,14 @@
           clearFortunePrefetch();
           setIsRecordOpen(false);
           setShowRecordPicker(false);
-          setShowResult(true);
+          const hs = getHatchState(nextRecords);
+          if (nextRecords.length > 0 && nextRecords.length % HATCH_RECORDS_REQUIRED === 0 && hs.avatarType) {
+            setHatchCelebration({ type: hs.avatarType, cycle: hs.completedCycles });
+            setShowResult(false);
+          } else {
+            setHatchCelebration(null);
+            setShowResult(true);
+          }
         }, fortunePrefetchRef.current.result ? 200 : 800);
       };
 
@@ -3036,11 +3149,22 @@
                 onPhotoChange={(url) => { recordPhotoRef.current = url; }}
               />
             )}
-            {showResult && latestRecord && <ResultModal record={latestRecord} onClose={() => setShowResult(false)} totalRecords={records.length} />}
+            {hatchCelebration && (
+              <HatchCelebrationModal
+                hatchType={hatchCelebration.type}
+                cycleNumber={hatchCelebration.cycle}
+                onClose={() => {
+                  setHatchCelebration(null);
+                  if (latestRecord) setShowResult(true);
+                }}
+              />
+            )}
+            {showResult && latestRecord && !hatchCelebration && <ResultModal record={latestRecord} onClose={() => setShowResult(false)} totalRecords={records.length} />}
 
             {/* 個人資料彈跳popup（手機） */}
             {showProfilePopup && (() => {
-              const latestType = records[0] ? MBEI_TYPES[records[0].mbeiCode] : MBEI_TYPES['MPLR'];
+              const hs = getHatchState(records);
+              const latestType = hs.avatarType || hs.formingType || (records[0] ? MBEI_TYPES[records[0].mbeiCode] : MBEI_TYPES['MPLR']);
               return (
                 <div className="md:hidden" style={{ position:'fixed', inset:0, zIndex:100, display:'flex', flexDirection:'column', justifyContent:'flex-end' }}>
                   {/* 背景遮罩 */}
@@ -3063,10 +3187,10 @@
                     {/* 生物圖 + 基本資訊 */}
                     <div style={{ display:'flex', gap:20, alignItems:'center', marginBottom:24 }}>
                       <div style={{ width:80, height:100, borderRadius:8, overflow:'hidden', border:'3px solid rgba(149,211,195,0.25)', background:'var(--paper)', flexShrink:0, boxShadow:'0 4px 16px rgba(0,0,0,0.4)' }}>
-                        <img src={CREATURE_IMG[latestType.code]} alt={latestType.creature} style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />
+                        <HatchPortrait hatchState={hs} />
                       </div>
                       <div style={{ flex:1, minWidth:0 }}>
-                        <p style={{ fontSize:10, fontWeight:900, color:'var(--jade)', letterSpacing:'0.2em', textTransform:'uppercase', marginBottom:4 }}>今日食修者</p>
+                        <p style={{ fontSize:10, fontWeight:900, color:'var(--jade)', letterSpacing:'0.2em', textTransform:'uppercase', marginBottom:4 }}>{hs.avatarType ? '孵化靈獸' : '孵化進度'}</p>
                         <h3 style={{ fontSize:22, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color:'white', letterSpacing:'-0.02em', margin:'0 0 6px' }}>
                           {loginProfile?.nickname || '修行者'}
                         </h3>
@@ -3076,6 +3200,7 @@
                         </div>
                         <p style={{ fontSize:11, color:'var(--sand)', opacity:0.7, margin:0 }}>
                           {loginProfile?.gender} · {loginProfile?.age} 歲
+                          {!hs.avatarType && ` · ${hs.progressInCycle}/${HATCH_RECORDS_REQUIRED} 筆`}
                         </p>
                       </div>
                     </div>

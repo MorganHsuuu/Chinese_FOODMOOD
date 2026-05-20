@@ -1,9 +1,13 @@
 /**
  * 從 Notion 資料庫彙整功德排行榜
  * GET /api/notion-leaderboard?email=（選填，標記「這是你」）
+ *
+ * 個人榜：功德 + 最近一輪孵化靈獸（每 10 筆紀錄）
+ * 角色榜：各靈獸有多少修行者（已孵化至少一輪）
  */
 
 const NOTION_VERSION = '2022-06-28';
+const HATCH_RECORDS_REQUIRED = 10;
 
 const COL = {
   merit: process.env.NOTION_COL_MERIT || '功德',
@@ -25,7 +29,7 @@ const MBEI_AXES = [
 ];
 
 const MBEI_NAMES = {
-  MNHR: '青鸞', MNHV: '窮奇', MNLR: '白澤', MNLV: '魍魎',
+  MNHR: '玄武', MNHV: '麒麟', MNLR: '白澤', MNLV: '九尾',
   MPHR: '金烏', MPHV: '饕餮', MPLR: '織女', MPLV: '夢貘',
   BNHR: '當康', BNHV: '朱厭', BNLR: '夔', BNLV: '夫諸',
   BPHR: '混沌', BPHV: '魃', BPLR: '精衛', BPLV: '影',
@@ -39,6 +43,24 @@ function mbeiCodeFromScores(scores) {
   if (!scores) return 'MPLR';
   const code = MBEI_AXES.map(({ key, neg, pos }) => (clampMbei(scores[key]) >= 0 ? pos : neg)).join('');
   return MBEI_NAMES[code] ? code : 'MPLR';
+}
+
+function dominantCodeFromBatch(batch) {
+  if (!batch.length) return null;
+  const freq = {};
+  batch.forEach((row) => {
+    const c = row.code || 'MPLR';
+    freq[c] = (freq[c] || 0) + 1;
+  });
+  return Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0] || 'MPLR';
+}
+
+function hatchedCodeFromUserRows(userRows) {
+  const sorted = [...userRows].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  const completed = Math.floor(sorted.length / HATCH_RECORDS_REQUIRED);
+  if (completed < 1) return dominantCodeFromBatch(sorted) || null;
+  const batch = sorted.slice((completed - 1) * HATCH_RECORDS_REQUIRED, completed * HATCH_RECORDS_REQUIRED);
+  return dominantCodeFromBatch(batch);
 }
 
 function readNumber(prop) {
@@ -107,63 +129,69 @@ function parseRow(page) {
 
 function buildLeaderboards(rows, currentEmail) {
   const current = normalizeEmail(currentEmail);
-  const personalMap = {};
+  const byUser = {};
 
   for (const row of rows) {
     const key = normalizeEmail(row.email) || `nick:${row.nickname}`;
     if (!key || key === 'nick:') continue;
+    if (!byUser[key]) byUser[key] = [];
+    byUser[key].push(row);
+  }
 
-    if (!personalMap[key]) {
-      personalMap[key] = {
-        email: normalizeEmail(row.email),
-        name: row.nickname || row.email.split('@')[0] || '修行者',
-        points: 0,
-        code: row.code,
-        recordCount: 0,
-      };
+  const personalMap = {};
+
+  for (const [key, userRows] of Object.entries(byUser)) {
+    const email = normalizeEmail(userRows[0]?.email);
+    const hatchedCode = hatchedCodeFromUserRows(userRows);
+    const recordCount = userRows.length;
+    let points = 0;
+    let latestMeritTotal = null;
+    for (const row of userRows) {
+      if (row.meritTotal != null) latestMeritTotal = Math.max(latestMeritTotal ?? row.meritTotal, row.meritTotal);
+      else points += row.merit;
     }
-    const u = personalMap[key];
-    u.recordCount += 1;
-    if (row.nickname) u.name = row.nickname;
-    if (row.meritTotal != null) {
-      u.points = Math.max(u.points, row.meritTotal);
-    } else {
-      u.points += row.merit;
-    }
-    if (row.date >= (u._latestDate || '')) {
-      u._latestDate = row.date;
-      u.code = row.code;
-    }
+    if (latestMeritTotal != null) points = latestMeritTotal;
+
+    personalMap[key] = {
+      email,
+      name: userRows.find((r) => r.nickname)?.nickname || email.split('@')[0] || '修行者',
+      points,
+      code: hatchedCode || userRows[userRows.length - 1]?.code || 'MPLR',
+      recordCount,
+      hatched: recordCount >= HATCH_RECORDS_REQUIRED,
+    };
   }
 
   const personal = Object.values(personalMap)
-    .map((u) => {
-      const { _latestDate, ...rest } = u;
-      return {
-        ...rest,
-        isUser: current && (rest.email === current || (!rest.email && current)),
-        scoreLabel: '累積功德',
-      };
-    })
+    .map((u) => ({
+      ...u,
+      isUser: current && (u.email === current || (!u.email && current)),
+      scoreLabel: '累積功德',
+    }))
     .sort((a, b) => b.points - a.points)
     .map((u, idx) => ({ ...u, rank: idx + 1 }));
 
-  const mbeiMap = {};
-  for (const row of rows) {
-    const code = row.code || 'MPLR';
-    if (!mbeiMap[code]) {
-      mbeiMap[code] = { code, name: MBEI_NAMES[code] || code, points: 0, recordCount: 0 };
+  const characterMap = {};
+  for (const u of Object.values(personalMap)) {
+    if (!u.hatched || !u.code) continue;
+    if (!characterMap[u.code]) {
+      characterMap[u.code] = {
+        code: u.code,
+        name: MBEI_NAMES[u.code] || u.code,
+        userCount: 0,
+        points: 0,
+      };
     }
-    mbeiMap[code].points += row.merit > 0 ? row.merit : 1;
-    mbeiMap[code].recordCount += 1;
+    characterMap[u.code].userCount += 1;
+    characterMap[u.code].points += u.points;
   }
 
-  const mbei = Object.values(mbeiMap)
-    .sort((a, b) => b.points - a.points)
+  const mbei = Object.values(characterMap)
+    .sort((a, b) => b.userCount - a.userCount || b.points - a.points)
     .map((u, idx) => ({
       ...u,
       rank: idx + 1,
-      scoreLabel: '累積功德',
+      scoreLabel: '修行者人數',
     }));
 
   return { personal, mbei };
@@ -194,6 +222,7 @@ module.exports = async (req, res) => {
       personal,
       mbei,
       totalRecords: rows.length,
+      hatchRecordsRequired: HATCH_RECORDS_REQUIRED,
       fetchedAt: new Date().toISOString(),
     });
   } catch (err) {
