@@ -146,8 +146,12 @@
     }
     .record-fab-btn:active { opacity: 0.88; animation: none; }
     @keyframes recordSacredFlash {
-      0%   { opacity:0.55; }
-      100% { opacity:0; }
+      0%   { opacity:0; transform:scale(0.99); }
+      18%  { opacity:0.38; transform:scale(1); }
+      38%  { opacity:0.26; }
+      58%  { opacity:0.14; }
+      78%  { opacity:0.05; }
+      100% { opacity:0; transform:scale(1.01); }
     }
     .record-sacred-flash {
       position: absolute;
@@ -155,8 +159,8 @@
       pointer-events: none;
       z-index: 9;
       border-radius: inherit;
-      background: radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.38) 0%, transparent 65%);
-      animation: recordSacredFlash 0.85s ease-out forwards;
+      background: radial-gradient(circle at 50% 28%, rgba(255, 255, 255, 0.32) 0%, transparent 68%);
+      animation: recordSacredFlash 2.4s cubic-bezier(0.33, 0, 0.2, 1) forwards;
     }
     @keyframes progressBar { from{width:0} to{width:20%} }
     .progress-bar { animation: progressBar 1s ease-out forwards; }
@@ -205,16 +209,33 @@
     .cn-corner-tr { top: 6px; right: 6px; border-width: 2px 2px 0 0; }
     .cn-corner-bl { bottom: 6px; left: 6px; border-width: 0 0 2px 2px; }
     .cn-corner-br { bottom: 6px; right: 6px; border-width: 0 2px 2px 0; }
-    .cn-red-frame-modal input[type="time"] {
-      display: block;
+    .meal-time-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
       width: 100%;
       max-width: 100%;
       min-width: 0;
-      box-sizing: border-box;
     }
-    .cn-red-frame-modal input[type="time"]::-webkit-date-and-time-value {
+    .meal-time-row select {
+      flex: 1;
       min-width: 0;
-      text-align: left;
+      max-width: 100%;
+      box-sizing: border-box;
+      appearance: none;
+      -webkit-appearance: none;
+      background-color: #252016;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23c8b88a' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+    }
+    .meal-time-sep {
+      flex-shrink: 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--muted);
+      line-height: 1;
     }
   </style>
   <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
@@ -647,6 +668,28 @@
         <div className="space-y-4 min-w-0 max-w-full">
           <h4 className="text-sm font-bold flex items-center gap-2"><span className="w-1.5 h-4 bg-clay rounded-full shrink-0" />{title}</h4>
           <div className="min-w-0 max-w-full">{children}</div>
+        </div>
+      );
+    }
+
+    function MealTimeField({ value, onChange }) {
+      const parts = String(value || '12:00').split(':');
+      const hh = (parts[0] || '12').padStart(2, '0').slice(0, 2);
+      const mm = (parts[1] || '00').padStart(2, '0').slice(0, 2);
+      const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+      const minutes = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
+      const selectCls = 'w-full min-w-0 rounded-[1.5rem] border-2 border-stroke bg-white px-3 py-3 md:px-4 md:py-4 text-base md:text-lg font-semibold text-ink focus:outline-none focus:border-ink/30';
+      const setHour = (h) => onChange(`${h}:${mm}`);
+      const setMinute = (m) => onChange(`${hh}:${m}`);
+      return (
+        <div className="meal-time-row">
+          <select value={hh} onChange={e => setHour(e.target.value)} className={selectCls} aria-label="小時">
+            {hours.map(h => <option key={h} value={h}>{h} 時</option>)}
+          </select>
+          <span className="meal-time-sep" aria-hidden="true">:</span>
+          <select value={mm} onChange={e => setMinute(e.target.value)} className={selectCls} aria-label="分鐘">
+            {minutes.map(m => <option key={m} value={m}>{m} 分</option>)}
+          </select>
         </div>
       );
     }
@@ -2322,10 +2365,7 @@
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 min-w-0">
                 <RecordSection title="餐別"><PillSelector options={['早餐','午餐','晚餐','宵夜','點心']} value={formData.mealType} onChange={v => setField('mealType', v)} /></RecordSection>
                 <RecordSection title="幾點吃這餐">
-                  <div className="min-w-0 w-full max-w-full overflow-hidden">
-                    <input type="time" value={formData.mealTime} onChange={e => setField('mealTime', e.target.value)}
-                      className="w-full max-w-full min-w-0 box-border rounded-[1.5rem] border-2 border-stroke bg-white px-3 py-3 md:px-5 md:py-4 text-base md:text-lg font-semibold text-ink focus:outline-none focus:border-ink/30" />
-                  </div>
+                  <MealTimeField value={formData.mealTime} onChange={v => setField('mealTime', v)} />
                 </RecordSection>
               </div>
               </>
