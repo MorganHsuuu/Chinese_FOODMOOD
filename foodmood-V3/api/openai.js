@@ -58,14 +58,7 @@ const BODY_FEELING_H = {
   '頭重腦慢': 3, '頭昏腦脹': 3, '腸胃不適': 4, '腸胃不舒服': 4,
 };
 
-const MBEI_AXES = [
-  { key: 'MB', neg: 'B', pos: 'M' },
-  { key: 'NP', neg: 'P', pos: 'N' },
-  { key: 'HL', neg: 'L', pos: 'H' },
-  { key: 'RV', neg: 'R', pos: 'V' },
-];
-
-const clampMbeiScore = (n) => Math.max(-50, Math.min(50, Math.round(Number(n) || 0)));
+const { mergeMbeiScores } = require('./mbei-scores');
 
 const calcMeritFromContext = (context) => {
   const t = String(context || '').trim();
@@ -73,17 +66,6 @@ const calcMeritFromContext = (context) => {
   if (t.length >= 60) return 3;
   if (t.length >= 15) return 2;
   return 1;
-};
-
-const mbeiCodeFromScores = (scores) => {
-  if (!scores) return null;
-  return MBEI_AXES.map(({ key, neg, pos }) => (clampMbeiScore(scores[key]) >= 0 ? pos : neg)).join('');
-};
-
-const normalizeMbeiScores = (raw) => {
-  const out = {};
-  MBEI_AXES.forEach(({ key }) => { out[key] = clampMbeiScore(raw?.[key]); });
-  return out;
 };
 
 const normalizeFortunePayload = (fortune, recordData) => {
@@ -95,15 +77,11 @@ const normalizeFortunePayload = (fortune, recordData) => {
   }
   meritEarned = Math.min(3, Math.max(1, Math.round(meritEarned), ruleMerit));
 
-  let mbei_scores = fortune?.mbei_scores ? normalizeMbeiScores(fortune.mbei_scores) : null;
-  const calculated_mbei = mbeiCodeFromScores(mbei_scores) || fortune?.calculated_mbei || 'MPLR';
-  if (!mbei_scores) {
-    mbei_scores = {};
-    MBEI_AXES.forEach(({ key, neg, pos }, i) => {
-      const ch = calculated_mbei[i] || pos;
-      mbei_scores[key] = ch === pos ? 28 : ch === neg ? -28 : 0;
-    });
-  }
+  const aiNp = fortune?.np_score ?? fortune?.mbei_scores?.NP;
+  const { mbei_scores, calculated_mbei } = mergeMbeiScores(
+    aiNp != null ? { NP: aiNp } : fortune?.mbei_scores,
+    recordData,
+  );
 
   return {
     ...fortune,
@@ -131,16 +109,13 @@ function buildFortunePrompt(recordData) {
 - 情境與執念：${context && String(context).trim() ? String(context).trim() : '（未填）'}
 - 進食時間：${mealTime} ${mealType}
 
-## MBEI 四軸分數（mbei_scores，整數 -50～+50）
-每軸負值偏左、正值偏右，0 為中性：
-- MB：負值→B（身體需要），正值→M（情緒驅動）
-- NP：負值→P（加工煉化），正值→N（原野自然）
-- HL：負值→L（輕盈靈動），正值→H（沉重煞氣）
-- RV：負值→R（曆法規律），正值→V（幻時隨性）
-請依食物、爽度、身體感受、餐別時間、情境綜合給出四個整數（不可全為 0）。
-
-## calculated_mbei
-依四軸分數符號推得四字母（≥0 取右側字母，<0 取左側），須與 mbei_scores 一致。
+## 食材造化 np_score（整數 -50～+50，必填，僅此一軸由你判定）
+依食物「${foodName}」在加工煉化(P)↔原野自然(N)光譜給分（系統另算 MB/HL/RV，勿輸出 mbei_scores 全組）：
+- **+50**：純原型（水煮蛋、清燙蔬菜、鮮肉塊、生魚片）
+- **+25**：輕度烹調原型（雞肉飯、煎牛排、炒青菜、家常便當）
+- **-25**：中重度調味/複合（牛肉麵、義大利麵、滷味、水餃）
+- **-50**：高度人工煉化（鹹酥雞、洋芋片、手搖飲、泡麵、超商甜點）
+可選中間值，但須貼近上述四檔之一；禁止固定套用同一數字。
 
 ## 功德（meritEarned，整數 1～3）
 - 未填情境：1
@@ -157,8 +132,8 @@ function buildFortunePrompt(recordData) {
 3. 不用現代營養學詞彙（卡路里、碳水等）
 4. 僅輸出 JSON
 
-## 輸出格式（Strict JSON）
-{"calculated_mbei":"MNHR","mbei_scores":{"MB":-20,"NP":35,"HL":10,"RV":-40},"meritEarned":2,"merit_point":"+2 功德","mythical_food_name":"四到六字玄幻菜名","original_food_name":"（原：食物名）","main_title":"七字對聯","poem":"四句詩","explanation":"神解一句","do":"宜：建議","next_meal":"下餐宜：建議"}`;
+## 輸出格式（Strict JSON，勿含 markdown）
+{"np_score":整數,"meritEarned":1到3,"merit_point":"+N 功德","mythical_food_name":"四到六字玄幻菜名","original_food_name":"（原：食物名）","main_title":"七字對聯","poem":"四句詩","explanation":"神解一句","do":"宜：建議","next_meal":"下餐宜：建議"}`;
 }
 
 module.exports = async (req, res) => {
