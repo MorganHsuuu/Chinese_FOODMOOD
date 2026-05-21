@@ -389,6 +389,263 @@
       .charge-orb .ring, .charge-orb .ring-dot,
       .charge-label, .charge-label::after { animation: none !important; }
     }
+
+    /* ── 全螢幕凝煉儀式（送出中覆蓋層） ── */
+    .charge-veil {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: chargeVeilIn 0.55s cubic-bezier(0.22, 0.85, 0.25, 1) both;
+      isolation: isolate;
+    }
+    @keyframes chargeVeilIn {
+      from { opacity: 0; backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); }
+      to   { opacity: 1; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+    }
+    .charge-veil::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 70% 60% at 50% 50%, rgba(60, 38, 8, 0.78) 0%, rgba(15, 8, 0, 0.92) 60%, rgba(0,0,0,0.96) 100%);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      z-index: -2;
+    }
+    /* 中央能量光暈（呼吸 + 旋轉） */
+    .charge-veil-aura {
+      position: absolute;
+      width: min(80vmin, 720px);
+      height: min(80vmin, 720px);
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 50% 50%, rgba(255, 230, 170, 0.35) 0%, rgba(212,168,67,0.25) 20%, transparent 55%);
+      filter: blur(8px);
+      animation: chargeVeilAuraBreathe 4s ease-in-out infinite;
+      z-index: -1;
+    }
+    @keyframes chargeVeilAuraBreathe {
+      0%, 100% { transform: scale(0.92); opacity: 0.65; }
+      50%      { transform: scale(1.08); opacity: 1; }
+    }
+    /* 四方光束（從中心向外的金色射線） */
+    .charge-veil-rays {
+      position: absolute;
+      width: min(120vmin, 1200px);
+      height: min(120vmin, 1200px);
+      background:
+        conic-gradient(from 0deg,
+          transparent 0deg,
+          rgba(212,168,67,0.10) 12deg,
+          transparent 24deg,
+          transparent 86deg,
+          rgba(212,168,67,0.06) 92deg,
+          transparent 104deg,
+          transparent 176deg,
+          rgba(212,168,67,0.10) 188deg,
+          transparent 200deg,
+          transparent 266deg,
+          rgba(212,168,67,0.06) 272deg,
+          transparent 284deg,
+          transparent 360deg);
+      animation: chargeVeilRaysSpin 16s linear infinite;
+      mask: radial-gradient(circle at 50% 50%, black 0%, black 8%, transparent 75%);
+      -webkit-mask: radial-gradient(circle at 50% 50%, black 0%, black 8%, transparent 75%);
+      z-index: -1;
+    }
+    @keyframes chargeVeilRaysSpin { to { transform: rotate(360deg); } }
+    /* 大型同心金光（取代小 orb） */
+    .charge-veil-orb {
+      position: relative;
+      width: clamp(140px, 36vmin, 220px);
+      height: clamp(140px, 36vmin, 220px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .charge-veil-orb .v-ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 1.5px solid transparent;
+    }
+    .charge-veil-orb .v-ring-12 {
+      inset: -6%;
+      border: none;
+      background:
+        repeating-conic-gradient(
+          rgba(212,168,67,0.85) 0deg 1.2deg,
+          transparent 1.2deg 30deg
+        );
+      -webkit-mask: radial-gradient(circle, transparent 47%, black 49%, black 51%, transparent 53%);
+              mask: radial-gradient(circle, transparent 47%, black 49%, black 51%, transparent 53%);
+      animation: chargeSpin 22s linear infinite;
+      opacity: 0.85;
+    }
+    .charge-veil-orb .v-ring-1 {
+      border-top-color: rgba(245, 224, 187, 0.95);
+      border-right-color: rgba(212,168,67,0.55);
+      box-shadow:
+        0 0 24px rgba(212,168,67,0.55),
+        inset 0 0 18px rgba(212,168,67,0.28);
+      animation: chargeSpin 4.5s linear infinite;
+    }
+    .charge-veil-orb .v-ring-2 {
+      inset: 10%;
+      border-top-color: rgba(255, 235, 180, 0.9);
+      border-left-color: rgba(212,168,67,0.65);
+      animation: chargeSpin 3s linear infinite reverse;
+      opacity: 0.95;
+    }
+    .charge-veil-orb .v-ring-3 {
+      inset: 22%;
+      border-top-color: rgba(255, 248, 220, 1);
+      border-bottom-color: rgba(212,168,67,0.7);
+      animation: chargeSpin 1.8s linear infinite;
+      opacity: 0.92;
+    }
+    .charge-veil-orb .v-ring-4 {
+      inset: 34%;
+      border: 1px dashed rgba(212,168,67,0.65);
+      animation: chargeSpin 7s linear infinite reverse;
+      opacity: 0.85;
+    }
+    .charge-veil-orb .v-core {
+      position: absolute;
+      width: 18%;
+      height: 18%;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle, rgba(255, 250, 230, 1) 0%, rgba(255, 220, 140, 0.9) 45%, rgba(212,168,67,0.2) 80%, transparent 100%);
+      box-shadow:
+        0 0 24px 8px rgba(255, 220, 140, 0.55),
+        0 0 48px 16px rgba(212,168,67,0.35);
+      animation: chargeCoreBreathe 2.2s ease-in-out infinite;
+    }
+    @keyframes chargeCoreBreathe {
+      0%, 100% { transform: scale(0.85); opacity: 0.9; }
+      50%      { transform: scale(1.15); opacity: 1; }
+    }
+    /* 全螢幕粒子（從底部隨機上升） */
+    .charge-veil-particles {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .charge-veil-particles .p {
+      position: absolute;
+      bottom: -10px;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: rgba(255, 240, 200, 1);
+      box-shadow: 0 0 8px 2px rgba(212,168,67,0.95), 0 0 18px 4px rgba(212,168,67,0.4);
+      opacity: 0;
+      animation: chargeVeilParticleRise 5.5s linear infinite;
+    }
+    .charge-veil-particles .p:nth-child(1)  { left:  4%; animation-delay: 0.0s; }
+    .charge-veil-particles .p:nth-child(2)  { left: 11%; animation-delay: 0.7s; width:3px; height:3px; }
+    .charge-veil-particles .p:nth-child(3)  { left: 18%; animation-delay: 2.1s; }
+    .charge-veil-particles .p:nth-child(4)  { left: 26%; animation-delay: 1.2s; width:2px; height:2px; }
+    .charge-veil-particles .p:nth-child(5)  { left: 33%; animation-delay: 3.4s; }
+    .charge-veil-particles .p:nth-child(6)  { left: 41%; animation-delay: 0.4s; width:3px; height:3px; }
+    .charge-veil-particles .p:nth-child(7)  { left: 49%; animation-delay: 2.6s; width:5px; height:5px; }
+    .charge-veil-particles .p:nth-child(8)  { left: 57%; animation-delay: 1.7s; }
+    .charge-veil-particles .p:nth-child(9)  { left: 65%; animation-delay: 4.1s; width:2px; height:2px; }
+    .charge-veil-particles .p:nth-child(10) { left: 72%; animation-delay: 0.9s; width:3px; height:3px; }
+    .charge-veil-particles .p:nth-child(11) { left: 80%; animation-delay: 3.0s; }
+    .charge-veil-particles .p:nth-child(12) { left: 87%; animation-delay: 1.5s; width:2px; height:2px; }
+    .charge-veil-particles .p:nth-child(13) { left: 94%; animation-delay: 4.6s; width:3px; height:3px; }
+    .charge-veil-particles .p:nth-child(14) { left: 38%; animation-delay: 5.0s; width:2px; height:2px; }
+    .charge-veil-particles .p:nth-child(15) { left: 60%; animation-delay: 3.7s; width:2px; height:2px; }
+    .charge-veil-particles .p:nth-child(16) { left: 76%; animation-delay: 2.4s; width:3px; height:3px; }
+    @keyframes chargeVeilParticleRise {
+      0%   { transform: translateY(0) scale(0.4); opacity: 0; }
+      8%   { opacity: 0.9; }
+      55%  { opacity: 0.85; transform: translateY(-55vh) scale(1); }
+      100% { transform: translateY(-110vh) scale(0.4); opacity: 0; }
+    }
+    /* 文字 */
+    .charge-veil-text {
+      position: relative;
+      margin-top: clamp(16px, 4vmin, 28px);
+      text-align: center;
+      animation: chargeTextFadeIn 0.8s 0.2s ease-out both;
+    }
+    @keyframes chargeTextFadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .charge-veil-text .v-title {
+      font-family: 'Noto Serif TC', serif;
+      font-weight: 900;
+      font-size: clamp(22px, 5vmin, 34px);
+      letter-spacing: 0.45em;
+      padding-left: 0.45em;
+      background: linear-gradient(90deg,
+        rgba(212,168,67,0.7) 0%,
+        rgba(255,245,210,1) 50%,
+        rgba(212,168,67,0.7) 100%);
+      background-size: 220% 100%;
+      -webkit-background-clip: text;
+              background-clip: text;
+      color: transparent;
+      animation: chargeTextShimmer 3.2s linear infinite;
+      margin: 0;
+    }
+    .charge-veil-text .v-sub {
+      margin: 12px 0 0;
+      font-family: 'Noto Serif TC', serif;
+      font-size: clamp(11px, 1.6vmin, 13px);
+      letter-spacing: 0.32em;
+      padding-left: 0.32em;
+      color: rgba(212,168,67,0.75);
+      animation: chargeDots 1.6s steps(4, end) infinite;
+    }
+    /* 中央內容容器 */
+    .charge-veil-stage {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1;
+    }
+    /* 角落金色裝飾 */
+    .charge-veil-corner {
+      position: absolute;
+      width: clamp(40px, 8vmin, 64px);
+      height: clamp(40px, 8vmin, 64px);
+      border: 1.5px solid rgba(212,168,67,0.55);
+      pointer-events: none;
+      opacity: 0;
+      animation: chargeCornerIn 0.6s 0.15s cubic-bezier(0.22, 0.85, 0.25, 1) both,
+                 chargeCornerGlow 3.6s ease-in-out 0.8s infinite;
+    }
+    .charge-veil-corner.tl { top: clamp(16px, 4vmin, 32px); left: clamp(16px, 4vmin, 32px); border-right: none; border-bottom: none; }
+    .charge-veil-corner.tr { top: clamp(16px, 4vmin, 32px); right: clamp(16px, 4vmin, 32px); border-left: none; border-bottom: none; }
+    .charge-veil-corner.bl { bottom: clamp(16px, 4vmin, 32px); left: clamp(16px, 4vmin, 32px); border-right: none; border-top: none; }
+    .charge-veil-corner.br { bottom: clamp(16px, 4vmin, 32px); right: clamp(16px, 4vmin, 32px); border-left: none; border-top: none; }
+    @keyframes chargeCornerIn {
+      from { opacity: 0; transform: scale(0.6); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    @keyframes chargeCornerGlow {
+      0%, 100% { box-shadow: 0 0 8px rgba(212,168,67,0.3); }
+      50%      { box-shadow: 0 0 18px rgba(212,168,67,0.65); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .charge-veil, .charge-veil-aura, .charge-veil-rays,
+      .charge-veil-orb .v-ring, .charge-veil-orb .v-core,
+      .charge-veil-particles .p, .charge-veil-text .v-title, .charge-veil-text .v-sub,
+      .charge-veil-corner { animation: none !important; }
+      .charge-veil::before { backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+    }
     /* 中式朱紅框（凝練食緒彈窗） */
     .cn-red-frame-modal {
       border: 2px solid #9e2a2b !important;
@@ -1733,6 +1990,39 @@
       );
     }
 
+    /** 全螢幕凝煉儀式覆蓋層：送出後等待 AI 回應期間顯示 */
+    function ChargingVeil({ active, label = '凝煉食緒', subLabel = '靈氣注入孵化池' }) {
+      if (!active) return null;
+      const particles = Array.from({ length: 16 });
+      return (
+        <div className="charge-veil" role="status" aria-live="polite" aria-label={label}>
+          <span className="charge-veil-corner tl" aria-hidden="true" />
+          <span className="charge-veil-corner tr" aria-hidden="true" />
+          <span className="charge-veil-corner bl" aria-hidden="true" />
+          <span className="charge-veil-corner br" aria-hidden="true" />
+          <span className="charge-veil-rays" aria-hidden="true" />
+          <span className="charge-veil-aura" aria-hidden="true" />
+          <div className="charge-veil-particles" aria-hidden="true">
+            {particles.map((_, i) => <span key={i} className="p" />)}
+          </div>
+          <div className="charge-veil-stage">
+            <div className="charge-veil-orb" aria-hidden="true">
+              <span className="v-ring v-ring-12" />
+              <span className="v-ring v-ring-1" />
+              <span className="v-ring v-ring-2" />
+              <span className="v-ring v-ring-3" />
+              <span className="v-ring v-ring-4" />
+              <span className="v-core" />
+            </div>
+            <div className="charge-veil-text">
+              <p className="v-title">{label}</p>
+              <p className="v-sub">{subLabel}</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     function HatchCelebrationModal({ hatchType, cycleNumber, onClose }) {
       if (!hatchType) return null;
       const serif = "'Noto Serif TC',serif";
@@ -3049,6 +3339,7 @@
       const canSubmit = scrolledToEnd && foodReady && feelingsComplete && !isLoading;
 
       return (
+        <>
         <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden p-2 md:p-12">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm record-overlay-veil" onClick={onClose} />
           <div className="w-full max-w-lg md:max-w-3xl h-[88vh] md:h-auto md:max-h-[85vh] bg-paper rounded-t-[5px] md:rounded-[5px] relative z-10 flex flex-col shadow-2xl overflow-hidden record-modal-sacred cn-red-frame-modal min-w-0">
@@ -3280,6 +3571,8 @@
             </div>
           </div>
         </div>
+        <ChargingVeil active={isLoading} />
+        </>
       );
     }
 
