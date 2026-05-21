@@ -611,10 +611,7 @@
     const mergeHatchWithNotion = (hatch, notionProfile) => {
       if (!notionProfile) return hatch;
       const fromNotionHatched = (notionProfile.hatchedCreatures || []).map((h) => h.code).filter(Boolean);
-      const fromNotionUnlocked = fromNotionHatched.length
-        ? fromNotionHatched
-        : (notionProfile.unlockedCodes || []);
-      const merged = new Set([...hatch.unlockedCodes, ...fromNotionUnlocked]);
+      const merged = new Set([...hatch.unlockedCodes, ...fromNotionHatched]);
       const mergedHatched = [...(hatch.hatchedCreatures || [])];
       (notionProfile.hatchedCreatures || []).forEach((h) => {
         if (!mergedHatched.some((x) => x.cycle === h.cycle)) mergedHatched.push(h);

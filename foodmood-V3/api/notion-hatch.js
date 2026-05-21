@@ -28,6 +28,14 @@ function mbeiCodeFromScores(scores) {
   return MBEI_NAMES[code] ? code : 'MPLR';
 }
 
+function sortUserRowsChronologically(userRows) {
+  return [...userRows].sort((a, b) => {
+    const d = String(a.date || '').localeCompare(String(b.date || ''));
+    if (d !== 0) return d;
+    return String(a.code || '').localeCompare(String(b.code || ''));
+  });
+}
+
 function dominantCodeFromBatch(batch) {
   if (!batch.length) return null;
   const freq = {};
@@ -35,11 +43,11 @@ function dominantCodeFromBatch(batch) {
     const c = row.code || 'MPLR';
     freq[c] = (freq[c] || 0) + 1;
   });
-  return Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0] || 'MPLR';
+  return Object.entries(freq).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] || 'MPLR';
 }
 
 function hatchedCodeFromUserRows(userRows) {
-  const sorted = [...userRows].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  const sorted = sortUserRowsChronologically(userRows);
   const completed = Math.floor(sorted.length / HATCH_RECORDS_REQUIRED);
   if (completed < 1) return null;
   const batch = sorted.slice((completed - 1) * HATCH_RECORDS_REQUIRED, completed * HATCH_RECORDS_REQUIRED);
@@ -54,7 +62,7 @@ function unlockedCodesFromUserRows(userRows) {
 
 /** 每一輪滿 10 筆孵化出的靈獸 */
 function hatchedCreaturesFromUserRows(userRows) {
-  const sorted = [...userRows].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  const sorted = sortUserRowsChronologically(userRows);
   const completed = Math.floor(sorted.length / HATCH_RECORDS_REQUIRED);
   const list = [];
   for (let i = 0; i < completed; i += 1) {
@@ -73,10 +81,11 @@ function hatchedCreaturesFromUserRows(userRows) {
 /**
  * 單欄「靈獸圖鑑」精簡格式（由左至右以 | 分隔）：
  * n:筆數|hatched:0/1|cycles:輪數|cur:當前代碼|u:解鎖代碼逗號分隔|h:輪數:代碼逗號分隔
- * 例：n:12|hatched:1|cycles:1|cur:MPLR|u:MNLR,MPLR|h:1:MPLR
+ * 例：n:12|hatched:1|cycles:1|cur:MPLR|u:MPLR|h:1:MPLR（u 僅含各輪孵化靈獸，不含每筆紀錄型格）
  */
 function serializeCreatureCollection(snap) {
-  const u = (snap.unlockedCodes || []).join(',');
+  const hatchedCodes = (snap.hatchedCreatures || []).map((x) => x.code).filter((c) => MBEI_NAMES[c]);
+  const u = [...new Set(hatchedCodes)].join(',');
   const h = (snap.hatchedCreatures || []).map((x) => `${x.cycle}:${x.code}`).join(',');
   return [
     `n:${snap.recordCount}`,
@@ -123,11 +132,9 @@ function parseCreatureCollection(text) {
             ? j.hatchedList.map((x) => `${x.cycle}:${x.code}`).join(',')
             : '',
         );
-      const unlockedFromH = hatchedCreatures.map((x) => x.code).filter((c) => MBEI_NAMES[c]);
-      const unlockedLegacy = Array.isArray(j.u) ? j.u : (j.unlocked || j.unlockedCodes || []);
-      const unlockedCodes = unlockedFromH.length
-        ? [...new Set(unlockedFromH)]
-        : unlockedLegacy.filter((c) => MBEI_NAMES[c]);
+      const unlockedCodes = [...new Set(
+        hatchedCreatures.map((x) => x.code).filter((c) => MBEI_NAMES[c]),
+      )];
       return {
         recordCount: Number(j.n ?? j.recordCount) || 0,
         hatched: !!(j.hatched ?? (Number(j.n) >= HATCH_RECORDS_REQUIRED)),
@@ -150,9 +157,9 @@ function parseCreatureCollection(text) {
     map[part.slice(0, i)] = part.slice(i + 1);
   });
   const hatchedCreatures = parseHatchedSegment(map.h);
-  const unlockedFromH = hatchedCreatures.map((x) => x.code).filter((c) => MBEI_NAMES[c]);
-  const unlockedLegacy = (map.u && map.u !== '-' ? map.u.split(',') : []).filter((c) => MBEI_NAMES[c]);
-  const unlockedCodes = unlockedFromH.length ? [...new Set(unlockedFromH)] : unlockedLegacy;
+  const unlockedCodes = [...new Set(
+    hatchedCreatures.map((x) => x.code).filter((c) => MBEI_NAMES[c]),
+  )];
   const creatureCode = map.cur && map.cur !== '-' ? map.cur : null;
   return {
     recordCount: parseInt(map.n, 10) || 0,
@@ -168,7 +175,7 @@ function parseCreatureCollection(text) {
 /** Notion 裡給人看的摘要（可接在精簡格式前，解析時會忽略 ◆ 之前） */
 function formatCreatureCollectionLabel(snap) {
   const n = snap.recordCount;
-  const unlocked = snap.unlockedCodes?.length || 0;
+  const unlocked = snap.hatchedCreatures?.length || snap.unlockedCodes?.length || 0;
   const cur = snap.creatureCode
     ? `${MBEI_NAMES[snap.creatureCode] || snap.creatureCode}(${snap.creatureCode})`
     : '—';
@@ -183,16 +190,16 @@ function buildHatchSnapshot(userRows) {
   const recordCount = userRows.length;
   const hatched = recordCount >= HATCH_RECORDS_REQUIRED;
   const code = hatched ? hatchedCodeFromUserRows(userRows) : null;
-  const unlockedCodes = unlockedCodesFromUserRows(userRows);
   const hatchedCreatures = hatchedCreaturesFromUserRows(userRows);
   const hatchCycles = hatchedCreatures.length;
+  const unlockedCodes = hatchedCreatures.map((h) => h.code).filter((c) => MBEI_NAMES[c]);
   return {
     recordCount,
     hatched,
     hatchCycles,
     creatureCode: code,
     creatureName: code ? (MBEI_NAMES[code] || code) : '',
-    unlockedCodes,
+    unlockedCodes: [...new Set(unlockedCodes)].sort(),
     hatchedCreatures,
     hatchRecordsRequired: HATCH_RECORDS_REQUIRED,
     collectionCompact: serializeCreatureCollection({
