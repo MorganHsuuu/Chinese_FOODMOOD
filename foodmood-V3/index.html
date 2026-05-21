@@ -925,6 +925,19 @@
     @media (min-width: 768px) {
       .body-feeling-grid-3x2 { gap: 12px; }
     }
+    /* 選中態：低調的金色描邊，淡淡的暖色 tint */
+    .body-feeling-card { position: relative; }
+    .body-feeling-card.is-selected {
+      background: rgba(217, 138, 91, 0.06) !important;
+      border-color: rgba(217, 138, 91, 0.7) !important;
+      color: var(--cream) !important;
+      box-shadow:
+        0 0 0 1px rgba(217, 138, 91, 0.25),
+        inset 0 0 14px rgba(217, 138, 91, 0.05);
+    }
+    .body-feeling-card.is-selected .bf-hint {
+      color: rgba(245, 224, 187, 0.75) !important;
+    }
     .creature-detail-sheet {
       animation: result-sheet-up 0.32s cubic-bezier(0.2, 0.85, 0.25, 1) both;
     }
@@ -1642,14 +1655,14 @@
                   onClick={() => onChange(opt.label)}
                   className={cn(
                     'body-feeling-card flex flex-col items-center justify-center gap-2 min-h-[100px] md:min-h-[108px] rounded-2xl border-2 transition-all px-2 py-3',
-                    isOn ? 'bg-ink text-white border-ink shadow-md' : idleCardCls(opt.group),
+                    isOn ? 'is-selected' : idleCardCls(opt.group),
                   )}
                 >
                   <span className="text-[2rem] leading-none">{opt.emoji}</span>
                   <span className="text-xs md:text-sm font-bold leading-tight text-center">{opt.label}</span>
                   {opt.hint && (
                     <span
-                      className={cn('text-[10px] md:text-[11px] leading-snug text-center px-0.5', isOn ? 'text-white/75' : 'text-muted/80')}
+                      className={cn('bf-hint text-[10px] md:text-[11px] leading-snug text-center px-0.5', isOn ? '' : 'text-muted/80')}
                       style={{ fontFamily: serif }}
                     >
                       {opt.hint}
@@ -2522,7 +2535,7 @@
                           <div style={{ width:3, alignSelf:'stretch', background:'rgba(192,74,59,0.5)', borderRadius:2, flexShrink:0 }} />
                           <div style={{ flex:1, minWidth:0 }}>
                             <p style={{ fontSize:13, color:'var(--blush)', fontWeight:700, margin:'0 0 4px', letterSpacing:'0.1em' }}>{r.fortune.main_title}</p>
-                            <p style={{ fontSize:14, color:'var(--cream)', lineHeight:1.8, margin:'0 0 6px' }}>{(r.fortune.poem || '').split('\n')[0]}</p>
+                            <p style={{ fontSize:14, color:'var(--cream)', lineHeight:1.8, margin:'0 0 6px' }}>{(r.fortune.poem || '').replace(/\\r\\n|\\n|\\r/g, '\n').replace(/\r\n|\r/g, '\n').split('\n').map(s => s.trim()).filter(Boolean)[0] || ''}</p>
                             <p style={{ fontSize:11, color:'var(--mist)', margin:0 }}>{r.date} · {r.mealType} · {getRecordFood(r)}</p>
                           </div>
                         </div>
@@ -2729,7 +2742,19 @@
       );
     }
 
-    function SpectrumTuner() {
+    /** MBEI 四碼 → 調頻儀左/右象限（M/N/L/R 為左，B/P/H/V 為右） */
+    function mbeiCodeToSliderSides(code) {
+      const c = String(code || '').toUpperCase();
+      if (!/^[MB][NP][LH][RV]$/.test(c)) return null;
+      return [
+        c[0] === 'M' ? 'left' : 'right',
+        c[1] === 'N' ? 'left' : 'right',
+        c[2] === 'L' ? 'left' : 'right',
+        c[3] === 'R' ? 'left' : 'right',
+      ];
+    }
+
+    function SpectrumTuner({ activeMbeiCode = null, activeLabel = '' }) {
       const DIMS = [
         { num:'01', title:'能量來源',
           left:  { code:'M', label:'魂', name:'以情入食，滋養神魂', desc:'你吃飯是為了「爽」，尋求情緒的補償。' },
@@ -2750,6 +2775,13 @@
       const [preview, setPreview] = React.useState(() => Array(4).fill(null));
       const isCoarse = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
 
+      React.useEffect(() => {
+        const sides = mbeiCodeToSliderSides(activeMbeiCode);
+        if (!sides) return;
+        setSelected(sides);
+        setPreview(Array(4).fill(null));
+      }, [activeMbeiCode]);
+
       const sideFromX = (el, clientX) => {
         const r = el.getBoundingClientRect();
         const pct = (clientX - r.left) / r.width;
@@ -2759,12 +2791,18 @@
       const pickSide = (i, side) => setSelected((s) => s.map((x, j) => (j === i ? side : x)));
       const setPreviewSide = (i, v) => setPreview((s) => s.map((x, j) => (j === i ? v : x)));
 
+      const presetType = activeMbeiCode && MBEI_TYPES[activeMbeiCode] ? MBEI_TYPES[activeMbeiCode] : null;
+
       return (
-        <div style={{ background:'#1a150a', border:'1px solid rgba(149,211,195,0.12)', borderRadius:5, padding:'24px 20px', display:'flex', flexDirection:'column', gap:0 }}>
+        <div id="spectrum-tuner" style={{ background:'#1a150a', border:'1px solid rgba(149,211,195,0.12)', borderRadius:5, padding:'24px 20px', display:'flex', flexDirection:'column', gap:0 }}>
           <div style={{ marginBottom:24 }}>
             <p style={{ fontSize:9, color:'var(--jade)', fontFamily:"'Noto Serif TC',serif", fontWeight:700, letterSpacing:'0.2em', margin:'0 0 6px', opacity:0.7 }}>四大維度 · 食緒型格</p>
             <h4 style={{ fontSize:16, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color:'var(--cream)', margin:0, letterSpacing:'0.1em' }}>能量調頻儀</h4>
-            <p style={{ fontSize:12, color:'var(--mist)', margin:'4px 0 0', opacity:0.6 }}>點擊左／右象限，解讀食緒靈魂維度</p>
+            <p style={{ fontSize:12, color:'var(--mist)', margin:'4px 0 0', opacity:0.6 }}>
+              {presetType
+                ? <>已同步 <span style={{ color:'var(--amber)' }}>{activeLabel || presetType.creature}</span> · {activeMbeiCode} 四象限</>
+                : '點擊上方靈獸圖像，或點擊左／右象限解讀維度'}
+            </p>
           </div>
           {DIMS.map((dim, i) => {
             const side = getSide(i);
@@ -2891,6 +2929,20 @@
       const encCreatures = Object.values(MBEI_TYPES);
       const encIdx = selectedCreature ? encCreatures.findIndex(c => c.code === selectedCreature.code) : 0;
       const goCreature = dir => setSelectedCreature(encCreatures[(encIdx + dir + encCreatures.length) % encCreatures.length]);
+      const [tunerMbeiCode, setTunerMbeiCode] = React.useState(null);
+
+      const pickCreatureForTuner = (type) => {
+        if (!type?.code) return;
+        setTunerMbeiCode(type.code);
+        requestAnimationFrame(() => {
+          document.getElementById('spectrum-tuner')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+      };
+      const tunerPortraitBorder = (code) => (
+        tunerMbeiCode === code
+          ? '2px solid rgba(217, 138, 91, 0.75)'
+          : '2px solid rgba(149,211,195,0.25)'
+      );
 
       React.useEffect(() => {
         if (!loginProfile?.email) { setNotionProfile(null); return; }
@@ -2906,6 +2958,11 @@
         [records, notionProfile],
       );
       const unlockedCount = hatch.unlockedCodes?.size || 0;
+
+      React.useEffect(() => {
+        const code = hatch.avatarType?.code || hatch.currentCycleType?.code || hatch.formingType?.code || null;
+        setTunerMbeiCode(code);
+      }, [hatch.avatarType?.code, hatch.currentCycleType?.code, hatch.formingType?.code]);
 
       const latest = records[0];
       const stageClue = !latest ? '' : (()=>{
@@ -3007,7 +3064,14 @@
                 {/* 階段 1：凝聚中 */}
                 {hatch.stage === 1 && (
                   <div style={{ padding:'32px 24px', display:'flex', flexDirection:'column', alignItems:'center', gap:20 }}>
-                    <div style={{ position:'relative', display:'inline-block', width:130, height:160 }}>
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => pickCreatureForTuner(hatch.formingType)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') pickCreatureForTuner(hatch.formingType); }}
+                      style={{ position:'relative', display:'inline-block', width:130, height:160, cursor:'pointer', borderRadius:5, border: tunerPortraitBorder(hatch.formingType?.code), transition:'border-color 0.2s, box-shadow 0.2s', boxShadow: tunerMbeiCode === hatch.formingType?.code ? '0 0 16px rgba(217,138,91,0.2)' : undefined }}
+                      aria-label={hatch.formingType ? `查看 ${hatch.formingType.creature} 四象限` : '查看靈獸四象限'}
+                    >
                       <div className="float-glow" style={{ width:'100%', height:'100%' }}>
                         <HatchPortrait hatchState={hatch} />
                       </div>
@@ -3033,24 +3097,38 @@
                   <div style={{ padding:'32px 24px', display:'flex', flexDirection:'column', alignItems:'center', gap:20 }}>
                     <div style={{ display:'flex', gap:16, alignItems:'center', flexWrap:'wrap', justifyContent:'center' }}>
                       {hatch.avatarType && (
-                        <div style={{ textAlign:'center' }}>
-                          <p style={{ fontSize:10, color:'var(--jade)', margin:'0 0 8px', fontFamily:serif }}>當前頭像靈獸</p>
-                          <div style={{ width:88, height:110, borderRadius:5, overflow:'hidden', border:'2px solid rgba(149,211,195,0.25)' }}>
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => pickCreatureForTuner(hatch.avatarType)}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') pickCreatureForTuner(hatch.avatarType); }}
+                          style={{ textAlign:'center', cursor:'pointer' }}
+                          aria-label={`查看 ${hatch.avatarType.creature} 四象限`}
+                        >
+                          <p style={{ fontSize:10, color:'var(--jade)', margin:'0 0 8px', fontFamily:serif }}>當前頭像靈獸 · 點擊對照</p>
+                          <div style={{ width:88, height:110, borderRadius:5, overflow:'hidden', border: tunerPortraitBorder(hatch.avatarType.code), transition:'border-color 0.2s', boxShadow: tunerMbeiCode === hatch.avatarType.code ? '0 0 16px rgba(217,138,91,0.2)' : undefined }}>
                             <img src={CREATURE_IMG[hatch.avatarType.code]} alt={hatch.avatarType.creature} style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />
                           </div>
-                          <p style={{ fontSize:12, color:'var(--sand)', margin:'8px 0 0', fontFamily:serif }}>{hatch.avatarType.creature}</p>
+                          <p style={{ fontSize:12, color: tunerMbeiCode === hatch.avatarType.code ? 'var(--amber)' : 'var(--sand)', margin:'8px 0 0', fontFamily:serif }}>{hatch.avatarType.creature}</p>
                         </div>
                       )}
-                      <div style={{ position:'relative', width:100, height:125, flexShrink:0 }}>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => pickCreatureForTuner(hatch.currentCycleType)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') pickCreatureForTuner(hatch.currentCycleType); }}
+                        style={{ position:'relative', width:100, height:125, flexShrink:0, cursor:'pointer', borderRadius:5, border: tunerPortraitBorder(hatch.currentCycleType?.code), transition:'border-color 0.2s' }}
+                        aria-label={hatch.currentCycleType ? `查看本輪暫估 ${hatch.currentCycleType.creature} 四象限` : '查看本輪靈獸四象限'}
+                      >
                         <img src={CREATURE_IMG[hatch.currentCycleType.code]} alt="?"
                           style={{ width:'100%', height:'100%', objectFit:'contain', filter:'blur(14px) brightness(0.5)', display:'block' }} />
-                        <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                        <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', pointerEvents:'none' }}>
                           <span style={{ fontSize:32, fontFamily:serif, fontWeight:900, color:'var(--jade)' }}>?</span>
                         </div>
                       </div>
                     </div>
                     <div style={{ textAlign:'center', maxWidth:300 }}>
-                      <p style={{ fontSize:11, color:'var(--amber)', letterSpacing:'0.2em', fontWeight:700, fontFamily:serif, margin:'0 0 12px' }}>下一輪凝聚中</p>
+                      <p style={{ fontSize:11, color:'var(--amber)', letterSpacing:'0.2em', fontWeight:700, fontFamily:serif, margin:'0 0 12px' }}>下一輪凝聚中 · 點擊 ? 對照暫估型格</p>
                       <p style={{ fontSize:13, color:'var(--sand)', lineHeight:1.7, fontFamily:serif, margin:0 }}>
                         再 {hatch.recordsToNext} 筆紀錄將孵化新靈獸（本輪暫估 {hatch.currentCycleType.creature}）
                       </p>
@@ -3062,8 +3140,15 @@
                 {hatch.stage >= 3 && hatch.avatarType && (
                   <div style={{ padding:'28px 24px' }}>
                     <div style={{ display:'flex', gap:20, alignItems:'flex-start', marginBottom:16 }}>
-                      <div style={{ flexShrink:0 }}>
-                        <div className="hatch-celebration-img" style={{ width:100, height:125, borderRadius:5, overflow:'hidden', border:'2px solid rgba(149,211,195,0.2)', boxShadow:'0 8px 32px rgba(0,0,0,0.4)' }}>
+                      <div
+                        style={{ flexShrink:0, cursor:'pointer' }}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => pickCreatureForTuner(hatch.avatarType)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') pickCreatureForTuner(hatch.avatarType); }}
+                        aria-label={`查看 ${hatch.avatarType.creature} 四象限`}
+                      >
+                        <div className="hatch-celebration-img" style={{ width:100, height:125, borderRadius:5, overflow:'hidden', border: tunerPortraitBorder(hatch.avatarType.code), boxShadow: tunerMbeiCode === hatch.avatarType.code ? '0 8px 32px rgba(217,138,91,0.25)' : '0 8px 32px rgba(0,0,0,0.4)', transition:'border-color 0.2s, box-shadow 0.2s' }}>
                           <img src={CREATURE_IMG[hatch.avatarType.code]} alt={hatch.avatarType.creature} style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />
                         </div>
                         <div style={{ textAlign:'center', marginTop:6 }}>
@@ -3084,10 +3169,63 @@
                     </div>
                   </div>
                 )}
+
+                {/* 已孵化靈獸快選（多輪時可切換對照四象限） */}
+                {hatch.hatchedCreatures?.length > 0 && hatch.stage >= 2 && (
+                  <div style={{ padding:'0 24px 20px', borderTop:'1px solid rgba(149,211,195,0.08)' }}>
+                    <p style={{ fontSize:11, color:'var(--mist)', fontFamily:serif, margin:'16px 0 10px', letterSpacing:'0.08em' }}>點擊靈獸 · 下方調頻儀同步四象限</p>
+                    <div style={{ display:'flex', gap:10, flexWrap:'wrap', justifyContent:'center' }}>
+                      {hatch.hatchedCreatures.map((h) => {
+                        const type = MBEI_TYPES[h.code];
+                        if (!type) return null;
+                        const on = tunerMbeiCode === h.code;
+                        return (
+                          <button
+                            key={`${h.cycle}-${h.code}`}
+                            type="button"
+                            onClick={() => pickCreatureForTuner(type)}
+                            style={{
+                              background: on ? 'rgba(217,138,91,0.08)' : 'rgba(21,13,0,0.5)',
+                              border: on ? '1px solid rgba(217,138,91,0.55)' : '1px solid rgba(149,211,195,0.15)',
+                              borderRadius:5, padding:'8px 10px', cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:6, minWidth:72,
+                            }}
+                          >
+                            <div style={{ width:48, height:60, borderRadius:4, overflow:'hidden' }}>
+                              <img src={CREATURE_IMG[h.code]} alt={type.creature} style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />
+                            </div>
+                            <span style={{ fontSize:10, color: on ? 'var(--amber)' : 'var(--sand)', fontFamily:serif }}>{type.creature}</span>
+                            <span style={{ fontSize:9, color:'var(--mist)', fontFamily:"'JetBrains Mono',monospace" }}>{h.code}</span>
+                          </button>
+                        );
+                      })}
+                      {hatch.stage === 2 && hatch.currentCycleType && (
+                        <button
+                          type="button"
+                          onClick={() => pickCreatureForTuner(hatch.currentCycleType)}
+                          style={{
+                            background: tunerMbeiCode === hatch.currentCycleType.code ? 'rgba(217,138,91,0.08)' : 'rgba(21,13,0,0.5)',
+                            border: tunerMbeiCode === hatch.currentCycleType.code ? '1px solid rgba(217,138,91,0.55)' : '1px dashed rgba(149,211,195,0.2)',
+                            borderRadius:5, padding:'8px 10px', cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:6, minWidth:72, opacity:0.85,
+                          }}
+                        >
+                          <div style={{ width:48, height:60, borderRadius:4, overflow:'hidden', position:'relative' }}>
+                            <img src={CREATURE_IMG[hatch.currentCycleType.code]} alt="" style={{ width:'100%', height:'100%', objectFit:'contain', filter:'blur(6px)', display:'block' }} />
+                            <span style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, color:'var(--jade)', fontWeight:900 }}>?</span>
+                          </div>
+                          <span style={{ fontSize:10, color:'var(--jade)', fontFamily:serif }}>本輪暫估</span>
+                          <span style={{ fontSize:9, color:'var(--mist)', fontFamily:"'JetBrains Mono',monospace" }}>{hatch.currentCycleType.code}</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* 能量調頻儀 */}
-              <SpectrumTuner />
+              <SpectrumTuner
+                activeMbeiCode={tunerMbeiCode}
+                activeLabel={tunerMbeiCode && MBEI_TYPES[tunerMbeiCode] ? MBEI_TYPES[tunerMbeiCode].creature : ''}
+              />
 
             </div>
           ) : (
@@ -3676,7 +3814,7 @@
                 )}
               </RecordSection>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 min-w-0">
-                <RecordSection title="餐別"><PillSelector options={['早餐','午餐','晚餐','宵夜','點心']} value={formData.mealType} onChange={v => setField('mealType', v)} /></RecordSection>
+                <RecordSection title="餐別"><PillSelector options={['早餐','午餐','晚餐','宵夜',{ label:'點心/飲料', value:'點心' }]} value={formData.mealType} onChange={v => setField('mealType', v)} /></RecordSection>
                 <RecordSection title="幾點吃這餐">
                   <MealTimeField value={formData.mealTime} onChange={v => setField('mealTime', v)} />
                 </RecordSection>
@@ -3864,7 +4002,12 @@
 
     function FortuneSlip({ fortune, onClose, recordData, skipEntryFx = false }) {
       const safe = useMemo(() => normalizeFortuneForDisplay(fortune, recordData), [fortune, recordData]);
-      const poemLines = (safe.poem || '').split('\n').filter(Boolean);
+      const poemLines = (safe.poem || '')
+        .replace(/\\r\\n|\\n|\\r/g, '\n')
+        .replace(/\r\n|\r/g, '\n')
+        .split('\n')
+        .map(s => s.trim())
+        .filter(Boolean);
       const meritN = safe.meritEarned ?? (safe.merit_point?.match(/\+(\d+)/) ? parseInt(safe.merit_point.match(/\+(\d+)/)[1], 10) : 0);
       const hasMerit = meritN >= 1;
       const serif = "'Noto Serif TC',serif";
