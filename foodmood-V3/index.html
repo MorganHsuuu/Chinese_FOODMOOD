@@ -1913,76 +1913,126 @@
           left:  { code:'R', label:'曆', name:'順應十二時辰，循天時', desc:'你是準時吃飯的乖寶寶，定時定量。' },
           right: { code:'V', label:'幻', name:'暴飲暴食，飄忽無常', desc:'你是看心情、看壓力才進食的邊緣人。' } },
       ];
-      const [hover, setHover] = React.useState(Array(4).fill(null));
-      const set = (i, v) => setHover(h => h.map((x,j) => j===i ? v : x));
+      const THUMB_POS = { left: 8, center: 50, right: 92 };
+      const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
+      const [selected, setSelected] = React.useState(() => Array(4).fill(null));
+      const [preview, setPreview] = React.useState(() => Array(4).fill(null));
+      const isCoarse = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
+
+      const sideFromX = (el, clientX) => {
+        const r = el.getBoundingClientRect();
+        const pct = (clientX - r.left) / r.width;
+        return pct < 0.5 ? 'left' : 'right';
+      };
+      const getSide = (i) => selected[i] ?? preview[i];
+      const pickSide = (i, side) => setSelected((s) => s.map((x, j) => (j === i ? side : x)));
+      const setPreviewSide = (i, v) => setPreview((s) => s.map((x, j) => (j === i ? v : x)));
 
       return (
         <div style={{ background:'#1a150a', border:'1px solid rgba(149,211,195,0.12)', borderRadius:5, padding:'24px 20px', display:'flex', flexDirection:'column', gap:0 }}>
           <div style={{ marginBottom:24 }}>
             <p style={{ fontSize:9, color:'var(--jade)', fontFamily:"'JetBrains Mono',monospace", fontWeight:700, letterSpacing:'0.25em', margin:'0 0 6px', opacity:0.7 }}>MBEI SYSTEM · 四大維度</p>
             <h4 style={{ fontSize:16, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color:'var(--cream)', margin:0, letterSpacing:'0.1em' }}>能量調頻儀</h4>
-            <p style={{ fontSize:12, color:'var(--mist)', margin:'4px 0 0', opacity:0.6 }}>滑動光譜，解讀你的食緒靈魂維度</p>
+            <p style={{ fontSize:12, color:'var(--mist)', margin:'4px 0 0', opacity:0.6 }}>點擊左／右象限，解讀食緒靈魂維度</p>
           </div>
           {DIMS.map((dim, i) => {
-            const side = hover[i];
+            const side = getSide(i);
             const active = side ? (side === 'left' ? dim.left : dim.right) : null;
+            const thumbLeft = THUMB_POS[side || 'center'];
             const jade = 'rgba(149,211,195,';
             const amber = 'rgba(200,184,138,';
+            const trackHandlers = isCoarse
+              ? {
+                  onClick: (e) => {
+                    e.preventDefault();
+                    pickSide(i, sideFromX(e.currentTarget, e.clientX));
+                  },
+                }
+              : {
+                  onClick: (e) => pickSide(i, sideFromX(e.currentTarget, e.clientX)),
+                  onMouseMove: (e) => {
+                    if (!selected[i]) setPreviewSide(i, sideFromX(e.currentTarget, e.clientX));
+                  },
+                  onMouseLeave: () => setPreviewSide(i, null),
+                };
             return (
               <div key={i} style={{ paddingBottom: i < 3 ? 20 : 0, marginBottom: i < 3 ? 20 : 0, borderBottom: i < 3 ? '1px solid rgba(149,211,195,0.06)' : 'none' }}>
-                {/* 維度標題 */}
                 <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
                   <span style={{ fontSize:9, fontFamily:"'JetBrains Mono',monospace", color:'rgba(149,211,195,0.3)', letterSpacing:'0.15em' }}>{dim.num} /</span>
                   <span style={{ fontSize:12, fontFamily:"'Noto Serif TC',serif", fontWeight:700, color:'var(--sand)', letterSpacing:'0.15em' }}>{dim.title}</span>
                 </div>
-                {/* 光譜軌道 — 整列都是 hit area */}
-                <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:12,
-                  padding:'16px 0', margin:'-16px 0 12px', cursor:'pointer' }}
-                  onMouseMove={e => { const r=e.currentTarget.getBoundingClientRect(); const pct=(e.clientX-r.left)/r.width; set(i, pct<0.15?'left':pct>0.85?'right':pct<0.5?'left':'right'); }}
-                  onMouseLeave={() => set(i,null)}
-                  onTouchStart={e => { const r=e.currentTarget.getBoundingClientRect(); set(i,(e.touches[0].clientX-r.left)/r.width<0.5?'left':'right'); }}
-                  onTouchEnd={() => set(i,null)}>
-                  {/* 左極端 */}
-                  <div style={{ width:36, textAlign:'right', flexShrink:0, userSelect:'none' }}>
+                <div
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${dim.title}：點擊左或右象限`}
+                  style={{
+                    display:'flex', alignItems:'center', gap:14, marginBottom:12,
+                    padding:'16px 0', margin:'-16px 0 12px', cursor:'pointer',
+                    touchAction:'manipulation', WebkitTapHighlightColor:'transparent', userSelect:'none',
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowLeft') pickSide(i, 'left');
+                    if (e.key === 'ArrowRight') pickSide(i, 'right');
+                  }}
+                  {...trackHandlers}
+                >
+                  <div style={{ width:36, textAlign:'right', flexShrink:0, pointerEvents:'none' }}>
                     <span style={{ fontSize:20, fontFamily:"'Noto Serif TC',serif", fontWeight:900, display:'block', lineHeight:1,
-                      color: side==='left' ? 'var(--jade)' : jade+'0.25)', transition:'color 0.4s cubic-bezier(0.4,0,0.2,1)' }}>{dim.left.code}</span>
+                      color: side==='left' ? 'var(--jade)' : jade+'0.25)', transition:`color 0.35s ${EASE}` }}>{dim.left.code}</span>
                     <span style={{ fontSize:10, display:'block', letterSpacing:'0.1em', marginTop:2,
-                      color: side==='left' ? 'var(--jade)' : jade+'0.2)', transition:'color 0.4s cubic-bezier(0.4,0,0.2,1)' }}>{dim.left.label}</span>
+                      color: side==='left' ? 'var(--jade)' : jade+'0.2)', transition:`color 0.35s ${EASE}` }}>{dim.left.label}</span>
                   </div>
-                  {/* 軌道（視覺） */}
-                  <div style={{ flex:1, position:'relative', height:6, borderRadius:3, background:'rgba(255,255,255,0.04)', backdropFilter:'blur(4px)', pointerEvents:'none' }}>
-                    {/* 漸層光芒 */}
-                    <div style={{ position:'absolute', inset:0, borderRadius:3, transition:'all 0.4s cubic-bezier(0.4,0,0.2,1)',
-                      background: side==='left'  ? 'linear-gradient(90deg,rgba(149,211,195,0.65) 0%,rgba(149,211,195,0.08) 55%,transparent 100%)' :
-                                  side==='right' ? 'linear-gradient(90deg,transparent 0%,rgba(200,184,138,0.08) 45%,rgba(200,184,138,0.65) 100%)' :
-                                  'transparent' }} />
-                    {/* 游標 */}
-                    <div style={{ position:'absolute', top:'50%', transform:'translate(-50%,-50%)',
-                      left: side==='left' ? '6%' : side==='right' ? '94%' : '50%',
-                      width:14, height:14, borderRadius:'50%', transition:'all 0.4s cubic-bezier(0.4,0,0.2,1)',
+                  <div style={{ flex:1, position:'relative', height:6, borderRadius:3, background:'rgba(255,255,255,0.04)', pointerEvents:'none', contain:'layout style paint' }}>
+                    <div style={{
+                      position:'absolute', inset:0, borderRadius:3, pointerEvents:'none',
+                      opacity: side ? 1 : 0,
+                      transition:`opacity 0.35s ${EASE}`,
+                      background: side==='left'
+                        ? 'linear-gradient(90deg,rgba(149,211,195,0.65) 0%,rgba(149,211,195,0.08) 55%,transparent 100%)'
+                        : side==='right'
+                          ? 'linear-gradient(90deg,transparent 0%,rgba(200,184,138,0.08) 45%,rgba(200,184,138,0.65) 100%)'
+                          : 'transparent',
+                    }} />
+                    <div style={{
+                      position:'absolute', top:'50%', left:`${thumbLeft}%`,
+                      width:14, height:14, borderRadius:'50%', pointerEvents:'none',
+                      transform:'translate3d(-50%,-50%,0)',
+                      transition:`left 0.38s ${EASE}, background 0.38s ${EASE}, box-shadow 0.38s ${EASE}`,
+                      willChange: side ? 'left' : 'auto',
                       background: side==='left' ? 'var(--jade)' : side==='right' ? 'var(--amber)' : 'rgba(149,211,195,0.3)',
-                      boxShadow: side==='left'  ? '0 0 14px rgba(149,211,195,0.8), 0 0 4px rgba(149,211,195,1)' :
-                                  side==='right' ? '0 0 14px rgba(200,184,138,0.8), 0 0 4px rgba(200,184,138,1)' : 'none' }} />
+                      boxShadow: side==='left'
+                        ? '0 0 14px rgba(149,211,195,0.8), 0 0 4px rgba(149,211,195,1)'
+                        : side==='right'
+                          ? '0 0 14px rgba(200,184,138,0.8), 0 0 4px rgba(200,184,138,1)'
+                          : 'none',
+                    }} />
                   </div>
-                  {/* 右極端 */}
-                  <div style={{ width:36, textAlign:'left', flexShrink:0, userSelect:'none' }}>
+                  <div style={{ width:36, textAlign:'left', flexShrink:0, pointerEvents:'none' }}>
                     <span style={{ fontSize:20, fontFamily:"'Noto Serif TC',serif", fontWeight:900, display:'block', lineHeight:1,
-                      color: side==='right' ? 'var(--amber)' : amber+'0.25)', transition:'color 0.4s cubic-bezier(0.4,0,0.2,1)' }}>{dim.right.code}</span>
+                      color: side==='right' ? 'var(--amber)' : amber+'0.25)', transition:`color 0.35s ${EASE}` }}>{dim.right.code}</span>
                     <span style={{ fontSize:10, display:'block', letterSpacing:'0.1em', marginTop:2,
-                      color: side==='right' ? 'var(--amber)' : amber+'0.2)', transition:'color 0.4s cubic-bezier(0.4,0,0.2,1)' }}>{dim.right.label}</span>
+                      color: side==='right' ? 'var(--amber)' : amber+'0.2)', transition:`color 0.35s ${EASE}` }}>{dim.right.label}</span>
                   </div>
                 </div>
-                {/* 動態解說 */}
-                <div style={{ minHeight:56 }}>
-                  {active && (
-                    <div key={side+i} className="shichen-content" style={{ padding:'10px 14px',
-                      background: side==='left' ? 'rgba(149,211,195,0.05)' : 'rgba(200,184,138,0.05)',
-                      border: `1px solid ${side==='left' ? 'rgba(149,211,195,0.15)' : 'rgba(200,184,138,0.15)'}`,
-                      borderRadius:5, backdropFilter:'blur(8px)' }}>
-                      <p style={{ fontSize:14, fontFamily:"'Noto Serif TC',serif", fontWeight:700, color:'var(--cream)', margin:'0 0 4px', letterSpacing:'0.04em' }}>{active.name}</p>
-                      <p style={{ fontSize:12, color:'var(--mist)', margin:0, opacity:0.75, lineHeight:1.6 }}>{active.desc}</p>
-                    </div>
-                  )}
+                <div style={{ height:72, position:'relative' }}>
+                  <div style={{
+                    position:'absolute', inset:0, padding:'10px 14px', borderRadius:5,
+                    background: side==='left' ? 'rgba(149,211,195,0.05)' : side==='right' ? 'rgba(200,184,138,0.05)' : 'transparent',
+                    border: side
+                      ? `1px solid ${side==='left' ? 'rgba(149,211,195,0.15)' : 'rgba(200,184,138,0.15)'}`
+                      : '1px solid transparent',
+                    opacity: active ? 1 : 0,
+                    transform: active ? 'translate3d(0,0,0)' : 'translate3d(0,6px,0)',
+                    transition:`opacity 0.32s ${EASE}, transform 0.32s ${EASE}, border-color 0.32s ${EASE}`,
+                    pointerEvents: active ? 'auto' : 'none',
+                  }}>
+                    <p style={{ fontSize:14, fontFamily:"'Noto Serif TC',serif", fontWeight:700, color:'var(--cream)', margin:'0 0 4px', letterSpacing:'0.04em' }}>
+                      {active ? active.name : '\u00A0'}
+                    </p>
+                    <p style={{ fontSize:12, color:'var(--mist)', margin:0, opacity: active ? 0.75 : 0, lineHeight:1.6 }}>
+                      {active ? active.desc : '\u00A0'}
+                    </p>
+                  </div>
                 </div>
               </div>
             );
