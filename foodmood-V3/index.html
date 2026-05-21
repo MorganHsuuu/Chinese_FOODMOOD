@@ -406,6 +406,48 @@
       from { opacity: 0; backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); }
       to   { opacity: 1; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
     }
+    /* 退場：整層淡出但「光球綻放擴散」，與 FortuneDecreeModal 的金光 cross-fade */
+    .charge-veil.exiting {
+      pointer-events: none;
+      z-index: 105;
+      animation: chargeVeilOut 0.7s cubic-bezier(0.4, 0, 0.6, 1) both;
+    }
+    @keyframes chargeVeilOut {
+      0%   { opacity: 1; }
+      60%  { opacity: 0.55; }
+      100% { opacity: 0; }
+    }
+    .charge-veil.exiting .charge-veil-orb {
+      animation: chargeOrbBloom 0.7s cubic-bezier(0.22, 0.85, 0.25, 1) both !important;
+    }
+    @keyframes chargeOrbBloom {
+      0%   { transform: scale(1); opacity: 1; filter: blur(0); }
+      55%  { transform: scale(1.6); opacity: 0.85; filter: blur(2px); }
+      100% { transform: scale(2.4); opacity: 0; filter: blur(10px); }
+    }
+    .charge-veil.exiting .charge-veil-aura {
+      animation: chargeAuraBloom 0.7s cubic-bezier(0.3, 0.7, 0.3, 1) both !important;
+    }
+    @keyframes chargeAuraBloom {
+      0%   { transform: scale(1); opacity: 0.9; }
+      100% { transform: scale(1.35); opacity: 0; }
+    }
+    .charge-veil.exiting .charge-veil-rays {
+      animation: chargeRaysBloom 0.7s cubic-bezier(0.3, 0.7, 0.3, 1) both !important;
+    }
+    @keyframes chargeRaysBloom {
+      0%   { transform: scale(1) rotate(0deg); opacity: 0.6; }
+      100% { transform: scale(1.45) rotate(60deg); opacity: 0; }
+    }
+    .charge-veil.exiting .charge-veil-text,
+    .charge-veil.exiting .charge-veil-corner,
+    .charge-veil.exiting .charge-veil-particles {
+      animation: chargeFadeOut 0.35s ease-out both !important;
+    }
+    @keyframes chargeFadeOut {
+      from { opacity: 1; }
+      to   { opacity: 0; }
+    }
     .charge-veil::before {
       content: '';
       position: absolute;
@@ -645,6 +687,199 @@
       .charge-veil-particles .p, .charge-veil-text .v-title, .charge-veil-text .v-sub,
       .charge-veil-corner { animation: none !important; }
       .charge-veil::before { backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+    }
+
+    /* ── 詩籤揭曉（金光凝聚 → 透出詩籤，連續無斷點） ── */
+    .decree-reveal-root {
+      isolation: isolate;
+    }
+    .decree-reveal-backdrop {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 70% 60% at 50% 50%, rgba(40, 24, 6, 0.85) 0%, rgba(0, 0, 0, 0.92) 70%);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      animation: decreeBackdropIn 0.6s ease-out both;
+    }
+    @keyframes decreeBackdropIn {
+      from { opacity: 0.55; }
+      to   { opacity: 1; }
+    }
+    /* 中央金色光暈：延續 charging veil 的金光，慢慢呼吸 */
+    .decree-halo {
+      position: absolute;
+      width: min(92vmin, 720px);
+      height: min(92vmin, 720px);
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 50% 50%,
+          rgba(255, 240, 200, 0.55) 0%,
+          rgba(212, 168, 67, 0.35) 22%,
+          rgba(140, 90, 30, 0.18) 48%,
+          transparent 72%);
+      filter: blur(10px);
+      pointer-events: none;
+      animation: decreeHaloIn 1.2s cubic-bezier(0.22, 0.85, 0.25, 1) both,
+                 decreeHaloBreathe 4.5s ease-in-out 1.2s infinite;
+      z-index: 1;
+    }
+    @keyframes decreeHaloIn {
+      0%   { opacity: 0.85; transform: scale(0.9); filter: blur(8px); }
+      35%  { opacity: 1;    transform: scale(1.1); filter: blur(8px); }
+      100% { opacity: 0.85; transform: scale(1);   filter: blur(10px); }
+    }
+    @keyframes decreeHaloBreathe {
+      0%, 100% { opacity: 0.7; transform: scale(0.98); }
+      50%      { opacity: 0.9; transform: scale(1.03); }
+    }
+    /* 旋轉光束，像極光緩慢盤旋 */
+    .decree-rays {
+      position: absolute;
+      width: min(140vmin, 1100px);
+      height: min(140vmin, 1100px);
+      background:
+        conic-gradient(from 0deg,
+          transparent 0deg,
+          rgba(212, 168, 67, 0.08) 14deg,
+          transparent 28deg,
+          transparent 88deg,
+          rgba(255, 235, 180, 0.05) 92deg,
+          transparent 96deg,
+          transparent 178deg,
+          rgba(212, 168, 67, 0.08) 192deg,
+          transparent 206deg,
+          transparent 268deg,
+          rgba(255, 235, 180, 0.05) 272deg,
+          transparent 276deg,
+          transparent 360deg);
+      mask: radial-gradient(circle at 50% 50%, black 0%, black 12%, transparent 70%);
+      -webkit-mask: radial-gradient(circle at 50% 50%, black 0%, black 12%, transparent 70%);
+      animation: decreeRaysIn 1.2s ease-out both,
+                 decreeRaysSpin 28s linear 1.2s infinite;
+      pointer-events: none;
+      z-index: 1;
+    }
+    @keyframes decreeRaysIn {
+      from { opacity: 0; transform: scale(0.5) rotate(0deg); }
+      to   { opacity: 1; transform: scale(1) rotate(8deg); }
+    }
+    @keyframes decreeRaysSpin {
+      from { transform: rotate(8deg); }
+      to   { transform: rotate(368deg); }
+    }
+    /* 上升的金色靈氣粒子 */
+    .decree-particles {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 2;
+    }
+    .decree-particles .dp {
+      position: absolute;
+      bottom: -10px;
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: rgba(255, 240, 200, 1);
+      box-shadow: 0 0 6px 1.5px rgba(212, 168, 67, 0.85), 0 0 14px 3px rgba(212, 168, 67, 0.35);
+      opacity: 0;
+      animation: decreeParticleRise 6s linear infinite;
+    }
+    .decree-particles .dp:nth-child(1)  { left:  6%; animation-delay: 0.0s; }
+    .decree-particles .dp:nth-child(2)  { left: 14%; animation-delay: 1.4s; width: 2px; height: 2px; }
+    .decree-particles .dp:nth-child(3)  { left: 23%; animation-delay: 2.7s; }
+    .decree-particles .dp:nth-child(4)  { left: 32%; animation-delay: 0.9s; width: 2px; height: 2px; }
+    .decree-particles .dp:nth-child(5)  { left: 41%; animation-delay: 3.5s; }
+    .decree-particles .dp:nth-child(6)  { left: 50%; animation-delay: 1.7s; width: 4px; height: 4px; }
+    .decree-particles .dp:nth-child(7)  { left: 59%; animation-delay: 4.2s; width: 2px; height: 2px; }
+    .decree-particles .dp:nth-child(8)  { left: 68%; animation-delay: 0.5s; }
+    .decree-particles .dp:nth-child(9)  { left: 77%; animation-delay: 2.1s; width: 2px; height: 2px; }
+    .decree-particles .dp:nth-child(10) { left: 86%; animation-delay: 3.8s; }
+    .decree-particles .dp:nth-child(11) { left: 94%; animation-delay: 1.2s; width: 2px; height: 2px; }
+    @keyframes decreeParticleRise {
+      0%   { transform: translateY(0) scale(0.5); opacity: 0; }
+      10%  { opacity: 0.9; }
+      55%  { opacity: 0.8; transform: translateY(-55vh) scale(1); }
+      100% { transform: translateY(-110vh) scale(0.4); opacity: 0; }
+    }
+    /* 詩籤舞台容器 */
+    .decree-stage {
+      position: relative;
+      z-index: 3;
+      width: min(92vw, 340px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    /* 詩籤包裝：從金光中浮現（scale + blur + glow 同步收斂） */
+    .decree-paper-wrap {
+      width: 100%;
+      position: relative;
+      animation: decreePaperEmerge 1.45s cubic-bezier(0.2, 0.7, 0.2, 1) 0.2s both;
+      will-change: opacity, transform, filter;
+    }
+    @keyframes decreePaperEmerge {
+      0% {
+        opacity: 0;
+        transform: scale(0.72);
+        filter: brightness(1.6) blur(12px);
+      }
+      35% {
+        opacity: 0.6;
+        transform: scale(0.92);
+        filter: brightness(1.32) blur(6px);
+      }
+      60% {
+        opacity: 0.92;
+        transform: scale(1.015);
+        filter: brightness(1.12) blur(1.5px);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1);
+        filter: brightness(1) blur(0);
+      }
+    }
+    /* 詩籤後方的金色背光：與詩籤同步呼吸 */
+    .decree-paper-wrap::before {
+      content: '';
+      position: absolute;
+      inset: -32px;
+      border-radius: 24px;
+      background: radial-gradient(ellipse at 50% 50%,
+        rgba(255, 240, 200, 0.45) 0%,
+        rgba(212, 168, 67, 0.28) 35%,
+        transparent 75%);
+      filter: blur(14px);
+      pointer-events: none;
+      z-index: -1;
+      animation: decreePaperHaloIn 1.45s cubic-bezier(0.2, 0.7, 0.2, 1) 0.2s both,
+                 decreePaperHaloBreathe 4s ease-in-out 1.7s infinite;
+    }
+    @keyframes decreePaperHaloIn {
+      from { opacity: 0; transform: scale(0.6); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    @keyframes decreePaperHaloBreathe {
+      0%, 100% { opacity: 0.7; }
+      50%      { opacity: 1; }
+    }
+    .decree-paper-wrap .fortune-card {
+      margin: 0 auto;
+      animation: none;
+    }
+    .decree-paper-wrap .fortune-card::before {
+      animation: aura-breathe 3.5s 1.2s ease-in-out infinite;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .decree-halo, .decree-rays, .decree-particles .dp,
+      .decree-paper-wrap, .decree-paper-wrap::before {
+        animation: none !important;
+      }
+      .decree-paper-wrap { opacity: 1; transform: none; filter: none; }
+      .decree-paper-wrap::before { opacity: 0.7; }
     }
     /* 中式朱紅框（凝練食緒彈窗） */
     .cn-red-frame-modal {
@@ -1992,10 +2227,26 @@
 
     /** 全螢幕凝煉儀式覆蓋層：送出後等待 AI 回應期間顯示 */
     function ChargingVeil({ active, label = '凝煉食緒', subLabel = '靈氣注入孵化池' }) {
-      if (!active) return null;
+      const [mounted, setMounted] = React.useState(active);
+      const [exiting, setExiting] = React.useState(false);
+      React.useEffect(() => {
+        if (active) {
+          setMounted(true);
+          setExiting(false);
+          return undefined;
+        }
+        if (!mounted) return undefined;
+        setExiting(true);
+        const t = setTimeout(() => {
+          setMounted(false);
+          setExiting(false);
+        }, 700);
+        return () => clearTimeout(t);
+      }, [active, mounted]);
+      if (!mounted) return null;
       const particles = Array.from({ length: 16 });
       return (
-        <div className="charge-veil" role="status" aria-live="polite" aria-label={label}>
+        <div className={`charge-veil${exiting ? ' exiting' : ''}`} role="status" aria-live="polite" aria-label={label}>
           <span className="charge-veil-corner tl" aria-hidden="true" />
           <span className="charge-veil-corner tr" aria-hidden="true" />
           <span className="charge-veil-corner bl" aria-hidden="true" />
@@ -3339,7 +3590,6 @@
       const canSubmit = scrolledToEnd && foodReady && feelingsComplete && !isLoading;
 
       return (
-        <>
         <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden p-2 md:p-12">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm record-overlay-veil" onClick={onClose} />
           <div className="w-full max-w-lg md:max-w-3xl h-[88vh] md:h-auto md:max-h-[85vh] bg-paper rounded-t-[5px] md:rounded-[5px] relative z-10 flex flex-col shadow-2xl overflow-hidden record-modal-sacred cn-red-frame-modal min-w-0">
@@ -3571,8 +3821,6 @@
             </div>
           </div>
         </div>
-        <ChargingVeil active={isLoading} />
-        </>
       );
     }
 
@@ -3611,13 +3859,16 @@
       };
     }
 
-    function FortuneSlip({ fortune, onClose, recordData }) {
+    const CHARGE_MIN_MS = 2000;
+    const DECREE_REVEAL_MS = 1650;
+
+    function FortuneSlip({ fortune, onClose, recordData, skipEntryFx = false }) {
       const safe = useMemo(() => normalizeFortuneForDisplay(fortune, recordData), [fortune, recordData]);
       const poemLines = (safe.poem || '').split('\n').filter(Boolean);
       const meritN = safe.meritEarned ?? (safe.merit_point?.match(/\+(\d+)/) ? parseInt(safe.merit_point.match(/\+(\d+)/)[1], 10) : 0);
       const hasMerit = meritN >= 1;
       const serif = "'Noto Serif TC',serif";
-      const reduceFx = typeof window !== 'undefined' && (
+      const reduceFx = !skipEntryFx && typeof window !== 'undefined' && (
         window.matchMedia('(prefers-reduced-motion: reduce)').matches
         || window.matchMedia('(pointer: coarse)').matches
       );
@@ -3722,18 +3973,61 @@
       );
     }
 
-    function ResultModal({ record, onClose }) {
+    /** 詩籤揭曉（送出後第二段儀式：金光凝聚 → 詩籤浮現） */
+    function FortuneDecreeModal({ record, onClose }) {
       const fortune = useMemo(() => record.fortune || getMockFortune(record), [record]);
+      const [ready, setReady] = React.useState(false);
+      const reduceFx = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      React.useEffect(() => {
+        const onKey = (e) => { if (e.key === 'Escape' && ready) onClose(); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+      }, [onClose, ready]);
+
+      React.useEffect(() => {
+        if (reduceFx) {
+          setReady(true);
+          return undefined;
+        }
+        const t = setTimeout(() => setReady(true), DECREE_REVEAL_MS);
+        return () => clearTimeout(t);
+      }, [reduceFx]);
+
       return (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-4 md:p-8">
-          <div className="absolute inset-0 result-modal-backdrop" onClick={onClose} aria-hidden="true" />
-          <div className="relative z-10 w-full flex justify-center pointer-events-none" style={{ maxWidth:320 }}>
-            <div className="pointer-events-auto w-full">
-              <FortuneSlip fortune={fortune} recordData={record} onClose={onClose} />
+        <div
+          className="decree-reveal-root fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-4 md:p-8"
+          role="dialog"
+          aria-modal="true"
+          aria-label="食緒詩籤"
+        >
+          <div
+            className="decree-reveal-backdrop"
+            onClick={ready ? onClose : undefined}
+            aria-hidden={!ready}
+          />
+          {!reduceFx && (
+            <>
+              <div className="decree-rays" aria-hidden="true" />
+              <div className="decree-halo" aria-hidden="true" />
+              <div className="decree-particles" aria-hidden="true">
+                <span className="dp" /><span className="dp" /><span className="dp" /><span className="dp" />
+                <span className="dp" /><span className="dp" /><span className="dp" /><span className="dp" />
+                <span className="dp" /><span className="dp" /><span className="dp" />
+              </div>
+            </>
+          )}
+          <div className="decree-stage">
+            <div className="decree-paper-wrap">
+              <FortuneSlip fortune={fortune} recordData={record} onClose={onClose} skipEntryFx />
             </div>
           </div>
         </div>
       );
+    }
+
+    function ResultModal({ record, onClose }) {
+      return <FortuneDecreeModal record={record} onClose={onClose} />;
     }
 
     // ── Main App ──
@@ -3755,6 +4049,7 @@
       const [initialPhotoPreview, setInitialPhotoPreview] = useState(null);
       const [mealDrafts, setMealDrafts] = useState(() => loadMealDrafts());
       const [isLoading, setIsLoading] = useState(false);
+      const [submitOverlay, setSubmitOverlay] = useState(null);
       const [prefetchStatus, setPrefetchStatus] = useState('idle');
       const [showResult, setShowResult] = useState(false);
       const [hatchCelebration, setHatchCelebration] = useState(null);
@@ -3930,8 +4225,12 @@
         submitGuardRef.current = true;
         setSubmitError('');
         setIsLoading(true);
+        setSubmitOverlay('charging');
         try {
-          const aiFortune = await resolveFortune(formData);
+          const [aiFortune] = await Promise.all([
+            resolveFortune(formData),
+            new Promise((r) => setTimeout(r, CHARGE_MIN_MS)),
+          ]);
           const mbeiScores = aiFortune?.mbei_scores || scoresFromMbeiCode(aiFortune?.calculated_mbei || determineMBEI(formData));
           const mbeiCode = aiFortune?.calculated_mbei || mbeiCodeFromScores(mbeiScores) || determineMBEI(formData);
           const meritEarned = aiFortune?.meritEarned ?? calcMeritFromContext(formData.context);
@@ -3990,19 +4289,27 @@
           setShowRecordPicker(false);
           const hs = getHatchState(nextRecords);
           if (hs.justHatched && hs.avatarType) {
+            setSubmitOverlay(null);
             setHatchCelebration({ type: hs.avatarType, cycle: hs.completedCycles });
             setShowResult(false);
           } else {
             setHatchCelebration(null);
+            setSubmitOverlay('reveal');
             setShowResult(true);
           }
         } catch (err) {
           console.error('[handleRecord]', err);
           setSubmitError(err?.message || '解籤或儲存失敗，請稍後再試');
+          setSubmitOverlay(null);
         } finally {
           setIsLoading(false);
           submitGuardRef.current = false;
         }
+      };
+
+      const closeFortuneReveal = () => {
+        setSubmitOverlay(null);
+        setShowResult(false);
       };
 
       const recordInitialPhase = recordMode === 'continue' ? 'feelings' : recordMode === 'early' ? 'food' : 'all';
@@ -4132,17 +4439,23 @@
                 onPhotoChange={(url) => { recordPhotoRef.current = url; }}
               />
             )}
+            <ChargingVeil active={submitOverlay === 'charging'} />
             {hatchCelebration && (
               <HatchCelebrationModal
                 hatchType={hatchCelebration.type}
                 cycleNumber={hatchCelebration.cycle}
                 onClose={() => {
                   setHatchCelebration(null);
-                  if (latestRecord) setShowResult(true);
+                  if (latestRecord) {
+                    setSubmitOverlay('reveal');
+                    setShowResult(true);
+                  }
                 }}
               />
             )}
-            {showResult && latestRecord && !hatchCelebration && <ResultModal record={latestRecord} onClose={() => setShowResult(false)} />}
+            {showResult && latestRecord && !hatchCelebration && submitOverlay === 'reveal' && (
+              <FortuneDecreeModal record={latestRecord} onClose={closeFortuneReveal} />
+            )}
 
             {/* 個人資料彈跳popup（手機） */}
             {showProfilePopup && (() => {
