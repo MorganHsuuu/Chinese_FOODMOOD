@@ -173,7 +173,10 @@
       background: radial-gradient(circle at 50% 28%, rgba(255, 255, 255, 0.32) 0%, transparent 68%);
       animation: recordSacredFlash 2.4s cubic-bezier(0.33, 0, 0.2, 1) forwards;
     }
-    @keyframes progressBar { from{width:0} to{width:20%} }
+    .result-modal-backdrop { background: rgba(0,0,0,0.78); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+    @media (max-width: 639px) {
+      .result-modal-backdrop { backdrop-filter: none; -webkit-backdrop-filter: none; }
+    }
     .progress-bar { animation: progressBar 1s ease-out forwards; }
     .hover-scale { transition: transform 0.2s; }
     .hover-scale:hover { transform: scale(1.02); }
@@ -660,9 +663,38 @@
         return r ? JSON.parse(r) : [];
       } catch { return []; }
     };
+    const stripRecordForStorage = (record) => {
+      if (!record || typeof record !== 'object') return record;
+      const { photoDataUrl, photoPreviewUrl, ...rest } = record;
+      return { ...rest, hasPhoto: !!(photoDataUrl || photoPreviewUrl) };
+    };
     const saveUserRecords = (email, list) => {
       if (!email) return;
-      localStorage.setItem(recordsStorageKey(email), JSON.stringify(list));
+      const slim = (list || []).map(stripRecordForStorage);
+      try {
+        localStorage.setItem(recordsStorageKey(email), JSON.stringify(slim));
+        return;
+      } catch (e) {
+        console.warn('[localStorage] 紀錄過大，改存精簡版', e.message);
+      }
+      try {
+        const minimal = slim.map((r) => {
+          const f = r.fortune;
+          return {
+            id: r.id, date: r.date, time: r.time, whatFood: r.whatFood, mealType: r.mealType,
+            mealTime: r.mealTime, mood: r.mood, bodyFeeling: r.bodyFeeling, context: r.context,
+            meritEarned: r.meritEarned, mbeiCode: r.mbeiCode, mbeiScores: r.mbeiScores, hasPhoto: r.hasPhoto,
+            fortune: f ? {
+              main_title: f.main_title, poem: f.poem, explanation: f.explanation,
+              calculated_mbei: f.calculated_mbei, meritEarned: f.meritEarned, merit_point: f.merit_point,
+              mythical_food_name: f.mythical_food_name, original_food_name: f.original_food_name,
+            } : undefined,
+          };
+        });
+        localStorage.setItem(recordsStorageKey(email), JSON.stringify(minimal));
+      } catch (e2) {
+        console.warn('[localStorage] 仍無法寫入', e2.message);
+      }
     };
     const MAX_DRAFTS = 8;
     const loadMealDrafts = () => { try { const r = localStorage.getItem(DRAFTS_KEY); return r ? JSON.parse(r) : []; } catch { return []; } };
@@ -2620,7 +2652,7 @@
       );
     }
 
-    function RecordModal({ onClose, onSubmit, formData, setFormData, isLoading, onSchedulePrefetch, onClearPrefetch, prefetchStatus, recordMode, initialPhase, onSaveDraft, initialPhotoPreview, onPhotoChange }) {
+    function RecordModal({ onClose, onSubmit, formData, setFormData, isLoading, submitError, onSchedulePrefetch, onClearPrefetch, prefetchStatus, recordMode, initialPhase, onSaveDraft, initialPhotoPreview, onPhotoChange }) {
       const setField = (field, value) => setFormData(prev => ({...prev, [field]: value}));
       const photoInputRef = React.useRef(null);
       const [phase, setPhase] = React.useState(initialPhase || (recordMode === 'after' ? 'all' : 'food'));
@@ -2936,6 +2968,9 @@
                 {scrolledToEnd && isEarlyFoodStep && !foodReady && (
                   <p className="text-center text-xs text-muted font-semibold" style={{ fontFamily:serif }}>請先輸入食物名稱</p>
                 )}
+                {submitError && (
+                  <p className="text-center text-sm text-clay font-semibold" style={{ fontFamily:serif }}>{submitError}</p>
+                )}
               </div>
             </div>
           </div>
@@ -2960,11 +2995,34 @@
       );
     };
 
-    function FortuneSlip({ fortune, onClose }) {
-      const poemLines = (fortune.poem || '').split('\n').filter(Boolean);
-      const meritN = fortune.meritEarned ?? (fortune.merit_point?.match(/\+(\d+)/) ? parseInt(fortune.merit_point.match(/\+(\d+)/)[1], 10) : 0);
+    function normalizeFortuneForDisplay(fortune, recordData) {
+      const base = fortune && typeof fortune === 'object' ? fortune : {};
+      const fallback = getMockFortune(recordData || {});
+      return {
+        ...fallback,
+        ...base,
+        main_title: base.main_title || fallback.main_title || '食緒已入卷',
+        poem: base.poem || fallback.poem || '',
+        explanation: base.explanation || fallback.explanation || '',
+        mythical_food_name: base.mythical_food_name || fallback.mythical_food_name || '',
+        original_food_name: base.original_food_name || fallback.original_food_name || '',
+        calculated_mbei: base.calculated_mbei || fallback.calculated_mbei || 'MPLR',
+        mbei_scores: base.mbei_scores || fallback.mbei_scores,
+        meritEarned: base.meritEarned ?? fallback.meritEarned ?? 1,
+        merit_point: base.merit_point || meritPointLabel(base.meritEarned ?? fallback.meritEarned ?? 1),
+      };
+    }
+
+    function FortuneSlip({ fortune, onClose, recordData }) {
+      const safe = useMemo(() => normalizeFortuneForDisplay(fortune, recordData), [fortune, recordData]);
+      const poemLines = (safe.poem || '').split('\n').filter(Boolean);
+      const meritN = safe.meritEarned ?? (safe.merit_point?.match(/\+(\d+)/) ? parseInt(safe.merit_point.match(/\+(\d+)/)[1], 10) : 0);
       const hasMerit = meritN >= 1;
       const serif = "'Noto Serif TC',serif";
+      const reduceFx = typeof window !== 'undefined' && (
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        || window.matchMedia('(pointer: coarse)').matches
+      );
       return (
         <div className="fortune-card">
 
@@ -2980,17 +3038,19 @@
               fontFamily:serif,
               boxShadow:'0 0 14px rgba(255,215,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
             }}>
-              {fortune.merit_point || meritPointLabel(meritN)}
+              {safe.merit_point || meritPointLabel(meritN)}
             </div>
           )}
 
-          {/* ── 雲霧效果 ── */}
+          {/* ── 雲霧效果（手機／減少動態時略過，避免黑屏） ── */}
+          {!reduceFx && (
           <div style={{
             position:'absolute', inset:-50, borderRadius:40,
             background:'radial-gradient(ellipse at 50% 45%, rgba(255,252,230,0.98) 0%, rgba(230,210,160,0.75) 30%, rgba(180,140,80,0.35) 58%, transparent 78%)',
             animation:'mist-dissipate 1.1s cubic-bezier(0.15,0,0.8,1) forwards',
             zIndex:20, pointerEvents:'none',
           }} />
+          )}
 
           {/* ── 卡片主體 ── */}
           <div style={{
@@ -3009,20 +3069,20 @@
 
               {/* Top rule */}
               <div style={{ width:'55%', height:1, background:'rgba(255,255,255,0.18)', marginBottom:20 }} />
-              <GeminiSourceNotice fortune={fortune} />
+              <GeminiSourceNotice fortune={fortune || safe} />
 
               {/* ── 御膳賜名 + 原名 + MBEI（橫排小字）── */}
-              {fortune.mythical_food_name && (
+              {safe.mythical_food_name && (
                 <div style={{ textAlign:'center', marginBottom:18 }}>
                   <div style={{ fontSize:15, fontWeight:900, color:'white', fontFamily:serif, letterSpacing:'0.2em' }}>
-                    {fortune.mythical_food_name}
+                    {safe.mythical_food_name}
                   </div>
                   <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, marginTop:5 }}>
-                    {fortune.original_food_name && (
-                      <span style={{ fontSize:10, color:'rgba(255,255,255,0.38)', fontFamily:serif }}>{fortune.original_food_name}</span>
+                    {safe.original_food_name && (
+                      <span style={{ fontSize:10, color:'rgba(255,255,255,0.38)', fontFamily:serif }}>{safe.original_food_name}</span>
                     )}
-                    {fortune.calculated_mbei && (
-                      <span style={{ fontSize:9, color:'rgba(255,215,100,0.5)', fontFamily:'monospace', letterSpacing:'0.12em', border:'1px solid rgba(255,215,100,0.2)', borderRadius:2, padding:'1px 5px' }}>{fortune.calculated_mbei}</span>
+                    {safe.calculated_mbei && (
+                      <span style={{ fontSize:9, color:'rgba(255,215,100,0.5)', fontFamily:'monospace', letterSpacing:'0.12em', border:'1px solid rgba(255,215,100,0.2)', borderRadius:2, padding:'1px 5px' }}>{safe.calculated_mbei}</span>
                     )}
                   </div>
                 </div>
@@ -3035,7 +3095,7 @@
                   fontFamily:serif, fontSize:22, fontWeight:900,
                   color:'white', letterSpacing:'0.18em', lineHeight:1.7,
                 }}>
-                  {fortune.main_title}
+                  {safe.main_title}
                 </div>
               </div>
 
@@ -3044,7 +3104,7 @@
 
               {/* ── 詩句：橫排，每行置中 ── */}
               <div style={{ width:'100%', display:'flex', flexDirection:'column', gap:8, marginBottom:18 }}>
-                {poemLines.map((line, idx) => (
+                {(poemLines.length ? poemLines : ['食緒已注入孵化池']).map((line, idx) => (
                   <p key={idx} style={{ color:'rgba(255,255,255,0.85)', fontFamily:serif, fontSize:14, letterSpacing:'0.12em', lineHeight:1.9, margin:0, textAlign:'center' }}>
                     {line}
                   </p>
@@ -3067,9 +3127,13 @@
     function ResultModal({ record, onClose }) {
       const fortune = useMemo(() => record.fortune || getMockFortune(record), [record]);
       return (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 md:p-8">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={onClose} />
-          <FortuneSlip fortune={fortune} onClose={onClose} />
+        <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-3 sm:p-4 md:p-8">
+          <div className="absolute inset-0 result-modal-backdrop" onClick={onClose} aria-hidden="true" />
+          <div className="relative z-10 w-full flex justify-center pointer-events-none" style={{ maxWidth:320 }}>
+            <div className="pointer-events-auto w-full">
+              <FortuneSlip fortune={fortune} recordData={record} onClose={onClose} />
+            </div>
+          </div>
         </div>
       );
     }
@@ -3104,6 +3168,8 @@
       const fortunePrefetchRef = React.useRef({ key: null, promise: null, result: null });
       const prefetchInFlightKeyRef = React.useRef(null);
       const recordPhotoRef = React.useRef(null);
+      const submitGuardRef = React.useRef(false);
+      const [submitError, setSubmitError] = useState('');
       const [formData, setFormData] = useState(makeDefaultFormData);
 
       React.useEffect(() => {
@@ -3262,15 +3328,18 @@
 
       const handleRecord = async () => {
         if (!formData.whatFood?.trim() || !isFeelingsComplete(formData)) return;
+        if (submitGuardRef.current) return;
+        submitGuardRef.current = true;
+        setSubmitError('');
         setIsLoading(true);
-        const moodText = MOOD_SCORE_LABELS[formData.mood];
-        const aiFortune = await resolveFortune(formData);
-        const mbeiScores = aiFortune?.mbei_scores || scoresFromMbeiCode(aiFortune?.calculated_mbei || determineMBEI(formData));
-        const mbeiCode = aiFortune?.calculated_mbei || mbeiCodeFromScores(mbeiScores) || determineMBEI(formData);
-        const meritEarned = aiFortune?.meritEarned ?? calcMeritFromContext(formData.context);
-        const now = new Date();
-        const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-        setTimeout(() => {
+        try {
+          const aiFortune = await resolveFortune(formData);
+          const mbeiScores = aiFortune?.mbei_scores || scoresFromMbeiCode(aiFortune?.calculated_mbei || determineMBEI(formData));
+          const mbeiCode = aiFortune?.calculated_mbei || mbeiCodeFromScores(mbeiScores) || determineMBEI(formData);
+          const meritEarned = aiFortune?.meritEarned ?? calcMeritFromContext(formData.context);
+          const moodText = MOOD_SCORE_LABELS[formData.mood];
+          const now = new Date();
+          const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
           const mealPhoto = recordPhotoRef.current;
           const newRecord = {
             id: Date.now().toString(),
@@ -3311,7 +3380,6 @@
               console.warn('[Notion 未寫入]', notionRes.error);
             }
           });
-          setIsLoading(false);
           if (editingDraftId) {
             const list = loadMealDrafts().filter(d => d.id !== editingDraftId);
             saveMealDrafts(list);
@@ -3330,7 +3398,13 @@
             setHatchCelebration(null);
             setShowResult(true);
           }
-        }, fortunePrefetchRef.current.result ? 200 : 800);
+        } catch (err) {
+          console.error('[handleRecord]', err);
+          setSubmitError(err?.message || '解籤或儲存失敗，請稍後再試');
+        } finally {
+          setIsLoading(false);
+          submitGuardRef.current = false;
+        }
       };
 
       const recordInitialPhase = recordMode === 'continue' ? 'feelings' : recordMode === 'early' ? 'food' : 'all';
@@ -3449,6 +3523,7 @@
                 formData={formData}
                 setFormData={setFormData}
                 isLoading={isLoading}
+                submitError={submitError}
                 onSchedulePrefetch={scheduleFortunePrefetch}
                 onClearPrefetch={clearFortunePrefetch}
                 prefetchStatus={prefetchStatus}
