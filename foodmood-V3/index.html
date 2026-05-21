@@ -1011,14 +1011,14 @@
 
     const MBEI_AXIS_TITLES = { MB: '能量來源', NP: '食源性', HL: '身體負荷', RV: '規律節奏' };
     const MBEI_LETTER_CN = {
-      M: { char: '魂', hint: '以情入食' },
-      B: { char: '魄', hint: '以身入食' },
-      N: { char: '野', hint: '原野自然' },
-      P: { char: '煉', hint: '人工煉化' },
-      L: { char: '靈', hint: '輕盈無壓' },
-      H: { char: '煞', hint: '沉重負擔' },
-      R: { char: '曆', hint: '守時規律' },
-      V: { char: '幻', hint: '隨性飄忽' },
+      M: { char: '魂', hint: '以情入食', eng: 'Mood' },
+      B: { char: '魄', hint: '以身入食', eng: 'Body' },
+      N: { char: '野', hint: '原野自然', eng: 'Natural' },
+      P: { char: '煉', hint: '人工煉化', eng: 'Processed' },
+      L: { char: '靈', hint: '輕盈無壓', eng: 'Light' },
+      H: { char: '煞', hint: '沉重負擔', eng: 'Heavy' },
+      R: { char: '曆', hint: '守時規律', eng: 'Rhythm' },
+      V: { char: '幻', hint: '隨性飄忽', eng: 'Volatile' },
     };
     const parseMbeiCodeProfile = (code) => {
       const c = String(code || 'MPLR').padEnd(4, 'M').slice(0, 4);
@@ -2019,7 +2019,7 @@
       return (
         <div style={{ background:'#1a150a', border:'1px solid rgba(149,211,195,0.12)', borderRadius:5, padding:'24px 20px', display:'flex', flexDirection:'column', gap:0 }}>
           <div style={{ marginBottom:24 }}>
-            <p style={{ fontSize:9, color:'var(--jade)', fontFamily:"'JetBrains Mono',monospace", fontWeight:700, letterSpacing:'0.25em', margin:'0 0 6px', opacity:0.7 }}>MBEI SYSTEM · 四大維度</p>
+            <p style={{ fontSize:9, color:'var(--jade)', fontFamily:"'Noto Serif TC',serif", fontWeight:700, letterSpacing:'0.2em', margin:'0 0 6px', opacity:0.7 }}>四大維度 · 食緒型格</p>
             <h4 style={{ fontSize:16, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color:'var(--cream)', margin:0, letterSpacing:'0.1em' }}>能量調頻儀</h4>
             <p style={{ fontSize:12, color:'var(--mist)', margin:'4px 0 0', opacity:0.6 }}>點擊左／右象限，解讀食緒靈魂維度</p>
           </div>
@@ -2043,6 +2043,14 @@
                   },
                   onMouseLeave: () => setPreviewSide(i, null),
                 };
+            const poleChar = { fontSize:18, fontWeight:900, lineHeight:1, transition:`color 0.35s ${EASE}` };
+            const poleEng = { fontSize:9, fontWeight:600, lineHeight:1, letterSpacing:'0.04em', fontFamily:"'JetBrains Mono',monospace", transition:`color 0.35s ${EASE}` };
+            const leftActive = side === 'left';
+            const rightActive = side === 'right';
+            const leftColor = leftActive ? 'var(--jade)' : jade + '0.28)';
+            const rightColor = rightActive ? 'var(--amber)' : amber + '0.28)';
+            const leftEng = MBEI_LETTER_CN[dim.left.code]?.eng || dim.left.code;
+            const rightEng = MBEI_LETTER_CN[dim.right.code]?.eng || dim.right.code;
             return (
               <div key={i} style={{ paddingBottom: i < 3 ? 20 : 0, marginBottom: i < 3 ? 20 : 0, borderBottom: i < 3 ? '1px solid rgba(149,211,195,0.06)' : 'none' }}>
                 <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
@@ -2064,11 +2072,12 @@
                   }}
                   {...trackHandlers}
                 >
-                  <div style={{ width:36, textAlign:'right', flexShrink:0, pointerEvents:'none' }}>
-                    <span style={{ fontSize:20, fontFamily:"'Noto Serif TC',serif", fontWeight:900, display:'block', lineHeight:1,
-                      color: side==='left' ? 'var(--jade)' : jade+'0.25)', transition:`color 0.35s ${EASE}` }}>{dim.left.code}</span>
-                    <span style={{ fontSize:10, display:'block', letterSpacing:'0.1em', marginTop:2,
-                      color: side==='left' ? 'var(--jade)' : jade+'0.2)', transition:`color 0.35s ${EASE}` }}>{dim.left.label}</span>
+                  <div style={{ width:62, flexShrink:0, pointerEvents:'none', display:'flex', flexDirection:'column', alignItems:'flex-end', gap:4 }}>
+                    <div style={{ display:'flex', alignItems:'baseline', gap:4 }}>
+                      <span style={{ ...poleChar, fontFamily:"'Noto Serif TC',serif", color: leftColor }}>{dim.left.label}</span>
+                      <span style={{ ...poleChar, fontFamily:"'JetBrains Mono',monospace", color: leftColor, letterSpacing:'0.04em' }}>{dim.left.code}</span>
+                    </div>
+                    <span style={{ ...poleEng, color: leftColor, opacity: leftActive ? 0.82 : 0.55 }}>{leftEng}</span>
                   </div>
                   <div style={{ flex:1, position:'relative', height:6, borderRadius:3, background:'rgba(255,255,255,0.04)', pointerEvents:'none', contain:'layout style paint' }}>
                     <div style={{
@@ -2095,11 +2104,12 @@
                           : 'none',
                     }} />
                   </div>
-                  <div style={{ width:36, textAlign:'left', flexShrink:0, pointerEvents:'none' }}>
-                    <span style={{ fontSize:20, fontFamily:"'Noto Serif TC',serif", fontWeight:900, display:'block', lineHeight:1,
-                      color: side==='right' ? 'var(--amber)' : amber+'0.25)', transition:`color 0.35s ${EASE}` }}>{dim.right.code}</span>
-                    <span style={{ fontSize:10, display:'block', letterSpacing:'0.1em', marginTop:2,
-                      color: side==='right' ? 'var(--amber)' : amber+'0.2)', transition:`color 0.35s ${EASE}` }}>{dim.right.label}</span>
+                  <div style={{ width:62, flexShrink:0, pointerEvents:'none', display:'flex', flexDirection:'column', alignItems:'flex-start', gap:4 }}>
+                    <div style={{ display:'flex', alignItems:'baseline', gap:4 }}>
+                      <span style={{ ...poleChar, fontFamily:"'JetBrains Mono',monospace", color: rightColor, letterSpacing:'0.04em' }}>{dim.right.code}</span>
+                      <span style={{ ...poleChar, fontFamily:"'Noto Serif TC',serif", color: rightColor }}>{dim.right.label}</span>
+                    </div>
+                    <span style={{ ...poleEng, color: rightColor, opacity: rightActive ? 0.82 : 0.55 }}>{rightEng}</span>
                   </div>
                 </div>
                 <div style={{ height:72, position:'relative' }}>
