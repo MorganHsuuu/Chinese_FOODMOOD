@@ -218,6 +218,177 @@
     .inject-btn:hover:not(:disabled) { box-shadow: 0 0 32px rgba(212,168,67,0.2), 0 4px 24px rgba(0,0,0,0.4); }
     .inject-btn:active:not(:disabled) { transform: scale(0.98); }
     .record-modal-sacred .inject-btn:active:not(:disabled) { transform: none; opacity: 0.88; }
+
+    /* ── 凝煉特效（送出中） ── */
+    .inject-btn.is-charging {
+      box-shadow:
+        0 0 28px rgba(212,168,67,0.45),
+        0 0 56px rgba(212,168,67,0.22),
+        0 6px 28px rgba(0,0,0,0.55);
+      animation: chargeBreathe 2.4s ease-in-out infinite;
+    }
+    @keyframes chargeBreathe {
+      0%, 100% { filter: brightness(1) saturate(1); }
+      50%      { filter: brightness(1.18) saturate(1.18); }
+    }
+    /* 旋轉的金色流光邊框（conic-gradient） */
+    .charge-border {
+      position: absolute; inset: -1px;
+      border-radius: inherit;
+      pointer-events: none;
+      padding: 1.5px;
+      background:
+        conic-gradient(from 0deg,
+          transparent 0deg,
+          rgba(212,168,67,0.0) 30deg,
+          rgba(212,168,67,0.85) 110deg,
+          rgba(255,235,180,1) 150deg,
+          rgba(212,168,67,0.85) 190deg,
+          rgba(212,168,67,0.0) 270deg,
+          transparent 360deg);
+      -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+              mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+              mask-composite: exclude;
+      animation: chargeBorderSpin 2.6s linear infinite;
+      opacity: 0.95;
+    }
+    @keyframes chargeBorderSpin { to { transform: rotate(360deg); } }
+    /* 內部能量呼吸 */
+    .charge-halo {
+      position: absolute; inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse 70% 80% at 50% 120%, rgba(212,168,67,0.55) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 60% at 50% -10%, rgba(255,235,180,0.35) 0%, transparent 60%);
+      animation: chargeHaloPulse 1.6s ease-in-out infinite;
+      mix-blend-mode: screen;
+    }
+    @keyframes chargeHaloPulse {
+      0%, 100% { opacity: 0.45; }
+      50%      { opacity: 1; }
+    }
+    /* 三環同心金光（取代單一太極） */
+    .charge-orb {
+      position: relative;
+      width: 26px; height: 26px;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+    .charge-orb .ring {
+      position: absolute; inset: 0;
+      border-radius: 50%;
+      border: 1.5px solid transparent;
+    }
+    .charge-orb .ring-outer {
+      border-top-color: rgba(245,224,187,0.95);
+      border-right-color: rgba(212,168,67,0.5);
+      box-shadow: 0 0 14px rgba(212,168,67,0.55), inset 0 0 6px rgba(212,168,67,0.25);
+      animation: chargeSpin 1.6s linear infinite;
+    }
+    .charge-orb .ring-mid {
+      inset: 5px;
+      border-top-color: rgba(255,232,170,0.9);
+      border-left-color: rgba(212,168,67,0.55);
+      animation: chargeSpin 1.05s linear infinite reverse;
+      opacity: 0.92;
+    }
+    .charge-orb .ring-core {
+      inset: 9px;
+      border-top-color: rgba(255,250,230,1);
+      border-bottom-color: rgba(212,168,67,0.6);
+      animation: chargeSpin 0.7s linear infinite;
+      opacity: 0.85;
+    }
+    .charge-orb .ring-dot {
+      position: absolute; left: 50%; top: 50%;
+      width: 4px; height: 4px;
+      border-radius: 50%;
+      background: rgba(255,245,210,1);
+      transform: translate(-50%,-50%);
+      box-shadow: 0 0 8px 2px rgba(212,168,67,0.95), 0 0 18px 4px rgba(212,168,67,0.5);
+      animation: chargeDotPulse 1.2s ease-in-out infinite;
+    }
+    @keyframes chargeSpin { to { transform: rotate(360deg); } }
+    @keyframes chargeDotPulse {
+      0%, 100% { transform: translate(-50%,-50%) scale(0.7); opacity: 0.85; }
+      50%      { transform: translate(-50%,-50%) scale(1.35); opacity: 1; }
+    }
+    /* 從底部上升的靈氣粒子 */
+    .charge-sparks {
+      position: absolute; inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      border-radius: inherit;
+    }
+    .charge-sparks .spark {
+      position: absolute; bottom: 0;
+      width: 3px; height: 3px;
+      border-radius: 50%;
+      background: rgba(255,240,200,1);
+      box-shadow: 0 0 6px 1px rgba(212,168,67,0.95), 0 0 12px 2px rgba(212,168,67,0.4);
+      opacity: 0;
+      animation: chargeSparkRise 2.2s ease-out infinite;
+    }
+    .charge-sparks .spark:nth-child(1) { left: 8%;  animation-delay: 0.0s; }
+    .charge-sparks .spark:nth-child(2) { left: 22%; animation-delay: 0.6s; }
+    .charge-sparks .spark:nth-child(3) { left: 38%; animation-delay: 1.1s; width:2px; height:2px; }
+    .charge-sparks .spark:nth-child(4) { left: 54%; animation-delay: 0.3s; }
+    .charge-sparks .spark:nth-child(5) { left: 68%; animation-delay: 1.4s; width:2px; height:2px; }
+    .charge-sparks .spark:nth-child(6) { left: 82%; animation-delay: 0.9s; }
+    .charge-sparks .spark:nth-child(7) { left: 94%; animation-delay: 1.7s; width:2px; height:2px; }
+    @keyframes chargeSparkRise {
+      0%   { opacity: 0; transform: translateY(0) scale(0.45); }
+      15%  { opacity: 1; }
+      80%  { opacity: 0.55; }
+      100% { opacity: 0; transform: translateY(-46px) scale(0.55); }
+    }
+    /* 流光金字 */
+    .charge-label {
+      position: relative;
+      font-family: 'Noto Serif TC', serif;
+      letter-spacing: 0.4em;
+      font-size: 14px;
+      font-weight: 700;
+      background: linear-gradient(90deg,
+        rgba(212,168,67,0.7) 0%,
+        rgba(255,245,210,1) 50%,
+        rgba(212,168,67,0.7) 100%);
+      background-size: 220% 100%;
+      -webkit-background-clip: text;
+              background-clip: text;
+      color: transparent;
+      animation: chargeTextShimmer 2.6s linear infinite;
+      text-shadow: 0 0 12px rgba(212,168,67,0.0);
+    }
+    @keyframes chargeTextShimmer {
+      0%   { background-position: 220% 0; }
+      100% { background-position: -220% 0; }
+    }
+    /* 點點點呼吸 */
+    .charge-label::after {
+      content: '⋯';
+      margin-left: 4px;
+      letter-spacing: 0.1em;
+      animation: chargeDots 1.4s steps(4, end) infinite;
+      opacity: 0.85;
+    }
+    @keyframes chargeDots {
+      0%   { opacity: 0.2; }
+      50%  { opacity: 1; }
+      100% { opacity: 0.2; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .inject-btn.is-charging,
+      .charge-border, .charge-halo, .charge-sparks .spark,
+      .charge-orb .ring, .charge-orb .ring-dot,
+      .charge-label, .charge-label::after { animation: none !important; }
+    }
     /* 中式朱紅框（凝練食緒彈窗） */
     .cn-red-frame-modal {
       border: 2px solid #9e2a2b !important;
@@ -3029,15 +3200,6 @@
                 )}
                 <BodyFeelingGrid value={formData.bodyFeeling} onChange={v => setField('bodyFeeling', v)} />
               </RecordSection>
-              {foodConfirmed && prefetchStatus === 'loading' && (
-                <p className="mt-2 text-xs text-jade font-semibold" style={{ fontFamily:serif }}>靈籤預熱中…</p>
-              )}
-              {foodConfirmed && prefetchStatus === 'ready' && (
-                <p className="mt-2 text-xs text-forest font-semibold" style={{ fontFamily:serif }}>靈籤已備妥，送出可更快顯示</p>
-              )}
-              {foodConfirmed && prefetchStatus === 'error' && (
-                <p className="mt-2 text-xs text-clay font-semibold" style={{ fontFamily:serif }}>AI 暫不可用，送出將使用離線示範籤（請檢查 Vercel 的 OPENAI_API_KEY）</p>
-              )}
               </>
               )}
 
@@ -3060,12 +3222,50 @@
                     </button>
                   </>
                 ) : (
-                <button onClick={onSubmit} disabled={!canSubmit || recognizePhase === 'confirm'}
-                  className="inject-btn w-full text-white py-3.5 rounded-[5px] font-bold text-base shadow-md flex items-center justify-center gap-2 relative overflow-hidden disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
-                  style={{ background:'linear-gradient(135deg,#1a1208 0%,#2d2010 50%,#1a1208 100%)', border:'1px solid rgba(212,168,67,0.35)' }}>
-                  <div className="absolute inset-0 paper-texture" style={{opacity:0.15}} />
-                  {isLoading ? <span className="spin-loading text-xl">☯</span> : <span className="tracking-[0.25em] text-sm" style={{fontFamily:"'Noto Serif TC',serif"}}>注入孵化池</span>}
-                </button>
+                <>
+                  {foodConfirmed && prefetchStatus === 'loading' && (
+                    <p className="text-center text-xs text-jade font-semibold" style={{ fontFamily:serif }}>靈籤準備中…</p>
+                  )}
+                  {foodConfirmed && prefetchStatus === 'ready' && (
+                    <p className="text-center text-xs font-semibold" style={{ fontFamily:serif, color:'var(--jade)' }}>靈籤已備妥</p>
+                  )}
+                  {foodConfirmed && prefetchStatus === 'error' && (
+                    <p className="text-center text-xs text-clay font-semibold" style={{ fontFamily:serif }}>AI 暫不可用，送出將使用離線示範籤（請檢查 Vercel 的 OPENAI_API_KEY）</p>
+                  )}
+                  <button onClick={onSubmit} disabled={!canSubmit || recognizePhase === 'confirm'}
+                    className={`inject-btn ${isLoading ? 'is-charging' : ''} w-full text-white py-3.5 rounded-[5px] font-bold text-base shadow-md flex items-center justify-center gap-3 relative overflow-hidden disabled:opacity-40 disabled:cursor-not-allowed transition-opacity`}
+                    style={{ background:'linear-gradient(135deg,#1a1208 0%,#2d2010 50%,#1a1208 100%)', border:'1px solid rgba(212,168,67,0.35)' }}>
+                    <div className="absolute inset-0 paper-texture" style={{opacity:0.15}} />
+                    {isLoading && (
+                      <>
+                        <span className="charge-border" aria-hidden="true" />
+                        <span className="charge-halo" aria-hidden="true" />
+                        <span className="charge-sparks" aria-hidden="true">
+                          <span className="spark" />
+                          <span className="spark" />
+                          <span className="spark" />
+                          <span className="spark" />
+                          <span className="spark" />
+                          <span className="spark" />
+                          <span className="spark" />
+                        </span>
+                      </>
+                    )}
+                    {isLoading ? (
+                      <span className="relative z-10 flex items-center gap-3">
+                        <span className="charge-orb" aria-hidden="true">
+                          <span className="ring ring-outer" />
+                          <span className="ring ring-mid" />
+                          <span className="ring ring-core" />
+                          <span className="ring-dot" />
+                        </span>
+                        <span className="charge-label">凝煉中</span>
+                      </span>
+                    ) : (
+                      <span className="tracking-[0.25em] text-sm" style={{fontFamily:"'Noto Serif TC',serif"}}>注入孵化池</span>
+                    )}
+                  </button>
+                </>
                 )}
                 {scrolledToEnd && !isEarlyFoodStep && !feelingsComplete && (
                   <p className="text-center text-xs text-muted font-semibold" style={{ fontFamily:serif }}>請完成爽度與身體感受（必選）</p>
