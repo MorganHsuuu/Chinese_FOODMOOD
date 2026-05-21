@@ -2902,15 +2902,23 @@
               className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-10 space-y-8 md:space-y-10 pb-6 scrollbar-hide relative z-10 min-w-0"
             >
               {phase === 'feelings' && formData.whatFood?.trim() && (
-                <div className="p-4 rounded-[1.5rem] border border-jade/30 bg-parchment/40 flex items-center gap-3 flex-wrap">
-                  {photoPreview && <img src={photoPreview} alt="" className="w-14 h-14 rounded-xl object-cover border border-stroke shrink-0" />}
+                <div
+                  className="flex items-center gap-3 flex-wrap"
+                  style={{
+                    padding:'14px 16px', borderRadius:16,
+                    border:'1px solid rgba(149,211,195,0.28)',
+                    background:'rgba(0,0,0,0.35)',
+                    boxShadow:'inset 0 1px 0 rgba(255,255,255,0.04)',
+                  }}
+                >
+                  {photoPreview && <img src={photoPreview} alt="" className="w-14 h-14 rounded-xl object-cover border border-jade/30 shrink-0" />}
                   <div className="flex-1 min-w-0">
-                    <p style={{ fontSize:11, color:'var(--mist)', margin:'0 0 4px' }}>本餐食物</p>
-                    <p style={{ fontSize:18, fontWeight:900, color:'var(--ink)', margin:0, fontFamily:serif }}>{formData.whatFood}</p>
-                    <p style={{ fontSize:12, color:'var(--muted)', margin:'4px 0 0' }}>{formData.mealType} · {formData.mealTime}</p>
+                    <p style={{ fontSize:10, color:'var(--jade)', margin:'0 0 5px', letterSpacing:'0.14em', fontWeight:700, opacity:0.9 }}>本餐食物</p>
+                    <p style={{ fontSize:20, fontWeight:900, color:'var(--cream)', margin:0, fontFamily:serif, lineHeight:1.35, letterSpacing:'0.03em' }}>{formData.whatFood}</p>
+                    <p style={{ fontSize:12, color:'var(--sand)', margin:'5px 0 0', opacity:0.88 }}>{formData.mealType} · {formData.mealTime}</p>
                   </div>
                   {(recordMode === 'early' || recordMode === 'continue') && (
-                    <button type="button" onClick={() => setPhase('food')} className="text-xs font-bold text-muted underline shrink-0">修改食物</button>
+                    <button type="button" onClick={() => setPhase('food')} className="text-xs font-bold text-jade/80 underline shrink-0 hover:text-jade">修改食物</button>
                   )}
                 </div>
               )}
