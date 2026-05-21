@@ -46,13 +46,10 @@ function hatchedCodeFromUserRows(userRows) {
   return dominantCodeFromBatch(batch);
 }
 
+/** 僅在每滿 10 筆孵化完成時解鎖該輪 dominant 靈獸（非每筆紀錄） */
 function unlockedCodesFromUserRows(userRows) {
-  const set = new Set();
-  userRows.forEach((row) => {
-    const c = row.code || 'MPLR';
-    if (MBEI_NAMES[c]) set.add(c);
-  });
-  return [...set].sort();
+  const codes = hatchedCreaturesFromUserRows(userRows).map((h) => h.code);
+  return [...new Set(codes.filter((c) => MBEI_NAMES[c]))].sort();
 }
 
 /** 每一輪滿 10 筆孵化出的靈獸 */
@@ -114,7 +111,6 @@ function parseCreatureCollection(text) {
   if (raw.startsWith('{')) {
     try {
       const j = JSON.parse(raw);
-      const unlockedCodes = Array.isArray(j.u) ? j.u : (j.unlocked || j.unlockedCodes || []);
       const hatchedCreatures = Array.isArray(j.h)
         ? j.h.map((x) => ({
           cycle: x.cycle || 1,
@@ -127,13 +123,18 @@ function parseCreatureCollection(text) {
             ? j.hatchedList.map((x) => `${x.cycle}:${x.code}`).join(',')
             : '',
         );
+      const unlockedFromH = hatchedCreatures.map((x) => x.code).filter((c) => MBEI_NAMES[c]);
+      const unlockedLegacy = Array.isArray(j.u) ? j.u : (j.unlocked || j.unlockedCodes || []);
+      const unlockedCodes = unlockedFromH.length
+        ? [...new Set(unlockedFromH)]
+        : unlockedLegacy.filter((c) => MBEI_NAMES[c]);
       return {
         recordCount: Number(j.n ?? j.recordCount) || 0,
         hatched: !!(j.hatched ?? (Number(j.n) >= HATCH_RECORDS_REQUIRED)),
         hatchCycles: Number(j.cycles ?? j.hatchCycles) || 0,
         creatureCode: j.cur && j.cur !== '-' ? j.cur : null,
         creatureName: j.cur && MBEI_NAMES[j.cur] ? MBEI_NAMES[j.cur] : '',
-        unlockedCodes: unlockedCodes.filter((c) => MBEI_NAMES[c]),
+        unlockedCodes,
         hatchedCreatures,
       };
     } catch {
@@ -148,7 +149,10 @@ function parseCreatureCollection(text) {
     if (i < 0) return;
     map[part.slice(0, i)] = part.slice(i + 1);
   });
-  const unlockedCodes = (map.u && map.u !== '-' ? map.u.split(',') : []).filter((c) => MBEI_NAMES[c]);
+  const hatchedCreatures = parseHatchedSegment(map.h);
+  const unlockedFromH = hatchedCreatures.map((x) => x.code).filter((c) => MBEI_NAMES[c]);
+  const unlockedLegacy = (map.u && map.u !== '-' ? map.u.split(',') : []).filter((c) => MBEI_NAMES[c]);
+  const unlockedCodes = unlockedFromH.length ? [...new Set(unlockedFromH)] : unlockedLegacy;
   const creatureCode = map.cur && map.cur !== '-' ? map.cur : null;
   return {
     recordCount: parseInt(map.n, 10) || 0,
@@ -157,7 +161,7 @@ function parseCreatureCollection(text) {
     creatureCode,
     creatureName: creatureCode ? (MBEI_NAMES[creatureCode] || creatureCode) : '',
     unlockedCodes,
-    hatchedCreatures: parseHatchedSegment(map.h),
+    hatchedCreatures,
   };
 }
 

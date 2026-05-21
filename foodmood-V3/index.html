@@ -556,6 +556,19 @@
       const total = sortedAsc.length;
       const completedCycles = Math.floor(total / HATCH_RECORDS_REQUIRED);
       const progressInCycle = total % HATCH_RECORDS_REQUIRED;
+      const hatchedCreatures = [];
+      for (let i = 0; i < completedCycles; i += 1) {
+        const batch = sortedAsc.slice(i * HATCH_RECORDS_REQUIRED, (i + 1) * HATCH_RECORDS_REQUIRED);
+        const type = dominantTypeFromRecords(batch);
+        if (type?.code) {
+          hatchedCreatures.push({
+            cycle: i + 1,
+            code: type.code,
+            name: type.name?.split(' ')[0] || type.creature,
+            label: `${type.name?.split(' ')[0] || type.creature} (${type.code})`,
+          });
+        }
+      }
       const avatarBatch = completedCycles > 0
         ? sortedAsc.slice((completedCycles - 1) * HATCH_RECORDS_REQUIRED, completedCycles * HATCH_RECORDS_REQUIRED)
         : [];
@@ -589,18 +602,28 @@
         cycleNumber: Math.max(1, completedCycles + (progressInCycle > 0 ? 1 : 0)),
         hasHatched: completedCycles >= 1,
         justHatched: progressInCycle === 0 && completedCycles > 0,
-        unlockedCodes: new Set(records.map(r => r.mbeiCode).filter(Boolean)),
+        hatchedCreatures,
+        unlockedCodes: new Set(hatchedCreatures.map((h) => h.code)),
         currentCycleType: formingType,
       };
     };
 
     const mergeHatchWithNotion = (hatch, notionProfile) => {
       if (!notionProfile) return hatch;
-      const fromNotion = notionProfile.unlockedCodes || [];
-      const merged = new Set([...hatch.unlockedCodes, ...fromNotion]);
+      const fromNotionHatched = (notionProfile.hatchedCreatures || []).map((h) => h.code).filter(Boolean);
+      const fromNotionUnlocked = fromNotionHatched.length
+        ? fromNotionHatched
+        : (notionProfile.unlockedCodes || []);
+      const merged = new Set([...hatch.unlockedCodes, ...fromNotionUnlocked]);
+      const mergedHatched = [...(hatch.hatchedCreatures || [])];
+      (notionProfile.hatchedCreatures || []).forEach((h) => {
+        if (!mergedHatched.some((x) => x.cycle === h.cycle)) mergedHatched.push(h);
+      });
+      mergedHatched.sort((a, b) => a.cycle - b.cycle);
       return {
         ...hatch,
         unlockedCodes: merged,
+        hatchedCreatures: mergedHatched.length ? mergedHatched : hatch.hatchedCreatures,
         notionRecordCount: notionProfile.recordCount,
         notionHatchCycles: notionProfile.hatchCycles,
         notionHatchedCreatures: notionProfile.hatchedCreatures || [],
