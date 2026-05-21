@@ -1009,6 +1009,64 @@
       );
     }
 
+    const MBEI_AXIS_TITLES = { MB: '能量來源', NP: '食源性', HL: '身體負荷', RV: '規律節奏' };
+    const MBEI_LETTER_CN = {
+      M: { char: '魂', hint: '以情入食' },
+      B: { char: '魄', hint: '以身入食' },
+      N: { char: '野', hint: '原野自然' },
+      P: { char: '煉', hint: '人工煉化' },
+      L: { char: '靈', hint: '輕盈無壓' },
+      H: { char: '煞', hint: '沉重負擔' },
+      R: { char: '曆', hint: '守時規律' },
+      V: { char: '幻', hint: '隨性飄忽' },
+    };
+    const parseMbeiCodeProfile = (code) => {
+      const c = String(code || 'MPLR').padEnd(4, 'M').slice(0, 4);
+      return MBEI_AXES.map((axis, i) => {
+        const letter = c[i];
+        const cn = MBEI_LETTER_CN[letter] || { char: letter, hint: '' };
+        return {
+          axisKey: axis.key,
+          axisTitle: MBEI_AXIS_TITLES[axis.key] || axis.key,
+          letter,
+          char: cn.char,
+          hint: cn.hint,
+        };
+      });
+    };
+
+    function CreatureMbeiProfile({ code, compact }) {
+      const profile = parseMbeiCodeProfile(code);
+      const serif = "'Noto Serif TC',serif";
+      if (compact) {
+        return (
+          <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
+            {profile.map((p) => (
+              <span key={p.axisKey} style={{ fontFamily:serif, fontWeight:900, fontSize:20, color:'var(--jade)', letterSpacing:'0.08em', lineHeight:1 }} title={`${p.axisTitle} · ${p.hint}`}>
+                {p.char}
+              </span>
+            ))}
+            <span style={{ fontSize:9, color:'rgba(149,211,195,0.35)', fontFamily:'monospace', letterSpacing:'0.06em' }}>{code}</span>
+          </div>
+        );
+      }
+      return (
+        <div style={{ borderRadius:8, border:'1px solid rgba(149,211,195,0.15)', background:'rgba(0,0,0,0.22)', padding:'12px 10px' }}>
+          <p style={{ fontSize:10, fontWeight:700, color:'var(--mist)', letterSpacing:'0.12em', margin:'0 0 10px', fontFamily:serif }}>四象限型格</p>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:8 }}>
+            {profile.map((p) => (
+              <div key={p.axisKey} style={{ textAlign:'center', padding:'8px 4px', borderRadius:6, background:'rgba(149,211,195,0.06)', border:'1px solid rgba(149,211,195,0.1)' }}>
+                <p style={{ fontSize:9, color:'rgba(200,184,138,0.75)', margin:'0 0 4px', fontFamily:serif, letterSpacing:'0.06em' }}>{p.axisTitle}</p>
+                <p style={{ fontSize:26, fontWeight:900, color:'var(--jade)', margin:'0 0 2px', fontFamily:serif, lineHeight:1.1 }}>{p.char}</p>
+                <p style={{ fontSize:10, color:'var(--sand)', margin:0, fontFamily:serif, opacity:0.85 }}>{p.hint}</p>
+              </div>
+            ))}
+          </div>
+          <p style={{ fontSize:8, color:'rgba(149,211,195,0.28)', fontFamily:'monospace', letterSpacing:'0.1em', textAlign:'center', margin:'8px 0 0' }}>{code}</p>
+        </div>
+      );
+    }
+
     function CreatureDetailModal({ creature, onClose, showNav, navIndex, navTotal, onPrev, onNext }) {
       if (!creature) return null;
       const serif = "'Noto Serif TC',serif";
@@ -1034,8 +1092,8 @@
             </div>
             <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-white/10">
               <div className="min-w-0 flex-1">
-                <span className="text-[10px] font-bold text-jade/90 tracking-widest" style={{ fontFamily: serif }}>{creature.code}</span>
-                <h3 id="creature-detail-title" className="text-base sm:text-lg font-serif font-black text-[var(--cream)] m-0 mt-0.5 leading-tight truncate">
+                <CreatureMbeiProfile code={creature.code} compact />
+                <h3 id="creature-detail-title" className="text-base sm:text-lg font-serif font-black text-[var(--cream)] m-0 mt-1.5 leading-tight truncate">
                   {creature.creature}
                 </h3>
                 {subName && <p className="text-[10px] text-muted m-0 mt-0.5 truncate">{subName}</p>}
@@ -1064,6 +1122,7 @@
                   {creature.description}
                 </p>
               </div>
+              <CreatureMbeiProfile code={creature.code} />
             </div>
             <div className="shrink-0 px-4 py-3 pb-[max(12px,env(safe-area-inset-bottom))] border-t border-white/10 bg-black/20 flex flex-col gap-2">
               {showNav && (
@@ -2094,7 +2153,6 @@
         [records, notionProfile],
       );
       const unlockedCount = hatch.unlockedCodes?.size || 0;
-      const totalCreatures = Object.keys(MBEI_TYPES).length;
 
       const latest = records[0];
       const stageClue = !latest ? '' : (()=>{
@@ -2285,9 +2343,7 @@
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
                 <h4 style={{ fontSize:14, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color:'var(--jade)', letterSpacing:'0.15em', margin:0 }}>十六型山海經圖鑑</h4>
                 <span style={{ fontSize:10, color:'var(--mist)', letterSpacing:'0.1em' }}>
-                  已解鎖 {unlockedCount}/{totalCreatures}
-                  {notionProfile ? ' · 含 Notion 同步' : ''}
-                  {unlockedCount < totalCreatures ? ' · 點擊已解鎖型格查看詳情' : ''}
+                  {unlockedCount > 0 ? '點擊已解鎖型格查看詳情' : ''}
                 </span>
               </div>
               <div style={{ display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:8 }}>
@@ -3127,7 +3183,7 @@
     function ResultModal({ record, onClose }) {
       const fortune = useMemo(() => record.fortune || getMockFortune(record), [record]);
       return (
-        <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-3 sm:p-4 md:p-8">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-4 md:p-8">
           <div className="absolute inset-0 result-modal-backdrop" onClick={onClose} aria-hidden="true" />
           <div className="relative z-10 w-full flex justify-center pointer-events-none" style={{ maxWidth:320 }}>
             <div className="pointer-events-auto w-full">
