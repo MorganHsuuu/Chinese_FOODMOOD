@@ -1690,11 +1690,11 @@
       M: { char: '魂', hint: '以情入食', eng: 'Mood' },
       B: { char: '魄', hint: '以身入食', eng: 'Body' },
       N: { char: '野', hint: '原野自然', eng: 'Natural' },
-      P: { char: '煉', hint: '人工煉化', eng: 'Processed' },
-      L: { char: '靈', hint: '輕盈無壓', eng: 'Light' },
-      H: { char: '煞', hint: '沉重負擔', eng: 'Heavy' },
+      P: { char: '煉', hint: '精緻煉化', eng: 'Processed' },
+      L: { char: '靈', hint: '輕盈通透', eng: 'Light' },
+      H: { char: '煞', hint: '厚實飽足', eng: 'Heavy' },
       R: { char: '曆', hint: '守時規律', eng: 'Rhythm' },
-      V: { char: '幻', hint: '隨性飄忽', eng: 'Volatile' },
+      V: { char: '幻', hint: '隨心流動', eng: 'Volatile' },
     };
     const parseMbeiCodeProfile = (code) => {
       const c = String(code || 'MPLR').padEnd(4, 'M').slice(0, 4);
@@ -2742,92 +2742,136 @@
       );
     }
 
-    /** MBEI 四碼 → 調頻儀左/右象限（M/N/L/R 為左，B/P/H/V 為右） */
-    function mbeiCodeToSliderSides(code) {
-      const c = String(code || '').toUpperCase();
-      if (!/^[MB][NP][LH][RV]$/.test(c)) return null;
-      return [
-        c[0] === 'M' ? 'left' : 'right',
-        c[1] === 'N' ? 'left' : 'right',
-        c[2] === 'L' ? 'left' : 'right',
-        c[3] === 'R' ? 'left' : 'right',
-      ];
+    /** 軸向分數 -50～+50 → 滑桿位置 8%～92%（與 MBEIBars 一致：正分靠左極、負分靠右極） */
+    function mbeiScoreToThumbPct(score) {
+      const s = clampMbeiScore(score);
+      return Math.round(8 + ((50 - s) / 100) * 84);
     }
 
-    function SpectrumTuner({ activeMbeiCode = null, activeLabel = '' }) {
+    function aggregateMbeiProfileFromRecords(records) {
+      const scored = (records || []).filter((r) => r.mbeiScores || r.mbeiCode);
+      if (!scored.length) return null;
+      const sums = { MB: 0, NP: 0, HL: 0, RV: 0 };
+      for (const r of scored) {
+        const s = normalizeMbeiScores(r.mbeiScores || scoresFromMbeiCode(r.mbeiCode));
+        MBEI_AXES.forEach(({ key }) => { sums[key] += s[key]; });
+      }
+      const n = scored.length;
+      const scores = {};
+      MBEI_AXES.forEach(({ key }) => { scores[key] = clampMbeiScore(Math.round(sums[key] / n)); });
+      return { scores, count: n, code: mbeiCodeFromScores(scores) };
+    }
+
+    function aggregateMbeiProfileForCode(records, code) {
+      const matched = (records || []).filter((r) => {
+        const c = r.mbeiCode || mbeiCodeFromScores(r.mbeiScores);
+        return c === code;
+      });
+      if (!matched.length) return null;
+      return aggregateMbeiProfileFromRecords(matched);
+    }
+
+    function SpectrumTuner({ profileScores = null, profileMeta = null }) {
       const DIMS = [
         { num:'01', title:'能量來源',
-          left:  { code:'M', label:'魂', name:'以情入食，滋養神魂', desc:'你吃飯是為了「爽」，尋求情緒的補償。' },
-          right: { code:'B', label:'魄', name:'以身入食，修煉肉體', desc:'你吃飯是為了「活」，補充生存機能。' } },
+          left:  { code:'M', label:'魂', name:'以情入食，滋養心緒', desc:'這一餐連著心情——開心、想念，或需要一點安慰，都是你此刻真實的動機。' },
+          right: { code:'B', label:'魄', name:'以身入食，照顧凡軀', desc:'這一餐為身體服務——補充能量、維持日常，讓肉身繼續穩穩走下去。' } },
         { num:'02', title:'食源性',
-          left:  { code:'N', label:'野', name:'吸收大地的原野食物', desc:'你吃的是「土裡長」的新鮮無添加物。' },
-          right: { code:'P', label:'煉', name:'攝取人工的煉化之物', desc:'你吃的是「工廠出」的重組與精緻加工品。' } },
+          left:  { code:'N', label:'野', name:'親近土地與當令之味', desc:'多半來自食材本身——當令、少加工，帶著季節與原野的氣息。' },
+          right: { code:'P', label:'煉', name:'精緻煉化，現代滋味', desc:'經人工調配與加工——便利、穩定，也常有精心設計的口感與質地。' } },
         { num:'03', title:'身體負荷',
-          left:  { code:'L', label:'靈', name:'氣血通暢，輕盈羽化', desc:'飲食清爽好代謝，身體毫無殘留感。' },
-          right: { code:'H', label:'煞', name:'痰濕淤塞，沉重濁氣', desc:'油膩重鹹帶來極端刺激，身體產生負擔感。' } },
+          left:  { code:'L', label:'靈', name:'輕盈通透，氣息順流', desc:'吃完少有滯重感，身體像被輕輕托住，仍保有餘裕與清醒。' },
+          right: { code:'H', label:'煞', name:'濃香厚實，全身都在', desc:'口味或份量較足，身體會明顯感到飽足與踏實，這一餐很有「存在感」。' } },
         { num:'04', title:'規律節奏',
-          left:  { code:'R', label:'曆', name:'順應十二時辰，循天時', desc:'你是準時吃飯的乖寶寶，定時定量。' },
-          right: { code:'V', label:'幻', name:'暴飲暴食，飄忽無常', desc:'你是看心情、看壓力才進食的邊緣人。' } },
+          left:  { code:'R', label:'曆', name:'順時而食，作息分明', desc:'用餐時間相對固定，像在守自己的小曆法，讓一日有清楚的錨點。' },
+          right: { code:'V', label:'幻', name:'隨心而食，節奏流動', desc:'何時吃、吃多少，常隨當天狀態調整——靈活，也帶著一點不可預測的詩意。' } },
       ];
-      const THUMB_POS = { left: 8, center: 50, right: 92 };
       const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
-      const [selected, setSelected] = React.useState(() => Array(4).fill(null));
-      const [preview, setPreview] = React.useState(() => Array(4).fill(null));
+      const [thumbPcts, setThumbPcts] = React.useState(() => [50, 50, 50, 50]);
+      const [previewPct, setPreviewPct] = React.useState(() => Array(4).fill(null));
       const isCoarse = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
 
       React.useEffect(() => {
-        const sides = mbeiCodeToSliderSides(activeMbeiCode);
-        if (!sides) return;
-        setSelected(sides);
-        setPreview(Array(4).fill(null));
-      }, [activeMbeiCode]);
+        if (!profileScores) {
+          setThumbPcts([50, 50, 50, 50]);
+          setPreviewPct(Array(4).fill(null));
+          return;
+        }
+        setThumbPcts(MBEI_AXES.map(({ key }) => mbeiScoreToThumbPct(profileScores[key])));
+        setPreviewPct(Array(4).fill(null));
+      }, [profileScores]);
 
-      const sideFromX = (el, clientX) => {
+      const pctFromX = (el, clientX) => {
         const r = el.getBoundingClientRect();
-        const pct = (clientX - r.left) / r.width;
-        return pct < 0.5 ? 'left' : 'right';
+        const raw = ((clientX - r.left) / r.width) * 100;
+        return Math.max(8, Math.min(92, Math.round(raw)));
       };
-      const getSide = (i) => selected[i] ?? preview[i];
-      const pickSide = (i, side) => setSelected((s) => s.map((x, j) => (j === i ? side : x)));
-      const setPreviewSide = (i, v) => setPreview((s) => s.map((x, j) => (j === i ? v : x)));
+      const getThumbPct = (i) => previewPct[i] ?? thumbPcts[i] ?? 50;
+      const pickPct = (i, pct) => setThumbPcts((p) => p.map((x, j) => (j === i ? pct : x)));
+      const setPreviewPctAt = (i, v) => setPreviewPct((s) => s.map((x, j) => (j === i ? v : x)));
 
-      const presetType = activeMbeiCode && MBEI_TYPES[activeMbeiCode] ? MBEI_TYPES[activeMbeiCode] : null;
+      const meta = profileMeta || {};
+      const subtitle = (() => {
+        if (!profileScores) return '記下餐食後，這裡會顯示你的平均食緒偏向';
+        if (meta.source === 'creature-records' && meta.count > 0) {
+          return (
+            <>
+              依你 <span style={{ color:'var(--amber)' }}>{meta.count}</span> 筆「{meta.label}」型紀錄的平均偏向
+              {meta.code && <> · <span style={{ color:'var(--jade)' }}>{meta.code}</span></>}
+            </>
+          );
+        }
+        if (meta.source === 'creature-archetype') {
+          return (
+            <>
+              <span style={{ color:'var(--amber)' }}>{meta.label}</span> 型格參考（你尚無同型紀錄，顯示典型四象限）
+              {meta.code && <> · {meta.code}</>}
+            </>
+          );
+        }
+        if (meta.count > 0) {
+          return (
+            <>
+              依你 <span style={{ color:'var(--amber)' }}>{meta.count}</span> 筆紀錄的平均食緒偏向
+              {meta.code && <> · 綜合 <span style={{ color:'var(--jade)' }}>{meta.code}</span></>}
+            </>
+          );
+        }
+        return '點擊滑桿或上方靈獸，對照四維度偏向';
+      })();
 
       return (
         <div id="spectrum-tuner" style={{ background:'#1a150a', border:'1px solid rgba(149,211,195,0.12)', borderRadius:5, padding:'24px 20px', display:'flex', flexDirection:'column', gap:0 }}>
           <div style={{ marginBottom:24 }}>
             <p style={{ fontSize:9, color:'var(--jade)', fontFamily:"'Noto Serif TC',serif", fontWeight:700, letterSpacing:'0.2em', margin:'0 0 6px', opacity:0.7 }}>四大維度 · 食緒型格</p>
             <h4 style={{ fontSize:16, fontFamily:"'Noto Serif TC',serif", fontWeight:900, color:'var(--cream)', margin:0, letterSpacing:'0.1em' }}>能量調頻儀</h4>
-            <p style={{ fontSize:12, color:'var(--mist)', margin:'4px 0 0', opacity:0.6 }}>
-              {presetType
-                ? <>已同步 <span style={{ color:'var(--amber)' }}>{activeLabel || presetType.creature}</span> · {activeMbeiCode} 四象限</>
-                : '點擊上方靈獸圖像，或點擊左／右象限解讀維度'}
-            </p>
+            <p style={{ fontSize:12, color:'var(--mist)', margin:'4px 0 0', opacity:0.6, lineHeight:1.65 }}>{subtitle}</p>
           </div>
           {DIMS.map((dim, i) => {
-            const side = getSide(i);
-            const active = side ? (side === 'left' ? dim.left : dim.right) : null;
-            const thumbLeft = THUMB_POS[side || 'center'];
+            const thumbLeft = getThumbPct(i);
+            const axisKey = MBEI_AXES[i].key;
+            const axisScore = profileScores ? clampMbeiScore(profileScores[axisKey]) : null;
+            const leanSide = thumbLeft < 50 ? 'left' : thumbLeft > 50 ? 'right' : null;
+            const active = leanSide ? (leanSide === 'left' ? dim.left : dim.right) : null;
+            const leanPct = Math.round(Math.abs(thumbLeft - 50) * 2);
             const jade = 'rgba(149,211,195,';
             const amber = 'rgba(200,184,138,';
             const trackHandlers = isCoarse
               ? {
                   onClick: (e) => {
                     e.preventDefault();
-                    pickSide(i, sideFromX(e.currentTarget, e.clientX));
+                    pickPct(i, pctFromX(e.currentTarget, e.clientX));
                   },
                 }
               : {
-                  onClick: (e) => pickSide(i, sideFromX(e.currentTarget, e.clientX)),
-                  onMouseMove: (e) => {
-                    if (!selected[i]) setPreviewSide(i, sideFromX(e.currentTarget, e.clientX));
-                  },
-                  onMouseLeave: () => setPreviewSide(i, null),
+                  onClick: (e) => pickPct(i, pctFromX(e.currentTarget, e.clientX)),
+                  onMouseMove: (e) => setPreviewPctAt(i, pctFromX(e.currentTarget, e.clientX)),
+                  onMouseLeave: () => setPreviewPctAt(i, null),
                 };
             const poleChar = { fontSize:18, fontWeight:900, lineHeight:1, transition:`color 0.35s ${EASE}` };
             const poleEng = { fontSize:9, fontWeight:600, lineHeight:1, letterSpacing:'0.04em', fontFamily:"'JetBrains Mono',monospace", transition:`color 0.35s ${EASE}` };
-            const leftActive = side === 'left';
-            const rightActive = side === 'right';
+            const leftActive = thumbLeft <= 50;
+            const rightActive = thumbLeft >= 50;
             const leftColor = leftActive ? 'var(--jade)' : jade + '0.28)';
             const rightColor = rightActive ? 'var(--amber)' : amber + '0.28)';
             const leftEng = MBEI_LETTER_CN[dim.left.code]?.eng || dim.left.code;
@@ -2848,8 +2892,8 @@
                     touchAction:'manipulation', WebkitTapHighlightColor:'transparent', userSelect:'none',
                   }}
                   onKeyDown={(e) => {
-                    if (e.key === 'ArrowLeft') pickSide(i, 'left');
-                    if (e.key === 'ArrowRight') pickSide(i, 'right');
+                    if (e.key === 'ArrowLeft') pickPct(i, 8);
+                    if (e.key === 'ArrowRight') pickPct(i, 92);
                   }}
                   {...trackHandlers}
                 >
@@ -2863,27 +2907,30 @@
                   <div style={{ flex:1, position:'relative', height:6, borderRadius:3, background:'rgba(255,255,255,0.04)', pointerEvents:'none', contain:'layout style paint' }}>
                     <div style={{
                       position:'absolute', inset:0, borderRadius:3, pointerEvents:'none',
-                      opacity: side ? 1 : 0,
+                      opacity: profileScores ? 1 : 0.35,
                       transition:`opacity 0.35s ${EASE}`,
-                      background: side==='left'
-                        ? 'linear-gradient(90deg,rgba(149,211,195,0.65) 0%,rgba(149,211,195,0.08) 55%,transparent 100%)'
-                        : side==='right'
-                          ? 'linear-gradient(90deg,transparent 0%,rgba(200,184,138,0.08) 45%,rgba(200,184,138,0.65) 100%)'
-                          : 'transparent',
+                      background: thumbLeft <= 50
+                        ? `linear-gradient(90deg,rgba(149,211,195,0.55) 0%,rgba(149,211,195,0.12) ${thumbLeft}%,transparent ${Math.min(thumbLeft + 8, 100)}%)`
+                        : `linear-gradient(90deg,transparent ${Math.max(thumbLeft - 8, 0)}%,rgba(200,184,138,0.12) ${thumbLeft}%,rgba(200,184,138,0.55) 100%)`,
                     }} />
                     <div style={{
                       position:'absolute', top:'50%', left:`${thumbLeft}%`,
                       width:14, height:14, borderRadius:'50%', pointerEvents:'none',
                       transform:'translate3d(-50%,-50%,0)',
                       transition:`left 0.38s ${EASE}, background 0.38s ${EASE}, box-shadow 0.38s ${EASE}`,
-                      willChange: side ? 'left' : 'auto',
-                      background: side==='left' ? 'var(--jade)' : side==='right' ? 'var(--amber)' : 'rgba(149,211,195,0.3)',
-                      boxShadow: side==='left'
+                      willChange: 'left',
+                      background: thumbLeft < 50 ? 'var(--jade)' : thumbLeft > 50 ? 'var(--amber)' : 'rgba(149,211,195,0.45)',
+                      boxShadow: thumbLeft < 50
                         ? '0 0 14px rgba(149,211,195,0.8), 0 0 4px rgba(149,211,195,1)'
-                        : side==='right'
+                        : thumbLeft > 50
                           ? '0 0 14px rgba(200,184,138,0.8), 0 0 4px rgba(200,184,138,1)'
-                          : 'none',
+                          : '0 0 8px rgba(149,211,195,0.4)',
                     }} />
+                    {axisScore != null && (
+                      <span style={{ position:'absolute', right:0, top:-14, fontSize:9, color:'rgba(149,211,195,0.5)', fontFamily:"'JetBrains Mono',monospace" }}>
+                        {axisScore > 0 ? '+' : ''}{axisScore}
+                      </span>
+                    )}
                   </div>
                   <div style={{ width:62, flexShrink:0, pointerEvents:'none', display:'flex', flexDirection:'column', alignItems:'flex-start', gap:4 }}>
                     <div style={{ display:'flex', alignItems:'baseline', gap:4 }}>
@@ -2896,9 +2943,9 @@
                 <div style={{ height:72, position:'relative' }}>
                   <div style={{
                     position:'absolute', inset:0, padding:'10px 14px', borderRadius:5,
-                    background: side==='left' ? 'rgba(149,211,195,0.05)' : side==='right' ? 'rgba(200,184,138,0.05)' : 'transparent',
-                    border: side
-                      ? `1px solid ${side==='left' ? 'rgba(149,211,195,0.15)' : 'rgba(200,184,138,0.15)'}`
+                    background: leanSide === 'left' ? 'rgba(149,211,195,0.05)' : leanSide === 'right' ? 'rgba(200,184,138,0.05)' : 'transparent',
+                    border: leanSide
+                      ? `1px solid ${leanSide === 'left' ? 'rgba(149,211,195,0.15)' : 'rgba(200,184,138,0.15)'}`
                       : '1px solid transparent',
                     opacity: active ? 1 : 0,
                     transform: active ? 'translate3d(0,0,0)' : 'translate3d(0,6px,0)',
@@ -2906,7 +2953,16 @@
                     pointerEvents: active ? 'auto' : 'none',
                   }}>
                     <p style={{ fontSize:14, fontFamily:"'Noto Serif TC',serif", fontWeight:700, color:'var(--cream)', margin:'0 0 4px', letterSpacing:'0.04em' }}>
-                      {active ? active.name : '\u00A0'}
+                      {active ? (
+                        <>
+                          {active.name}
+                          {leanPct > 8 && (
+                            <span style={{ fontSize:11, color:'var(--mist)', fontWeight:600, marginLeft:8 }}>
+                              偏向 {active.label} {leanPct}%
+                            </span>
+                          )}
+                        </>
+                      ) : '\u00A0'}
                     </p>
                     <p style={{ fontSize:12, color:'var(--mist)', margin:0, opacity: active ? 0.75 : 0, lineHeight:1.6 }}>
                       {active ? active.desc : '\u00A0'}
@@ -2929,14 +2985,44 @@
       const encCreatures = Object.values(MBEI_TYPES);
       const encIdx = selectedCreature ? encCreatures.findIndex(c => c.code === selectedCreature.code) : 0;
       const goCreature = dir => setSelectedCreature(encCreatures[(encIdx + dir + encCreatures.length) % encCreatures.length]);
+      const [tunerMode, setTunerMode] = React.useState('user');
       const [tunerMbeiCode, setTunerMbeiCode] = React.useState(null);
+
+      const userMbeiProfile = useMemo(() => aggregateMbeiProfileFromRecords(records), [records]);
+
+      const tunerProfile = useMemo(() => {
+        if (tunerMode === 'creature' && tunerMbeiCode) {
+          const byCode = aggregateMbeiProfileForCode(records, tunerMbeiCode);
+          const type = MBEI_TYPES[tunerMbeiCode];
+          return {
+            scores: byCode?.scores || scoresFromMbeiCode(tunerMbeiCode),
+            count: byCode?.count || 0,
+            code: tunerMbeiCode,
+            label: type?.creature || tunerMbeiCode,
+            source: byCode?.count ? 'creature-records' : 'creature-archetype',
+          };
+        }
+        return {
+          scores: userMbeiProfile?.scores || null,
+          count: userMbeiProfile?.count || 0,
+          code: userMbeiProfile?.code || null,
+          label: loginProfile?.nickname || '修行者',
+          source: 'user',
+        };
+      }, [tunerMode, tunerMbeiCode, records, userMbeiProfile, loginProfile?.nickname]);
 
       const pickCreatureForTuner = (type) => {
         if (!type?.code) return;
+        setTunerMode('creature');
         setTunerMbeiCode(type.code);
         requestAnimationFrame(() => {
           document.getElementById('spectrum-tuner')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         });
+      };
+
+      const resetTunerToUser = () => {
+        setTunerMode('user');
+        setTunerMbeiCode(null);
       };
       const tunerPortraitBorder = (code) => (
         tunerMbeiCode === code
@@ -2958,11 +3044,6 @@
         [records, notionProfile],
       );
       const unlockedCount = hatch.unlockedCodes?.size || 0;
-
-      React.useEffect(() => {
-        const code = hatch.avatarType?.code || hatch.currentCycleType?.code || hatch.formingType?.code || null;
-        setTunerMbeiCode(code);
-      }, [hatch.avatarType?.code, hatch.currentCycleType?.code, hatch.formingType?.code]);
 
       const latest = records[0];
       const stageClue = !latest ? '' : (()=>{
@@ -3173,7 +3254,7 @@
                 {/* 已孵化靈獸快選（多輪時可切換對照四象限） */}
                 {hatch.hatchedCreatures?.length > 0 && hatch.stage >= 2 && (
                   <div style={{ padding:'0 24px 20px', borderTop:'1px solid rgba(149,211,195,0.08)' }}>
-                    <p style={{ fontSize:11, color:'var(--mist)', fontFamily:serif, margin:'16px 0 10px', letterSpacing:'0.08em' }}>點擊靈獸 · 下方調頻儀同步四象限</p>
+                    <p style={{ fontSize:11, color:'var(--mist)', fontFamily:serif, margin:'16px 0 10px', letterSpacing:'0.08em' }}>點擊靈獸 · 調頻儀顯示該型紀錄平均偏向（或型格參考）</p>
                     <div style={{ display:'flex', gap:10, flexWrap:'wrap', justifyContent:'center' }}>
                       {hatch.hatchedCreatures.map((h) => {
                         const type = MBEI_TYPES[h.code];
@@ -3222,10 +3303,16 @@
               </div>
 
               {/* 能量調頻儀 */}
-              <SpectrumTuner
-                activeMbeiCode={tunerMbeiCode}
-                activeLabel={tunerMbeiCode && MBEI_TYPES[tunerMbeiCode] ? MBEI_TYPES[tunerMbeiCode].creature : ''}
-              />
+              {tunerMode === 'creature' && (
+                <button
+                  type="button"
+                  onClick={resetTunerToUser}
+                  style={{ width:'100%', marginBottom:8, padding:'10px', background:'transparent', border:'1px solid rgba(149,211,195,0.25)', borderRadius:5, color:'var(--jade)', fontSize:12, fontFamily:serif, letterSpacing:'0.08em', cursor:'pointer' }}
+                >
+                  ← 回到我的整體平均偏向
+                </button>
+              )}
+              <SpectrumTuner profileScores={tunerProfile.scores} profileMeta={tunerProfile} />
 
             </div>
           ) : (
