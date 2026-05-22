@@ -246,6 +246,13 @@
       filter: blur(9px) brightness(0.88) saturate(0.82) contrast(0.95);
       transform: scale(1.04);
     }
+    @keyframes creatureLockGlow {
+      0%, 100% { filter: drop-shadow(0 0 5px rgba(212, 168, 67, 0.2)); }
+      50% { filter: drop-shadow(0 0 12px rgba(212, 168, 67, 0.45)); }
+    }
+    .creature-mist-lock-seal {
+      animation: creatureLockGlow 3.2s ease-in-out infinite;
+    }
     @keyframes red-flash { 0%{opacity:0} 25%{opacity:1} 75%{opacity:0.8} 100%{opacity:0} }
     @keyframes gold-border-pulse { 0%,100%{opacity:0.25} 50%{opacity:1} }
     @keyframes merit-bounce { 0%{transform:scale(0) rotate(-10deg);opacity:0} 60%{transform:scale(1.2) rotate(3deg);opacity:1} 80%{transform:scale(0.92) rotate(-2deg)} 100%{transform:scale(1) rotate(0);opacity:1} }
@@ -1987,6 +1994,7 @@
                     <div className="creature-mist-veil" aria-hidden="true" />
                     <div className="creature-mist-veil creature-mist-veil--alt" aria-hidden="true" />
                     <div className="creature-mist-wisp" aria-hidden="true" />
+                    <CreatureMistLock size="lg" />
                   </>
                 )}
               </div>
@@ -3033,15 +3041,19 @@
                   onMouseLeave: () => setPreviewPctAt(i, null),
                 };
             const poleChar = { fontSize:18, fontWeight:900, lineHeight:1, transition:`color 0.35s ${EASE}` };
-            const poleEng = { fontSize:9, fontWeight:600, lineHeight:1, letterSpacing:'0.04em', fontFamily:"'JetBrains Mono',monospace", transition:`color 0.35s ${EASE}` };
             const leftActive = thumbLeft <= 50;
             const rightActive = thumbLeft >= 50;
             const leftColor = leftActive ? 'var(--jade)' : jade + '0.28)';
             const rightColor = rightActive ? 'var(--amber)' : amber + '0.28)';
-            const leftEng = MBEI_LETTER_CN[dim.left.code]?.eng || dim.left.code;
-            const rightEng = MBEI_LETTER_CN[dim.right.code]?.eng || dim.right.code;
+            const leftHint = MBEI_LETTER_CN[dim.left.code]?.hint || '';
+            const rightHint = MBEI_LETTER_CN[dim.right.code]?.hint || '';
+            const boxAccent = leanSide === 'left'
+              ? { bg: 'rgba(149,211,195,0.07)', border: 'rgba(149,211,195,0.22)', badge: 'rgba(149,211,195,0.14)', text: 'var(--jade)' }
+              : leanSide === 'right'
+                ? { bg: 'rgba(200,184,138,0.07)', border: 'rgba(200,184,138,0.22)', badge: 'rgba(200,184,138,0.14)', text: 'var(--amber)' }
+                : null;
             return (
-              <div key={i} style={{ paddingBottom: i < 3 ? 20 : 0, marginBottom: i < 3 ? 20 : 0, borderBottom: i < 3 ? '1px solid rgba(149,211,195,0.06)' : 'none' }}>
+              <div key={i} style={{ paddingBottom: i < 3 ? 18 : 0, marginBottom: i < 3 ? 18 : 0, borderBottom: i < 3 ? '1px solid rgba(149,211,195,0.06)' : 'none' }}>
                 <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
                   <span style={{ fontSize:9, fontFamily:"'JetBrains Mono',monospace", color:'rgba(149,211,195,0.3)', letterSpacing:'0.15em' }}>{dim.num} /</span>
                   <span style={{ fontSize:12, fontFamily:"'Noto Serif TC',serif", fontWeight:700, color:'var(--sand)', letterSpacing:'0.15em' }}>{dim.title}</span>
@@ -3066,7 +3078,9 @@
                       <span style={{ ...poleChar, fontFamily:"'Noto Serif TC',serif", color: leftColor }}>{dim.left.label}</span>
                       <span style={{ ...poleChar, fontFamily:"'JetBrains Mono',monospace", color: leftColor, letterSpacing:'0.04em' }}>{dim.left.code}</span>
                     </div>
-                    <span style={{ ...poleEng, color: leftColor, opacity: leftActive ? 0.82 : 0.55 }}>{leftEng}</span>
+                    {leftHint && (
+                      <span style={{ fontSize:10, fontFamily:"'Noto Serif TC',serif", color: leftColor, opacity: leftActive ? 0.75 : 0.45, lineHeight:1.3, textAlign:'right' }}>{leftHint}</span>
+                    )}
                   </div>
                   <div style={{ flex:1, position:'relative', height:6, borderRadius:3, background:'rgba(255,255,255,0.04)', pointerEvents:'none', contain:'layout style paint' }}>
                     <div style={{
@@ -3101,41 +3115,89 @@
                       <span style={{ ...poleChar, fontFamily:"'JetBrains Mono',monospace", color: rightColor, letterSpacing:'0.04em' }}>{dim.right.code}</span>
                       <span style={{ ...poleChar, fontFamily:"'Noto Serif TC',serif", color: rightColor }}>{dim.right.label}</span>
                     </div>
-                    <span style={{ ...poleEng, color: rightColor, opacity: rightActive ? 0.82 : 0.55 }}>{rightEng}</span>
+                    {rightHint && (
+                      <span style={{ fontSize:10, fontFamily:"'Noto Serif TC',serif", color: rightColor, opacity: rightActive ? 0.75 : 0.45, lineHeight:1.3 }}>{rightHint}</span>
+                    )}
                   </div>
                 </div>
-                <div style={{ height:72, position:'relative' }}>
+                <div style={{
+                  overflow: 'hidden',
+                  maxHeight: active ? 140 : 0,
+                  opacity: active ? 1 : 0,
+                  marginTop: active ? 10 : 0,
+                  transition: `max-height 0.38s ${EASE}, opacity 0.32s ${EASE}, margin-top 0.32s ${EASE}`,
+                  pointerEvents: active ? 'auto' : 'none',
+                }}>
                   <div style={{
-                    position:'absolute', inset:0, padding:'10px 14px', borderRadius:5,
-                    background: leanSide === 'left' ? 'rgba(149,211,195,0.05)' : leanSide === 'right' ? 'rgba(200,184,138,0.05)' : 'transparent',
-                    border: leanSide
-                      ? `1px solid ${leanSide === 'left' ? 'rgba(149,211,195,0.15)' : 'rgba(200,184,138,0.15)'}`
-                      : '1px solid transparent',
-                    opacity: active ? 1 : 0,
-                    transform: active ? 'translate3d(0,0,0)' : 'translate3d(0,6px,0)',
-                    transition:`opacity 0.32s ${EASE}, transform 0.32s ${EASE}, border-color 0.32s ${EASE}`,
-                    pointerEvents: active ? 'auto' : 'none',
+                    width: '100%',
+                    padding: '12px 14px',
+                    borderRadius: 8,
+                    boxSizing: 'border-box',
+                    background: boxAccent?.bg || 'transparent',
+                    border: `1px solid ${boxAccent?.border || 'transparent'}`,
+                    boxShadow: active ? 'inset 0 1px 0 rgba(255,255,255,0.04)' : 'none',
                   }}>
-                    <p style={{ fontSize:14, fontFamily:"'Noto Serif TC',serif", fontWeight:700, color:'var(--cream)', margin:'0 0 4px', letterSpacing:'0.04em' }}>
-                      {active ? (
-                        <>
-                          {active.name}
-                          {leanPct > 8 && (
-                            <span style={{ fontSize:11, color:'var(--mist)', fontWeight:600, marginLeft:8 }}>
+                    {active && (
+                      <>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px 10px', marginBottom: 8 }}>
+                          <span style={{ fontSize: 14, fontFamily: "'Noto Serif TC',serif", fontWeight: 900, color: 'var(--cream)', letterSpacing: '0.04em', lineHeight: 1.4 }}>
+                            {active.name}
+                          </span>
+                          {leanPct > 8 && boxAccent && (
+                            <span style={{
+                              fontSize: 11, fontFamily: "'Noto Serif TC',serif", fontWeight: 700,
+                              padding: '3px 9px', borderRadius: 20, letterSpacing: '0.06em',
+                              background: boxAccent.badge, color: boxAccent.text,
+                              border: `1px solid ${boxAccent.border}`,
+                            }}>
                               偏向 {active.label} {leanPct}%
                             </span>
                           )}
-                        </>
-                      ) : '\u00A0'}
-                    </p>
-                    <p style={{ fontSize:12, color:'var(--mist)', margin:0, opacity: active ? 0.75 : 0, lineHeight:1.6 }}>
-                      {active ? active.desc : '\u00A0'}
-                    </p>
+                        </div>
+                        <p style={{ fontSize: 12, color: 'var(--sand)', margin: 0, lineHeight: 1.7, opacity: 0.9 }}>
+                          {active.desc}
+                        </p>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
             );
           })}
+        </div>
+      );
+    }
+
+    /** 水墨雲霧上的朱印小鎖（size: sm | md | lg） */
+    function CreatureMistLock({ size = 'md' }) {
+      const box = size === 'sm' ? 30 : size === 'lg' ? 50 : 40;
+      const font = size === 'sm' ? 15 : size === 'lg' ? 24 : 20;
+      return (
+        <div
+          className="creature-mist-lock"
+          aria-hidden="true"
+          style={{
+            position: 'absolute', left: '50%', top: '50%',
+            transform: 'translate(-50%, -50%)', zIndex: 8, pointerEvents: 'none',
+          }}
+        >
+          <div
+            className="creature-mist-lock-seal"
+            style={{
+              width: box, height: box, borderRadius: 5,
+              background: 'linear-gradient(155deg, rgba(62,32,24,0.88) 0%, rgba(26,16,10,0.94) 100%)',
+              border: '2px solid rgba(160,68,52,0.7)',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,210,170,0.12)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transform: 'rotate(-4deg)',
+            }}
+          >
+            <span style={{
+              fontFamily: "'Noto Serif TC', serif", fontSize: font, fontWeight: 900,
+              color: 'rgba(228,195,150,0.96)', lineHeight: 1, letterSpacing: '0.08em',
+              textShadow: '0 1px 3px rgba(0,0,0,0.55)',
+            }}>鎖</span>
+          </div>
         </div>
       );
     }
