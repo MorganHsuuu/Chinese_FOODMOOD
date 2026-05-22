@@ -29,6 +29,11 @@ const COL = {
   photo: process.env.NOTION_COL_PHOTO || '餐點照片',
   /** 單欄彙總：筆數、解鎖、當前、各輪孵化（建議只建這一欄） */
   creatureCollection: process.env.NOTION_COL_CREATURE_COLLECTION || '靈獸圖鑑',
+  /** 選填：Notion 有建欄位才會寫入（拉桿五類分析用） */
+  moodTier: process.env.NOTION_COL_MOOD_TIER || null,
+  bodyTier: process.env.NOTION_COL_BODY_TIER || null,
+  moodSlider: process.env.NOTION_COL_MOOD_SLIDER || null,
+  bodyComfort: process.env.NOTION_COL_BODY_COMFORT || null,
 };
 
 const MOOD_TEXT_TO_NUM = {
@@ -299,6 +304,7 @@ function buildProperties(record, user, meritTotal, schema, { includeDemographics
 
   const set = (colKey, val, opts) => {
     const colName = COL[colKey];
+    if (!colName || !types[colName]) return;
     const p = propForColumn(colName, val, types, opts);
     if (p) props[colName] = p;
   };
@@ -306,8 +312,12 @@ function buildProperties(record, user, meritTotal, schema, { includeDemographics
   set('date', record.date);
   set('time', record.mealTime || record.time);
   set('mealType', record.mealType);
-  set('mood', record.mood, { preferNumber: true });
+  set('mood', record.moodScore ?? record.mood, { preferNumber: true });
   set('bodyFeeling', record.bodyFeeling);
+  if (record.moodTier != null) set('moodTier', record.moodTier);
+  if (record.bodyTier != null) set('bodyTier', record.bodyTier);
+  if (record.moodSlider != null) set('moodSlider', record.moodSlider);
+  if (record.bodyComfort != null) set('bodyComfort', record.bodyComfort);
   set('merit', merit);
   set('meritTotal', meritTotal);
   set('mb', scores.MB);
