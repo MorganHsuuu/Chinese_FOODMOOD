@@ -1432,7 +1432,7 @@
     const cn = (...classes) => classes.filter(Boolean).join(' ');
     const ACTIVE_USER_KEY = 'foodmood_active_user';
     const PROFILES_KEY = 'foodmood_profiles';
-    const normalizeEmail = (email) => email.trim().toLowerCase();
+    const normalizeEmail = (email) => String(email || '').trim().toLowerCase();
     const loadProfiles = () => { try { const r = localStorage.getItem(PROFILES_KEY); return r ? JSON.parse(r) : {}; } catch { return {}; } };
     const saveProfiles = (p) => localStorage.setItem(PROFILES_KEY, JSON.stringify(p));
     const findProfileByEmail = (email) => {
@@ -1440,6 +1440,13 @@
       if (!key) return null;
       return loadProfiles()[key] || null;
     };
+    /** 為新使用者自動產生一組本地識別碼（不顯示給使用者，但維持 Notion / localStorage 結構不變） */
+    const generateGuestId = () => {
+      const rand = Math.random().toString(36).slice(2, 10);
+      const t = Date.now().toString(36).slice(-4);
+      return `guest_${rand}${t}@foodmood.local`;
+    };
+    const isGuestEmail = (email) => /^guest_[a-z0-9]+@foodmood\.local$/i.test(String(email || ''));
     const DRAFTS_KEY = 'foodmood_meal_drafts';
     const recordsStorageKey = (email) => `foodmood_records_${normalizeEmail(email)}`;
     const loadUserRecords = (email) => {
@@ -1696,6 +1703,7 @@
     const BarChartIcon = ({ size=20 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>;
     const UserIcon = ({ size=20 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
     const XIcon = ({ size=20 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>;
+    const LockIcon = ({ size=18 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
     const ChevronRightIcon = ({ size=14 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>;
     const ChevronLeftIcon  = ({ size=14 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>;
     const InfoIcon = ({ size=20 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>;
@@ -2134,16 +2142,14 @@
     }
 
     function LoginGate({ onLogin, existingProfile = null }) {
-      const [step, setStep] = useState('splash'); // splash | leaving | choice | signin | register
-      const [authMode, setAuthMode] = useState(null); // 'signin' | 'register'
-      const [form, setForm] = useState({ email:'', nickname:'', gender:'', age:'' });
+      const [step, setStep] = useState('splash'); // splash | leaving | register
+      const [form, setForm] = useState({ nickname:'', gender:'', age:'' });
       const [formError, setFormError] = useState('');
       const isDesktop = window.innerWidth >= 768;
       const splashImg = isDesktop ? 'openspec/asset/png/login_desktop.jpg' : 'openspec/asset/png/onboarding_v2.jpg';
 
-      const goToStep = (next, mode = null) => {
+      const goToStep = (next) => {
         setFormError('');
-        if (mode) setAuthMode(mode);
         if (step === 'splash' || step === 'leaving') {
           setStep('leaving');
           setTimeout(() => setStep(next), 600);
@@ -2152,29 +2158,26 @@
         }
       };
 
-      const submitSignIn = (e) => {
-        e.preventDefault();
-        setFormError('');
-        const email = normalizeEmail(form.email);
-        if (!email) { setFormError('請輸入 Email'); return; }
-        const profile = findProfileByEmail(email);
-        if (!profile) {
-          setFormError('找不到此 Email 的檔案，請確認或改為「建立新帳號」');
-          return;
-        }
-        onLogin({ ...profile, email });
-      };
-
       const submitRegister = (e) => {
         e.preventDefault();
         setFormError('');
-        if (!form.email || !form.nickname || !form.gender || !form.age) return;
-        const email = normalizeEmail(form.email);
-        if (findProfileByEmail(email)) {
-          setFormError('此 Email 已註冊，請改用「已有帳號登入」');
-          return;
-        }
-        onLogin({ ...form, email });
+        const nickname = form.nickname.trim();
+        if (!nickname) { setFormError('請填寫稱號'); return; }
+        onLogin({
+          nickname,
+          gender: form.gender || '',
+          age: form.age || '',
+          email: generateGuestId(),
+        });
+      };
+
+      const quickStart = () => {
+        onLogin({
+          nickname: '修行者',
+          gender: '',
+          age: '',
+          email: generateGuestId(),
+        });
       };
 
       const inputStyle = {
@@ -2189,12 +2192,6 @@
         letterSpacing:'0.2em', fontFamily:"'Noto Serif TC', serif", cursor:'pointer',
         boxShadow:'0 0 0 6px rgba(133,41,27,0.12), 0 8px 32px rgba(133,41,27,0.5)',
       };
-      const panelBtnSecondary = {
-        width:'100%', background:'transparent', border:'1px solid rgba(149,211,195,0.35)',
-        borderRadius:12, padding:'13px 0', color:'var(--jade)', fontSize:13, fontWeight:700,
-        letterSpacing:'0.12em', fontFamily:"'Noto Serif TC', serif", cursor:'pointer',
-      };
-
       if (step === 'splash' || step === 'leaving') return (
         <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, zIndex:200, background:'var(--night)',
           animation: step === 'leaving' ? 'fadeOut 0.6s ease-in forwards' : 'onboardFadeIn 1s ease-out' }}>
@@ -2235,13 +2232,13 @@
                   Continue Journey
                 </span>
               </button>
-              <button type="button" onClick={() => goToStep('choice')}
+              <button type="button" onClick={() => goToStep('register')}
                 style={{ marginTop:14, background:'none', border:'none', color:'var(--sand)', fontSize:12, fontFamily:"'Noto Serif TC', serif", letterSpacing:'0.08em', cursor:'pointer', textDecoration:'underline' }}>
-                使用其他帳號
+                換個身分繼續
               </button>
             </div>
             ) : (
-              <button type="button" onClick={() => goToStep('choice')} className="wax-seal-active"
+              <button type="button" onClick={() => goToStep('register')} className="wax-seal-active"
                 style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:12, background:'none', border:'none', cursor:'pointer' }}>
                 <div style={{ width:96, height:96, background:'var(--crimson)', borderRadius:'50%', border:'4px solid rgba(255,180,160,0.25)',
                   boxShadow:'0 0 0 8px rgba(133,41,27,0.15), 0 12px 40px rgba(133,41,27,0.6)',
@@ -2260,16 +2257,6 @@
         </div>
       );
 
-      const isSignIn = step === 'signin';
-      const isRegister = step === 'register';
-      const isChoice = step === 'choice';
-      const panelTitle = isChoice ? '選擇你的方式' : isSignIn ? '已有帳號登入' : '建立新帳號';
-      const panelSubtitle = isChoice
-        ? '登入以載入既有紀錄，或建立全新食緒檔案'
-        : isSignIn
-          ? '輸入註冊時的 Email，將載入你的紀錄與設定'
-          : '填寫基本資料，開始記錄每一餐';
-
       return (
         <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'var(--night)', animation:'onboardFadeIn 0.8s ease-out' }}>
           <img src={splashImg} alt=""
@@ -2281,10 +2268,10 @@
               <div style={{ position:'absolute', top:20, left:20, width:28, height:28, borderTop:'1px solid rgba(149,211,195,0.65)', borderLeft:'1px solid rgba(149,211,195,0.65)' }} />
               <div style={{ position:'absolute', bottom:20, right:20, width:28, height:28, borderBottom:'1px solid rgba(149,211,195,0.65)', borderRight:'1px solid rgba(149,211,195,0.65)' }} />
 
-              <div style={{ marginBottom:28, textAlign:'center' }}>
+              <div style={{ marginBottom:24, textAlign:'center' }}>
                 <p style={{ fontSize:13, letterSpacing:'0.25em', color:'var(--mist)', textTransform:'uppercase', fontFamily:"'Noto Serif TC', serif", marginBottom:10 }}>食緒曆 · FoodMood</p>
-                <h1 style={{ fontSize:24, fontFamily:"'Noto Serif TC', serif", fontWeight:900, color:'var(--jade)', letterSpacing:'0.1em', lineHeight:1.4, margin:0 }}>{panelTitle}</h1>
-                <p style={{ marginTop:8, fontSize:13, color:'var(--sand)', fontFamily:"'Noto Serif TC', serif", lineHeight:1.6 }}>{panelSubtitle}</p>
+                <h1 style={{ fontSize:24, fontFamily:"'Noto Serif TC', serif", fontWeight:900, color:'var(--jade)', letterSpacing:'0.1em', lineHeight:1.4, margin:0 }}>開始你的食緒</h1>
+                <p style={{ marginTop:8, fontSize:13, color:'var(--sand)', fontFamily:"'Noto Serif TC', serif", lineHeight:1.6 }}>留下一個稱號即可，性別與年齡可日後再填</p>
               </div>
 
               <div style={{ height:1, background:'linear-gradient(to right, transparent, rgba(149,211,195,0.2), transparent)', marginBottom:24 }} />
@@ -2295,74 +2282,33 @@
                 </p>
               )}
 
-              {isChoice && (
-                <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-                  <button type="button" className="wax-seal-active" onClick={() => goToStep('signin', 'signin')} style={panelBtnPrimary}>
-                    已有帳號登入
-                  </button>
-                  <button type="button" onClick={() => goToStep('register', 'register')} style={panelBtnSecondary}>
-                    建立新帳號
-                  </button>
-                  <button type="button" onClick={() => { setFormError(''); setStep('splash'); }}
-                    style={{ marginTop:8, background:'none', border:'none', color:'var(--mist)', fontSize:12, fontFamily:"'Noto Serif TC', serif", cursor:'pointer', textDecoration:'underline' }}>
-                    返回開場
-                  </button>
+              <form onSubmit={submitRegister} style={{ display:'flex', flexDirection:'column', gap:14 }}>
+                <div>
+                  <label style={labelStyle}>稱號</label>
+                  <input style={inputStyle} type="text" placeholder="例：山中行者、清風" required autoFocus
+                    value={form.nickname} onChange={e => setForm({ ...form, nickname: e.target.value })} />
                 </div>
-              )}
-
-              {isSignIn && (
-                <form onSubmit={submitSignIn} style={{ display:'flex', flexDirection:'column', gap:14 }}>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
                   <div>
-                    <label style={labelStyle}>Email</label>
-                    <input style={inputStyle} type="email" placeholder="註冊時使用的 Email" required autoFocus
-                      value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
-                  </div>
-                  <button type="submit" className="wax-seal-active" style={{ ...panelBtnPrimary, marginTop:6 }}>登入食緒曆</button>
-                  <button type="button" onClick={() => { setFormError(''); goToStep('register', 'register'); }}
-                    style={{ background:'none', border:'none', color:'var(--jade)', fontSize:13, fontFamily:"'Noto Serif TC', serif", cursor:'pointer', textDecoration:'underline' }}>
-                    還沒有帳號？建立新帳號
-                  </button>
-                  <button type="button" onClick={() => { setFormError(''); goToStep('choice'); }}
-                    style={{ background:'none', border:'none', color:'var(--mist)', fontSize:12, fontFamily:"'Noto Serif TC', serif", cursor:'pointer' }}>
-                    ← 返回
-                  </button>
-                </form>
-              )}
-
-              {isRegister && (
-                <form onSubmit={submitRegister} style={{ display:'flex', flexDirection:'column', gap:14 }}>
-                  <div>
-                    <label style={labelStyle}>Email</label>
-                    <input style={inputStyle} type="email" placeholder="your@email.com" required autoFocus
-                      value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+                    <label style={labelStyle}>性別<span style={{ fontWeight:500, color:'rgba(168,197,191,0.55)', letterSpacing:'0.05em', marginLeft:6 }}>選填</span></label>
+                    <GenderSelect value={form.gender} onChange={v => setForm({ ...form, gender: v })} />
                   </div>
                   <div>
-                    <label style={labelStyle}>暱稱</label>
-                    <input style={inputStyle} type="text" placeholder="你的稱號" required
-                      value={form.nickname} onChange={e => setForm({ ...form, nickname: e.target.value })} />
+                    <label style={labelStyle}>年齡<span style={{ fontWeight:500, color:'rgba(168,197,191,0.55)', letterSpacing:'0.05em', marginLeft:6 }}>選填</span></label>
+                    <input style={inputStyle} type="number" min={1} max={120} placeholder="歲"
+                      value={form.age} onChange={e => setForm({ ...form, age: e.target.value })} />
                   </div>
-                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-                    <div>
-                      <label style={labelStyle}>性別</label>
-                      <GenderSelect value={form.gender} onChange={v => setForm({ ...form, gender: v })} />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>年齡</label>
-                      <input style={inputStyle} type="number" min={1} max={120} placeholder="歲" required
-                        value={form.age} onChange={e => setForm({ ...form, age: e.target.value })} />
-                    </div>
-                  </div>
-                  <button type="submit" className="wax-seal-active" style={{ ...panelBtnPrimary, marginTop:6 }}>建立並進入</button>
-                  <button type="button" onClick={() => { setFormError(''); goToStep('signin', 'signin'); }}
-                    style={{ background:'none', border:'none', color:'var(--jade)', fontSize:13, fontFamily:"'Noto Serif TC', serif", cursor:'pointer', textDecoration:'underline' }}>
-                    已有帳號？改為登入
-                  </button>
-                  <button type="button" onClick={() => { setFormError(''); goToStep('choice'); }}
-                    style={{ background:'none', border:'none', color:'var(--mist)', fontSize:12, fontFamily:"'Noto Serif TC', serif", cursor:'pointer' }}>
-                    ← 返回
-                  </button>
-                </form>
-              )}
+                </div>
+                <button type="submit" className="wax-seal-active" style={{ ...panelBtnPrimary, marginTop:6 }}>進入食緒曆</button>
+                <button type="button" onClick={quickStart}
+                  style={{ background:'none', border:'none', color:'var(--jade)', fontSize:13, fontFamily:"'Noto Serif TC', serif", cursor:'pointer', textDecoration:'underline' }}>
+                  先不填，直接以「修行者」身分進入
+                </button>
+                <button type="button" onClick={() => { setFormError(''); setStep('splash'); }}
+                  style={{ background:'none', border:'none', color:'var(--mist)', fontSize:12, fontFamily:"'Noto Serif TC', serif", cursor:'pointer' }}>
+                  ← 返回開場
+                </button>
+              </form>
             </div>
           </div>
         </div>
@@ -2496,7 +2442,7 @@
       );
     }
 
-    function HomeView({ records, loginProfile, mealDrafts = [], onContinueDraft }) {
+    function HomeView({ records, loginProfile, mealDrafts = [], onContinueDraft, onReviewFortune }) {
       const hatch = useMemo(() => getHatchState(records), [records]);
       const displayType = hatch.avatarType || hatch.formingType || MBEI_TYPES.MPLR;
       const isUnlocked = hatch.hasHatched;
@@ -2703,13 +2649,27 @@
                   ) : (
                     <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
                       {fortuneRecords.map(r => (
-                        <div key={r.id} style={{ display:'flex', gap:12, alignItems:'flex-start', background:'rgba(133,41,27,0.1)', border:'1px solid rgba(255,180,160,0.1)', borderRadius:5, padding:'12px 16px' }}>
+                        <div
+                          key={r.id}
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`回顧 ${r.date} ${r.mealType} 的食緒詩籤`}
+                          onClick={() => onReviewFortune?.(r)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              onReviewFortune?.(r);
+                            }
+                          }}
+                          style={{ display:'flex', gap:12, alignItems:'flex-start', background:'rgba(133,41,27,0.1)', border:'1px solid rgba(255,180,160,0.1)', borderRadius:5, padding:'12px 16px', cursor:'pointer', transition:'border-color 0.18s ease, background 0.18s ease, transform 0.18s ease' }}
+                        >
                           <div style={{ width:3, alignSelf:'stretch', background:'rgba(192,74,59,0.5)', borderRadius:2, flexShrink:0 }} />
                           <div style={{ flex:1, minWidth:0 }}>
                             <p style={{ fontSize:13, color:'var(--blush)', fontWeight:700, margin:'0 0 4px', letterSpacing:'0.1em' }}>{r.fortune.main_title}</p>
                             <p style={{ fontSize:14, color:'var(--cream)', lineHeight:1.8, margin:'0 0 6px' }}>{(r.fortune.poem || '').replace(/\\r\\n|\\n|\\r/g, '\n').replace(/\r\n|\r/g, '\n').split('\n').map(s => s.trim()).filter(Boolean)[0] || ''}</p>
                             <p style={{ fontSize:11, color:'var(--mist)', margin:0 }}>{r.date} · {r.mealType} · {getRecordFood(r)}</p>
                           </div>
+                          <span style={{ fontSize:18, color:'rgba(255,180,160,0.32)', lineHeight:1, paddingTop:2, flexShrink:0 }} aria-hidden="true">›</span>
                         </div>
                       ))}
                     </div>
@@ -3170,8 +3130,8 @@
 
     /** 水墨雲霧上的朱印小鎖（size: sm | md | lg） */
     function CreatureMistLock({ size = 'md' }) {
-      const box = size === 'sm' ? 30 : size === 'lg' ? 50 : 40;
-      const font = size === 'sm' ? 15 : size === 'lg' ? 24 : 20;
+      const box = size === 'sm' ? 28 : size === 'lg' ? 52 : 38;
+      const iconSize = size === 'sm' ? 14 : size === 'lg' ? 26 : 20;
       return (
         <div
           className="creature-mist-lock"
@@ -3190,13 +3150,10 @@
               boxShadow: '0 4px 14px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,210,170,0.12)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transform: 'rotate(-4deg)',
+              color: 'rgba(228,195,150,0.96)',
             }}
           >
-            <span style={{
-              fontFamily: "'Noto Serif TC', serif", fontSize: font, fontWeight: 900,
-              color: 'rgba(228,195,150,0.96)', lineHeight: 1, letterSpacing: '0.08em',
-              textShadow: '0 1px 3px rgba(0,0,0,0.55)',
-            }}>鎖</span>
+            <LockIcon size={iconSize} />
           </div>
         </div>
       );
@@ -3490,10 +3447,10 @@
                   </div>
                 )}
 
-                {/* 已孵化靈獸快選（多輪時可切換對照四象限） */}
-                {hatch.hatchedCreatures?.length > 0 && hatch.stage >= 2 && (
+                {/* 已孵化靈獸快選（多輪時可切換對照四象限）— 只有當「已孵化 ≥ 2 隻」時才顯示，避免與上方頭像區塊重複 */}
+                {hatch.hatchedCreatures?.length >= 2 && hatch.stage >= 2 && (
                   <div style={{ padding:'0 24px 20px', borderTop:'1px solid rgba(149,211,195,0.08)' }}>
-                    <p style={{ fontSize:11, color:'var(--mist)', fontFamily:serif, margin:'16px 0 10px', letterSpacing:'0.08em' }}>點擊靈獸 · 調頻儀顯示該型紀錄平均偏向（或型格參考）</p>
+                    <p style={{ fontSize:11, color:'var(--mist)', fontFamily:serif, margin:'16px 0 10px', letterSpacing:'0.08em' }}>點擊靈獸 · 調頻儀顯示該型紀錄平均偏向</p>
                     <div style={{ display:'flex', gap:10, flexWrap:'wrap', justifyContent:'center' }}>
                       {hatch.hatchedCreatures.map((h) => {
                         const type = MBEI_TYPES[h.code];
@@ -3518,24 +3475,6 @@
                           </button>
                         );
                       })}
-                      {hatch.stage === 2 && hatch.currentCycleType && (
-                        <button
-                          type="button"
-                          onClick={() => pickCreatureForTuner(hatch.currentCycleType)}
-                          style={{
-                            background: tunerMbeiCode === hatch.currentCycleType.code ? 'rgba(217,138,91,0.08)' : 'rgba(21,13,0,0.5)',
-                            border: tunerMbeiCode === hatch.currentCycleType.code ? '1px solid rgba(217,138,91,0.55)' : '1px dashed rgba(149,211,195,0.2)',
-                            borderRadius:5, padding:'8px 10px', cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:6, minWidth:72, opacity:0.85,
-                          }}
-                        >
-                          <div style={{ width:48, height:60, borderRadius:4, overflow:'hidden', position:'relative' }}>
-                            <img src={CREATURE_IMG[hatch.currentCycleType.code]} alt="" style={{ width:'100%', height:'100%', objectFit:'contain', filter:'blur(6px)', display:'block' }} />
-                            <span style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, color:'var(--jade)', fontWeight:900 }}>?</span>
-                          </div>
-                          <span style={{ fontSize:10, color:'var(--jade)', fontFamily:serif }}>本輪暫估</span>
-                          <span title={hatch.currentCycleType.code} style={{ fontSize:10, color:'var(--mist)', fontFamily:serif, letterSpacing:'0.18em', fontWeight:700 }}>{mbeiCodeToChinese(hatch.currentCycleType.code)}</span>
-                        </button>
-                      )}
                     </div>
                   </div>
                 )}
@@ -3574,10 +3513,11 @@
                       onClick={() => setSelectedCreature({ ...type, _locked: !isUnlocked })}
                       title={!isUnlocked ? '靈獸雲霧中等待 · 點擊窺見型格' : undefined}
                       style={{ background: isCurrent ? 'rgba(149,211,195,0.07)' : 'rgba(21,13,0,0.6)',
-                        border: isCurrent ? '1px solid rgba(149,211,195,0.4)' : isUnlocked ? '1px solid rgba(149,211,195,0.15)' : '1px solid rgba(149,211,195,0.12)',
+                        border: isCurrent ? '1px solid rgba(149,211,195,0.4)' : isUnlocked ? '1px solid rgba(149,211,195,0.15)' : '1px solid rgba(149,211,195,0.1)',
                         borderRadius:5, padding:'10px', display:'flex', gap:10, alignItems:'flex-start',
                         cursor:'pointer', position:'relative',
-                        transition:'border-color 0.25s, box-shadow 0.25s',
+                        opacity: isUnlocked ? 1 : 0.55,
+                        transition:'border-color 0.25s, box-shadow 0.25s, opacity 0.25s',
                         boxShadow: !isUnlocked ? 'inset 0 0 24px rgba(149,211,195,0.04)' : undefined }}>
                       {isCurrent && (
                         <div style={{ position:'absolute', top:5, right:5, fontSize:8, fontWeight:900, color:'var(--jade)', background:'rgba(149,211,195,0.15)', border:'1px solid rgba(149,211,195,0.3)', borderRadius:3, padding:'1px 4px', fontFamily:"'Noto Serif TC',serif", letterSpacing:'0.1em' }}>本輪</div>
@@ -3636,10 +3576,11 @@
                           onClick={() => setSelectedCreature({ ...type, _locked: !isUnlocked })}
                           title={!isUnlocked ? '靈獸雲霧中等待 · 點擊窺見型格' : undefined}
                           style={{ background: isCurrent ? 'rgba(149,211,195,0.07)' : 'rgba(21,13,0,0.8)',
-                            border: isCurrent ? '1px solid rgba(149,211,195,0.4)' : isUnlocked ? '1px solid rgba(149,211,195,0.15)' : '1px solid rgba(149,211,195,0.12)',
+                            border: isCurrent ? '1px solid rgba(149,211,195,0.4)' : isUnlocked ? '1px solid rgba(149,211,195,0.15)' : '1px solid rgba(149,211,195,0.1)',
                             borderRadius:5, padding:'12px', display:'flex', gap:10, alignItems:'flex-start',
-                            transition:'border-color 0.25s, background 0.25s, box-shadow 0.25s',
+                            transition:'border-color 0.25s, background 0.25s, box-shadow 0.25s, opacity 0.25s',
                             cursor:'pointer', position:'relative',
+                            opacity: isUnlocked ? 1 : 0.55,
                             boxShadow: !isUnlocked ? 'inset 0 0 28px rgba(149,211,195,0.04)' : undefined }}
                           onMouseEnter={e => {
                             e.currentTarget.style.borderColor = isCurrent ? 'rgba(149,211,195,0.6)' : isUnlocked ? 'rgba(149,211,195,0.35)' : 'rgba(149,211,195,0.25)';
@@ -4541,6 +4482,7 @@
       const [showResult, setShowResult] = useState(false);
       const [hatchCelebration, setHatchCelebration] = useState(null);
       const [latestRecord, setLatestRecord] = useState(null);
+      const [reviewRecord, setReviewRecord] = useState(null);
       const [records, setRecords] = useState(() => {
         const activeEmail = localStorage.getItem(ACTIVE_USER_KEY);
         return activeEmail ? loadUserRecords(activeEmail) : [];
@@ -4819,6 +4761,11 @@
         setShowResult(false);
       };
 
+      const openFortuneReview = (record) => {
+        if (!record?.fortune) return;
+        setReviewRecord(record);
+      };
+
       const recordInitialPhase = recordMode === 'continue' ? 'feelings' : recordMode === 'early' ? 'food' : 'all';
 
       if (!splashDone) return <LoginGate onLogin={handleLogin} existingProfile={loginProfile} />;
@@ -4885,7 +4832,7 @@
             <main style={{ flex:1, position:'relative', zIndex:10, paddingBottom:120 }}
               className="scrollbar-hide md:pb-24">
               <div style={{ maxWidth:960, margin:'0 auto', padding:'32px 20px' }} className="md:p-12">
-                {activeTab === 'home' && <HomeView records={records} loginProfile={loginProfile} mealDrafts={mealDrafts} onContinueDraft={continueDraft} />}
+                {activeTab === 'home' && <HomeView records={records} loginProfile={loginProfile} mealDrafts={mealDrafts} onContinueDraft={continueDraft} onReviewFortune={openFortuneReview} />}
                 {activeTab === 'almanac' && <AlmanacView records={records} />}
                 {activeTab === 'insight' && <InsightView records={records} loginProfile={loginProfile} />}
                 {activeTab === 'profile' && <ProfileView records={records} loginProfile={loginProfile} onLogout={handleLogout} />}
@@ -4899,7 +4846,7 @@
               zIndex:40, borderTop:'1px solid rgba(149,211,195,0.15)',
               boxShadow:'0 -4px 24px rgba(0,0,0,0.4)' }}
               className="md:hidden">
-              {['今日|home','曆卡|almanac', null, '食譜|insight','功德|profile'].map((item, i) => {
+              {['今日|home','曆卡|almanac', null, '食鑑|insight','功德|profile'].map((item, i) => {
                 if (!item) return (
                   <button key="record" onClick={openRecordModal}
                     className="record-fab-btn"
@@ -4963,6 +4910,9 @@
             {showResult && latestRecord && !hatchCelebration && submitOverlay === 'reveal' && (
               <FortuneDecreeModal record={latestRecord} onClose={closeFortuneReveal} />
             )}
+            {reviewRecord && (
+              <FortuneDecreeModal record={reviewRecord} onClose={() => setReviewRecord(null)} />
+            )}
 
             {/* 個人資料彈跳popup（手機） */}
             {showProfilePopup && (() => {
@@ -5002,8 +4952,9 @@
                           <span style={{ fontSize:11, fontWeight:700, color:'var(--sand)', letterSpacing:'0.05em' }}>{latestType.name}</span>
                         </div>
                         <p style={{ fontSize:11, color:'var(--sand)', opacity:0.7, margin:0 }}>
-                          {loginProfile?.gender} · {loginProfile?.age} 歲
-                          {!hs.avatarType && ` · ${hs.progressInCycle}/${HATCH_RECORDS_REQUIRED} 筆`}
+                          {[loginProfile?.gender, loginProfile?.age ? `${loginProfile.age} 歲` : null].filter(Boolean).join(' · ')}
+                          {(loginProfile?.gender || loginProfile?.age) && !hs.avatarType && ' · '}
+                          {!hs.avatarType && `${hs.progressInCycle}/${HATCH_RECORDS_REQUIRED} 筆`}
                         </p>
                       </div>
                     </div>
