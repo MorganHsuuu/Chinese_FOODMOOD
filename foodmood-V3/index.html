@@ -2484,7 +2484,7 @@
       setTimeout(() => URL.revokeObjectURL(url), 1200);
     };
 
-    const renderPosterSvgToJpeg = async (svg, filename) => {
+    const renderPosterSvgToJpeg = async (svg) => {
       const svgBlob = new Blob([svg], { type:'image/svg+xml;charset=utf-8' });
       const svgUrl = URL.createObjectURL(svgBlob);
       try {
@@ -2501,14 +2501,13 @@
         ctx.fillStyle = '#100900';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const blob = await canvasToCompressedJpeg(canvas);
-        await shareOrDownloadPosterBlob(blob, filename);
+        return await canvasToCompressedJpeg(canvas);
       } finally {
         URL.revokeObjectURL(svgUrl);
       }
     };
 
-    const saveHatchSharePoster = async ({ hatchType, cycleNumber, loginProfile, records }) => {
+    const createHatchSharePoster = async ({ hatchType, cycleNumber, loginProfile, records }) => {
       if (!hatchType) return;
       const creatureImg = await assetToDataUrl(CREATURE_IMG[hatchType.code] || BEGIN_AVATAR_IMG);
       const nickname = posterXmlEscape(loginProfile?.nickname || '修行者');
@@ -2518,10 +2517,10 @@
       const count = posterXmlEscape((records?.length || 0).toLocaleString());
       const streak = posterXmlEscape(calcStreak(records).toLocaleString());
       const cycle = posterXmlEscape(cycleNumber || 1);
-      const insightLines = wrapPosterText(hatchType.insight, 18, 2);
+      const insightLines = wrapPosterText(hatchType.insight, 20, 2);
       const filename = `foodmood-${hatchType.code || 'creature'}-${Date.now()}.jpg`;
       const insightSvg = insightLines.map((line, i) =>
-        `<text x="360" y="${905 + i * 28}" text-anchor="middle" font-size="19" fill="#d8c48e" font-family="'Noto Serif TC', serif" letter-spacing="1.2">${posterXmlEscape(line)}</text>`
+        `<text x="360" y="${870 + i * 27}" text-anchor="middle" font-size="18" fill="#d8c48e" font-family="'Noto Serif TC', serif" letter-spacing="0.45">${posterXmlEscape(line)}</text>`
       ).join('');
       const svg = `
 <svg xmlns="http://www.w3.org/2000/svg" width="720" height="1280" viewBox="0 0 720 1280">
@@ -2536,55 +2535,39 @@
       <stop offset="0.38" stop-color="#8b5a19" stop-opacity="0.2"/>
       <stop offset="1" stop-color="#000000" stop-opacity="0"/>
     </radialGradient>
-    <clipPath id="portraitClip">
-      <rect x="154" y="278" width="412" height="440" rx="28"/>
-    </clipPath>
+    <clipPath id="portraitClip"><rect x="149" y="270" width="422" height="456" rx="28"/></clipPath>
   </defs>
   <rect width="720" height="1280" fill="url(#bg)"/>
   <circle cx="360" cy="410" r="430" fill="url(#halo)"/>
-  <path d="M54 54H164M54 54V164M666 54H556M666 54V164M54 1226H164M54 1226V1116M666 1226H556M666 1226V1116" fill="none" stroke="#95d3c3" stroke-opacity="0.42" stroke-width="2"/>
-  <rect x="38" y="38" width="644" height="1204" rx="30" fill="none" stroke="#d4a843" stroke-opacity="0.22" stroke-width="1.5"/>
-  <text x="360" y="104" text-anchor="middle" font-size="46" fill="#9fe1ce" font-family="'Noto Serif TC', serif" font-weight="900" letter-spacing="16">食緒曆</text>
-  <text x="360" y="143" text-anchor="middle" font-size="15" fill="#d9cfa5" font-family="'JetBrains Mono', monospace" font-weight="700" letter-spacing="6">FOODMOOD ARCHIVE</text>
-  <text x="360" y="205" text-anchor="middle" font-size="22" fill="#d98a5b" font-family="'Noto Serif TC', serif" font-weight="800" letter-spacing="5">第 ${cycle} 輪 · 靈獸顯形</text>
-  <rect x="134" y="258" width="452" height="480" rx="34" fill="#100900" fill-opacity="0.9" stroke="#95d3c3" stroke-opacity="0.28" stroke-width="3"/>
-  <rect x="154" y="278" width="412" height="440" rx="28" fill="#211607"/>
-  <image href="${creatureImg}" x="154" y="278" width="412" height="440" preserveAspectRatio="xMidYMid meet" clip-path="url(#portraitClip)"/>
-  <rect x="154" y="278" width="412" height="440" rx="28" fill="none" stroke="#d4a843" stroke-opacity="0.36" stroke-width="2"/>
-  <text x="360" y="770" text-anchor="middle" font-size="58" fill="#fff8df" font-family="'Noto Serif TC', serif" font-weight="900" letter-spacing="6">${creature}</text>
-  <text x="360" y="846" text-anchor="middle" font-size="28" fill="#9fe1ce" font-family="'Noto Serif TC', serif" font-weight="900" letter-spacing="14">${codeCn}</text>
-  <text x="360" y="884" text-anchor="middle" font-size="16" fill="#bda267" font-family="'JetBrains Mono', monospace" font-weight="700" letter-spacing="5">${posterXmlEscape(hatchType.code)}</text>
+  <path d="M42 42H168M42 42V168M678 42H552M678 42V168M42 1238H168M42 1238V1112M678 1238H552M678 1238V1112" fill="none" stroke="#95d3c3" stroke-opacity="0.42" stroke-width="2"/>
+  <rect x="28" y="28" width="664" height="1224" rx="32" fill="none" stroke="#d4a843" stroke-opacity="0.2" stroke-width="1.5"/>
+  <text x="360" y="104" text-anchor="middle" font-size="44" fill="#9fe1ce" font-family="'Noto Serif TC', serif" font-weight="900" letter-spacing="10">食緒曆</text>
+  <text x="360" y="143" text-anchor="middle" font-size="14" fill="#d9cfa5" font-family="'JetBrains Mono', monospace" font-weight="700" letter-spacing="4">FOODMOOD ARCHIVE</text>
+  <text x="360" y="205" text-anchor="middle" font-size="21" fill="#d98a5b" font-family="'Noto Serif TC', serif" font-weight="800" letter-spacing="3">第 ${cycle} 輪 · 靈獸顯形</text>
+  <rect x="132" y="253" width="456" height="490" rx="34" fill="none" stroke="#95d3c3" stroke-opacity="0.34" stroke-width="3"/>
+  <image href="${creatureImg}" x="149" y="270" width="422" height="456" preserveAspectRatio="xMidYMid slice" clip-path="url(#portraitClip)"/>
+  <rect x="149" y="270" width="422" height="456" rx="28" fill="none" stroke="#d4a843" stroke-opacity="0.38" stroke-width="2"/>
+  <text x="360" y="775" text-anchor="middle" font-size="54" fill="#fff8df" font-family="'Noto Serif TC', serif" font-weight="900" letter-spacing="2">${creature}</text>
+  <text x="360" y="817" text-anchor="middle" font-size="27" fill="#9fe1ce" font-family="'Noto Serif TC', serif" font-weight="900" letter-spacing="7">${codeCn}</text>
   ${insightSvg}
-  <rect x="84" y="938" width="552" height="145" rx="24" fill="#0b0600" fill-opacity="0.82" stroke="#95d3c3" stroke-opacity="0.22" stroke-width="1.5"/>
-  <text x="360" y="984" text-anchor="middle" font-size="27" fill="#fff2d4" font-family="'Noto Serif TC', serif" font-weight="900">修行者 · ${nickname}</text>
-  <text x="180" y="1035" text-anchor="middle" font-size="15" fill="#a8c5bf" font-family="'Noto Serif TC', serif" letter-spacing="3">累積功德</text>
-  <text x="180" y="1071" text-anchor="middle" font-size="34" fill="#d4a843" font-family="'Noto Serif TC', serif" font-weight="900">${merit}</text>
-  <text x="360" y="1035" text-anchor="middle" font-size="15" fill="#a8c5bf" font-family="'Noto Serif TC', serif" letter-spacing="3">食緒紀錄</text>
-  <text x="360" y="1071" text-anchor="middle" font-size="34" fill="#d4a843" font-family="'Noto Serif TC', serif" font-weight="900">${count} 筆</text>
-  <text x="540" y="1035" text-anchor="middle" font-size="15" fill="#a8c5bf" font-family="'Noto Serif TC', serif" letter-spacing="3">連續修行</text>
-  <text x="540" y="1071" text-anchor="middle" font-size="34" fill="#d4a843" font-family="'Noto Serif TC', serif" font-weight="900">${streak} 天</text>
-  <text x="360" y="1163" text-anchor="middle" font-size="24" fill="#fff3d6" font-family="'Noto Serif TC', serif" font-weight="900" letter-spacing="3">記錄十餐，孵化你的食緒靈獸</text>
-  <text x="360" y="1204" text-anchor="middle" font-size="16" fill="#95d3c3" fill-opacity="0.76" font-family="'Noto Serif TC', serif" letter-spacing="4">每一餐，都是一場修行</text>
+  <rect x="80" y="940" width="560" height="168" rx="22" fill="#0b0600" fill-opacity="0.76" stroke="#95d3c3" stroke-opacity="0.24" stroke-width="1.5"/>
+  <text x="360" y="990" text-anchor="middle" font-size="25" fill="#fff2d4" font-family="'Noto Serif TC', serif" font-weight="900">修行者 · ${nickname}</text>
+  <text x="184" y="1037" text-anchor="middle" font-size="14" fill="#a8c5bf" font-family="'Noto Serif TC', serif" letter-spacing="1.2">累積功德</text>
+  <text x="184" y="1072" text-anchor="middle" font-size="31" fill="#d4a843" font-family="'Noto Serif TC', serif" font-weight="900">${merit}</text>
+  <text x="360" y="1037" text-anchor="middle" font-size="14" fill="#a8c5bf" font-family="'Noto Serif TC', serif" letter-spacing="1.2">食緒紀錄</text>
+  <text x="360" y="1072" text-anchor="middle" font-size="31" fill="#d4a843" font-family="'Noto Serif TC', serif" font-weight="900">${count} 筆</text>
+  <text x="536" y="1037" text-anchor="middle" font-size="14" fill="#a8c5bf" font-family="'Noto Serif TC', serif" letter-spacing="1.2">連續修行</text>
+  <text x="536" y="1072" text-anchor="middle" font-size="31" fill="#d4a843" font-family="'Noto Serif TC', serif" font-weight="900">${streak} 天</text>
+  <text x="360" y="1164" text-anchor="middle" font-size="20" fill="#fff3d6" font-family="'Noto Serif TC', serif" font-weight="900" letter-spacing="1.2">記錄十餐，孵化你的食緒靈獸</text>
+  <text x="360" y="1202" text-anchor="middle" font-size="15" fill="#95d3c3" fill-opacity="0.76" font-family="'Noto Serif TC', serif" letter-spacing="2">每一餐，都是一場修行</text>
 </svg>`;
-      await renderPosterSvgToJpeg(svg, filename);
+      const blob = await renderPosterSvgToJpeg(svg);
+      return { blob, filename, url: URL.createObjectURL(blob) };
     };
 
-    function HatchCelebrationModal({ hatchType, cycleNumber, loginProfile, records = [], onClose }) {
+    function HatchCelebrationModal({ hatchType, cycleNumber, onSharePoster, shareBusy, shareError, onClose }) {
       if (!hatchType) return null;
       const serif = "'Noto Serif TC',serif";
-      const [shareBusy, setShareBusy] = React.useState(false);
-      const [shareError, setShareError] = React.useState('');
-      const handleSaveShare = async () => {
-        setShareError('');
-        setShareBusy(true);
-        try {
-          await saveHatchSharePoster({ hatchType, cycleNumber, loginProfile, records });
-        } catch (err) {
-          setShareError(err?.message || '分享卡產生失敗，請稍後再試');
-        } finally {
-          setShareBusy(false);
-        }
-      };
       return (
         <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center sm:p-4 record-overlay-veil" onClick={onClose}>
           <div className="record-sacred-flash" aria-hidden="true" style={{ position:'fixed', inset:0, borderRadius:0, pointerEvents:'none' }} />
@@ -2612,7 +2595,7 @@
             <div className="result-modal-footer shrink-0 px-5 pb-4 sm:px-8 sm:pb-6">
               <button
                 type="button"
-                onClick={handleSaveShare}
+                onClick={onSharePoster}
                 disabled={shareBusy}
                 className="w-full py-3 rounded-[5px] font-bold text-sm mb-2"
                 style={{
@@ -2632,6 +2615,52 @@
               )}
               <button type="button" onClick={onClose} className="inject-btn w-full text-white py-3 rounded-[5px] font-bold text-sm" style={{ background:'linear-gradient(135deg,#1a1208 0%,#2d2010 50%,#1a1208 100%)', border:'1px solid rgba(212,168,67,0.35)', fontFamily:serif }}>
                 承接靈獸之力
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function SharePosterPreviewModal({ preview, busy, error, onConfirm, onClose }) {
+      if (!preview?.url) return null;
+      const serif = "'Noto Serif TC',serif";
+      return (
+        <div className="fixed inset-0 z-[135] flex items-end sm:items-center justify-center sm:p-4 record-overlay-veil" role="dialog" aria-modal="true" aria-label="分享卡預覽">
+          <div onClick={onClose} style={{ position:'absolute', inset:0, background:'rgba(0,0,0,0.62)', backdropFilter:'blur(6px)' }} />
+          <div
+            onClick={e => e.stopPropagation()}
+            className="relative z-10 w-full sm:max-w-sm rounded-t-[18px] sm:rounded-[10px] overflow-hidden"
+            style={{ background:'linear-gradient(160deg,#120b02 0%,#251900 65%,#120b02 100%)', border:'1px solid rgba(149,211,195,0.22)', boxShadow:'0 24px 80px rgba(0,0,0,0.75)' }}
+          >
+            <div className="sm:hidden flex justify-center pt-2">
+              <div style={{ width:40, height:4, borderRadius:2, background:'rgba(149,211,195,0.25)' }} />
+            </div>
+            <div style={{ padding:'18px 20px 16px', textAlign:'center' }}>
+              <p style={{ fontSize:11, color:'var(--jade)', letterSpacing:'0.22em', fontWeight:800, fontFamily:serif, margin:'0 0 8px' }}>分享卡預覽</p>
+              <div style={{ width:'min(68vw, 280px)', margin:'0 auto', borderRadius:12, overflow:'hidden', border:'1px solid rgba(212,168,67,0.3)', boxShadow:'0 14px 44px rgba(0,0,0,0.55)' }}>
+                <img src={preview.url} alt="食緒曆分享卡預覽" style={{ width:'100%', display:'block' }} />
+              </div>
+              {error && (
+                <p style={{ fontSize:12, color:'var(--blush)', lineHeight:1.5, fontFamily:serif, margin:'10px 0 0' }}>{error}</p>
+              )}
+            </div>
+            <div style={{ padding:'0 20px 20px', display:'grid', gap:10 }}>
+              <button
+                type="button"
+                onClick={onConfirm}
+                disabled={busy}
+                className="inject-btn w-full text-white py-3 rounded-[5px] font-bold text-sm"
+                style={{ background:'linear-gradient(135deg,#1a1208 0%,#2d2010 50%,#1a1208 100%)', border:'1px solid rgba(212,168,67,0.35)', fontFamily:serif, opacity: busy ? 0.65 : 1, cursor: busy ? 'wait' : 'pointer' }}
+              >
+                {busy ? '開啟分享中…' : '分享我的食鑑'}
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                style={{ width:'100%', padding:'11px', background:'transparent', border:'none', color:'rgba(200,184,138,0.55)', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:serif }}
+              >
+                取消
               </button>
             </div>
           </div>
@@ -4731,6 +4760,8 @@
       const [reviewRecord, setReviewRecord] = useState(null);
       const [profileShareBusy, setProfileShareBusy] = useState(false);
       const [profileShareError, setProfileShareError] = useState('');
+      const [sharePreview, setSharePreview] = useState(null);
+      const [shareConfirmBusy, setShareConfirmBusy] = useState(false);
       const [records, setRecords] = useState(() => {
         const activeEmail = localStorage.getItem(ACTIVE_USER_KEY);
         return activeEmail ? loadUserRecords(activeEmail) : [];
@@ -5060,11 +5091,15 @@
         setProfileShareError('');
         setProfileShareBusy(true);
         try {
-          await saveHatchSharePoster({
+          const nextPreview = await createHatchSharePoster({
             hatchType: hs.avatarType,
             cycleNumber: hs.completedCycles,
             loginProfile,
             records,
+          });
+          setSharePreview((prev) => {
+            if (prev?.url) URL.revokeObjectURL(prev.url);
+            return nextPreview;
           });
         } catch (err) {
           const msg = err?.message || '分享卡產生失敗，請稍後再試';
@@ -5072,6 +5107,27 @@
           if (!showProfilePopup) window.alert(msg);
         } finally {
           setProfileShareBusy(false);
+        }
+      };
+
+      const closeSharePreview = () => {
+        setSharePreview((prev) => {
+          if (prev?.url) URL.revokeObjectURL(prev.url);
+          return null;
+        });
+      };
+
+      const confirmSharePreview = async () => {
+        if (!sharePreview?.blob || shareConfirmBusy) return;
+        setProfileShareError('');
+        setShareConfirmBusy(true);
+        try {
+          await shareOrDownloadPosterBlob(sharePreview.blob, sharePreview.filename);
+          closeSharePreview();
+        } catch (err) {
+          setProfileShareError(err?.message || '分享失敗，請稍後再試');
+        } finally {
+          setShareConfirmBusy(false);
         }
       };
 
@@ -5207,8 +5263,9 @@
               <HatchCelebrationModal
                 hatchType={hatchCelebration.type}
                 cycleNumber={hatchCelebration.cycle}
-                loginProfile={loginProfile}
-                records={records}
+                onSharePoster={handleProfileSharePoster}
+                shareBusy={profileShareBusy}
+                shareError={profileShareError}
                 onClose={() => {
                   setHatchCelebration(null);
                   if (latestRecord) {
@@ -5223,6 +5280,15 @@
             )}
             {reviewRecord && (
               <FortuneDecreeModal record={reviewRecord} onClose={() => setReviewRecord(null)} />
+            )}
+            {sharePreview && (
+              <SharePosterPreviewModal
+                preview={sharePreview}
+                busy={shareConfirmBusy}
+                error={profileShareError}
+                onConfirm={confirmSharePreview}
+                onClose={closeSharePreview}
+              />
             )}
 
             {/* 個人資料彈跳popup（手機） */}
