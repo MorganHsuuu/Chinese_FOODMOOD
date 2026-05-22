@@ -1037,22 +1037,22 @@
 
     // ── Constants ──
     const MBEI_TYPES = {
-      MNHR: { code:'MNHR', name:'玄武 (The Guardian)', creature:'玄武', description:'北方守護神，龜蛇一體，象徵沉穩與長壽。作息規律如鐵，偏好紮實厚重的原型肉食燉品，以飲食秩序建立內在安定感。氣場沉穩磐石，是最懂用三餐錨定生命節奏的存在。', insight:'規律吃紮實原型肉食，以飲食秩序錨定內在穩定。', emoji:'🐢' },
-      MNHV: { code:'MNHV', name:'麒麟 (The Sacred Beast)', creature:'麒麟', description:'仁義瑞獸，不履生蟲，不折生草，自帶療癒之光。飲食完全由情緒主導，心情好或疲憊時會隨性大啖豐盛原型珍饈。一餐的生理負擔雖重，卻能帶來極大的靈魂修復。', insight:'情緒驅動，隨性享用豐盛原型大餐，大吃一頓就是最好的療癒。', emoji:'🦒' },
-      MNLR: { code:'MNLR', name:'白澤 (The Wise Seer)', creature:'白澤', description:'崑崙山上的全知聖獸，渾身雪白，通達萬物，能辟除一切邪氣。全圖鑑最健康平衡的存在。準時在胃經最旺之時攝取純淨原型食物，身輕心清，是最懂現代生活避險的均衡大師。', insight:'準時吃清淡原型食物，神魂清澈，圖鑑中最健康的均衡大師。', emoji:'🦄' },
-      MNLV: { code:'MNLV', name:'九尾 (The Spirit Fox)', creature:'九尾', description:'青丘之山的幻化之狐，九尾象徵無盡靈動與魅惑。靠心情決定三餐，不拘時間，隨性攝取自然花果與輕盈原型食物。身輕如雲，飲食節奏與性格一樣飄忽難測，極具靈性。', insight:'靠心情決定三餐，隨性吃自然輕食，飄忽靈動難以捉摸。', emoji:'🦊' },
-      MPHR: { code:'MPHR', name:'金烏 (The Sun-Bird)', creature:'金烏', description:'三足神鳥，司掌太陽之精，每日規律從東方升起。為維持高強度的情緒與工作能量，有極度規律的飲食習慣，卻依賴精緻加工甜食與高能量食品作為「火精補給」，日積月累，體內陽煞過旺。', insight:'規律依賴精緻加工食品補充能量，循天時但陽煞積聚。', emoji:'🦅' },
-      MPHV: { code:'MPHV', name:'饕餮 (The Devourer)', creature:'饕餮', description:'傳說中羊身人面的貪食凶獸，能吞噬萬物。極度焦慮或情緒空虛時，發起補償性暴食，在無規律的時間吞噬大量高負擔加工食品，以填補心靈黑洞。濁煞極重，出沒無常。', insight:'焦慮空虛時暴食加工重食，以無盡吞噬填補心靈黑洞。', emoji:'👺' },
-      MPLR: { code:'MPLR', name:'織女 (The Weaver)', creature:'織女', description:'天帝之女，在銀河邊日夜編織雲彩霓裳，工法細膩且極度規律。對飲食有美學堅持，定時定量，偏好精緻但低負擔的輕盈加工膳食（分子料理、精緻沙拉、無糖燕麥）。透過飲食的秩序感維持情緒的細膩穩定。', insight:'定時吃精緻輕盈加工食，以飲食的秩序感維持情緒穩定。', emoji:'🧵' },
-      MPLV: { code:'MPLV', name:'夢貘 (The Dream Eater)', creature:'夢貘', description:'深夜出沒、以人類夢境為食的幻獸，能將惡夢吃盡。沒有固定進食時鐘，常在深夜因情緒波動攝取代餐、微糖手搖或功能性果凍，游離於飽腹感與精神幻覺之間，以咀嚼安撫情緒。', insight:'深夜情緒波動下的代餐族，在虛實之間咀嚼孤獨。', emoji:'🐘' },
-      BNHR: { code:'BNHR', name:'當康 (The Harvest Boar)', creature:'當康', description:'其鳴自叫，見則天下大豐收，象徵大地的豐饒與力量。極度重視正餐規律，習慣攝取大量紮實的原型在地糧食、根莖類與大塊肉類。攝取量大，常有沉重的飽足感，但肉體機能強健充沛。', insight:'規律大量吃原型紮實食物，強健如豐收，常有飽重的大地能量。', emoji:'🐗' },
-      BNHV: { code:'BNHV', name:'朱厭 (The War Omen)', creature:'朱厭', description:'猿身紅足，見則大兵，象徵爆發性的力量與衝突。追求純粹的肌肉爆發力，進食時間完全隨性，常在運動前後大量攝取原型蛋白質（烤肉、原型牛排）。力量強大，但體內火煞過旺，常處發炎臨界。', insight:'隨性暴攝原型蛋白質，爆發力強大但火煞旺盛、易發炎。', emoji:'🐒' },
-      BNLR: { code:'BNLR', name:'夔 (The Thunder Beast)', creature:'夔', description:'東海獨足神牛，出入必伴風雨雷鳴，氣息強大。純粹的自然功能主義者，為了維持肉體機能，嚴格堅守原野清淡之食，作息如雷打不動，順應天時。身體素質極高，但飲食生活毫無社交樂趣。', insight:'規律吃清淡原型食，身強氣壯，但孤傲冷冽，無社交飲食。', emoji:'🐃' },
-      BNLV: { code:'BNLV', name:'夫諸 (The Water Deer)', creature:'夫諸', description:'白鹿四角，帶來水靈清滌、化解燥熱的溫柔神獸。完全聽從身體直覺，不被生理時鐘框架。口渴就喝清泉，餓了就隨性攝取原野草木瓜果。體質清透如洗，性情隨遇而安，生理循環極佳。', insight:'完全聽從直覺吃清淡原型食，體質清透、隨遇而安。', emoji:'🦌' },
-      BPHR: { code:'BPHR', name:'混沌 (The Primal Chaos)', creature:'混沌', description:'其狀如黃囊無面目，象徵天地未開時的混沌沉重。三餐雖然定時，但極度偏好沉重的高碳水精緻澱粉與加工肉品。雖進食有時，但肉身缺乏流動性，如沒有孔竅的混沌，難以有效代謝清化。', insight:'定時吃重澱粉加工食，肉身混濁、缺乏孔竅，難以有效代謝。', emoji:'🌀' },
-      BPHV: { code:'BPHV', name:'魃 (The Drought Bringer)', creature:'魃', description:'黃帝之女，所居之處天大旱，寸草不生。將食物視為單純燃料，因忙碌或隨性，高頻攝取超商微波食品、高鈉乾糧與炸物。體內水分逐漸枯竭，濁氣淤塞，生理代謝嚴重紊亂。', insight:'以食物為燃料，高頻吃加工焦炸食，體內枯竭、代謝紊亂。', emoji:'🏜️' },
-      BPLR: { code:'BPLR', name:'精衛 (The Persistent Bird)', creature:'精衛', description:'日夜銜西山木石以湮東海的堅毅之鳥，意志不達目的不罷休。典型的嚴格健身減脂族，為了達成特定生理目標，以非人意志力規律攝取極低負擔的人工煉化補給（雞胸肉、乳清蛋白）。堅毅，但飲食生活極度枯燥。', insight:'規律吃低負擔人工補給，意志堅毅如銜石填海，但生活極度枯燥。', emoji:'🐦' },
-      BPLV: { code:'BPLV', name:'影 (The Shadow Runner)', creature:'影', description:'依附光而生、隨風而動的無形之魅，沒有固定形態。飲食只是「為了活著而應付」，沒有固定用餐時間，常隨手抓超商麵包或代餐棒應付。雖無重油重鹹負擔，但缺乏真食物滋養，生理存在感極其薄弱。', insight:'隨手抓加工輕食應付過活，「為活著而吃」的邊緣存在。', emoji:'👤' },
+      MNHR: { code:'MNHR', name:'玄武 (The Guardian)', creature:'玄武', description:'北方守護神，龜蛇一體，象徵沉穩與長久守護。以心緒安定為飲食核心，規律攝取原型而厚實的食物，透過固定節奏承接較高飽足感。魂、野、煞、曆並行，像以三餐築起一座安定的玄甲。', insight:'以情緒安定為軸，規律吃厚實原型食，用飲食秩序穩住內在。', emoji:'🐢' },
+      MNHV: { code:'MNHV', name:'麒麟 (The Sacred Beast)', creature:'麒麟', description:'仁義瑞獸，象徵祥和與心緒修復。進食多受情緒牽引，時間較隨性，偏向原型而豐盛的食物，身體感受也較厚重。魂、野、煞、幻交織，像一場由心情召喚的盛宴。', insight:'情緒牽引下隨性享用豐盛原型食，療癒感強，也帶來厚重飽足。', emoji:'🦒' },
+      MNLR: { code:'MNLR', name:'白澤 (The Wise Seer)', creature:'白澤', description:'崑崙山上的全知聖獸，通達萬物、辟除邪氣。以心緒穩定為起點，規律攝取清淡原型食物，身體負擔低而節律清明。魂、野、靈、曆成形，是最清澈有序的食緒型格。', insight:'規律吃清淡原型食，心緒清明、身體輕盈，節律穩定。', emoji:'🦄' },
+      MNLV: { code:'MNLV', name:'九尾 (The Spirit Fox)', creature:'九尾', description:'青丘靈狐，九尾象徵變化與流動。飲食跟隨心情起伏，時間不固定，偏向自然清淡、低負擔的原型食物。魂、野、靈、幻流轉，像一縷隨心而行的輕煙。', insight:'跟著心緒流動，隨性吃清淡原型食，輕盈而富變化。', emoji:'🦊' },
+      MPHR: { code:'MPHR', name:'金烏 (The Sun-Bird)', creature:'金烏', description:'三足神鳥，司掌日輪與熱能。以情緒能量為食緒起點，進食節奏規律，偏向加工或精緻補給，身體負擔較高。魂、煉、煞、曆聚成火輪，規律之中仍有厚重熱度。', insight:'規律攝取精緻加工補給，情緒能量充足，也累積較厚重的身體負擔。', emoji:'🦅' },
+      MPHV: { code:'MPHV', name:'饕餮 (The Devourer)', creature:'饕餮', description:'傳說中的吞食之獸，象徵強烈慾念與即時填補。情緒驅動明顯，進食時間流動不定，常偏向加工且高負擔的食物。魂、煉、煞、幻相互推動，如一股難以停歇的食緒漩渦。', insight:'情緒驅動下隨性吃加工重食，滿足感強，身體負擔也明顯。', emoji:'👺' },
+      MPLR: { code:'MPLR', name:'織女 (The Weaver)', creature:'織女', description:'天帝之女，在銀河邊編織雲彩霓裳。以情緒秩序感為飲食核心，規律選擇精緻加工但低負擔的食物，讓心緒與節奏保持細密穩定。魂、煉、靈、曆如絲線交織，形成輕盈而有序的食緒紋理。', insight:'規律吃精緻低負擔食物，用飲食秩序維持心緒穩定。', emoji:'🧵' },
+      MPLV: { code:'MPLV', name:'夢貘 (The Dream Eater)', creature:'夢貘', description:'吞夢之獸，游走於夜色與心緒之間。進食多由情緒牽引，時間較流動，偏向加工但低負擔的食物或簡便補給。魂、煉、靈、幻交錯，像在虛實之間尋找一口安撫。', insight:'情緒牽引下隨性吃低負擔加工食，在流動節奏中安撫心緒。', emoji:'🐘' },
+      BNHR: { code:'BNHR', name:'當康 (The Harvest Boar)', creature:'當康', description:'其鳴自叫，見則豐收，象徵大地的充盈力量。以身體需求為主，規律攝取原型而紮實的食物，帶來明顯飽足與厚重能量。魄、野、煞、曆凝成豐收之相，重在穩定補給。', insight:'以身體需求為先，規律吃紮實原型食，獲得厚實而穩定的補給。', emoji:'🐗' },
+      BNHV: { code:'BNHV', name:'朱厭 (The War Omen)', creature:'朱厭', description:'猿身紅足，象徵衝勢與爆發。以身體需求為主，進食時間較隨性，偏向原型而份量感明顯的食物，帶來較高身體負荷。魄、野、煞、幻並起，像一陣不定時湧現的赤色能量。', insight:'隨身體需求流動，隨性吃厚實原型食，力量感強但負擔也高。', emoji:'🐒' },
+      BNLR: { code:'BNLR', name:'夔 (The Thunder Beast)', creature:'夔', description:'東海獨足神牛，出入伴風雨雷鳴。以身體機能為起點，規律攝取清淡原型食物，身體負擔低而節律穩定。魄、野、靈、曆如雷聲有序，清明而有力。', insight:'以身體機能為先，規律攝取清淡原型食，節律穩定如雷。', emoji:'🐃' },
+      BNLV: { code:'BNLV', name:'夫諸 (The Water Deer)', creature:'夫諸', description:'白鹿四角，象徵清流與柔和感知。以身體需求為主，進食時間較隨性，偏向自然清淡、低負擔的原型食物。魄、野、靈、幻像水流轉向，順著身體訊號前行。', insight:'跟隨身體訊號，隨性吃清淡原型食，清透而流動。', emoji:'🦌' },
+      BPHR: { code:'BPHR', name:'混沌 (The Primal Chaos)', creature:'混沌', description:'天地未開時的混沌之象，厚重而難分。以身體需求為主，進食節奏規律，偏向加工或精緻而負擔較高的食物。魄、煉、煞、曆形成穩定但濃厚的食緒結構。', insight:'規律吃加工厚重食物，補給穩定，但身體負擔偏高。', emoji:'🌀' },
+      BPHV: { code:'BPHV', name:'魃 (The Drought Bringer)', creature:'魃', description:'旱氣之神，象徵乾烈與消耗。以身體需求為主，進食時間較隨性，偏向加工而高負擔的食物，使食緒呈現焦燥厚重之感。魄、煉、煞、幻聚成不定時升起的燥熱。', insight:'身體需求驅動下隨性吃加工重食，補給快速，負擔也較明顯。', emoji:'🏜️' },
+      BPLR: { code:'BPLR', name:'精衛 (The Persistent Bird)', creature:'精衛', description:'銜木填海之鳥，象徵持續與定力。以身體需求為主，規律攝取加工但低負擔的食物或簡便補給，讓節奏保持穩定。魄、煉、靈、曆如反覆銜石，輕量而持續。', insight:'以身體需求為先，規律吃低負擔加工食，節奏穩定而持續。', emoji:'🐦' },
+      BPLV: { code:'BPLV', name:'影 (The Shadow Runner)', creature:'影', description:'依附光而行的影魅，形態流動不定。以身體需求為主，進食時間較隨性，偏向加工但低負擔的簡便食物。魄、煉、靈、幻使食緒輕快而不定，像掠過地面的影。', insight:'跟隨身體需求，隨性吃低負擔加工食，輕快但節奏不固定。', emoji:'👤' },
     };
 
     const CREATURE_IMG = {
@@ -1066,6 +1066,8 @@
       BPLR:'openspec/asset/png/14.png', BPLV:'openspec/asset/png/9.png',
     };
     const BEGIN_AVATAR_IMG = 'openspec/asset/png/begin1.png';
+    const BELL_AUDIO_SRC = 'openspec/changes/bell.mp3';
+    const BACKGROUND_MUSIC_SRC = 'openspec/changes/archive/2026-05-16-dark-theme-ui-unification/backgroundmusic.mp3';
 
     function HatchPortrait({ hatchState, style, className }) {
       const hatched = hatchState?.avatarType;
@@ -2443,7 +2445,46 @@
       });
     };
 
-    const downloadSvgAsPng = async (svg, filename) => {
+    const canvasToCompressedJpeg = async (canvas, maxBytes = 950 * 1024) => {
+      const qualities = [0.86, 0.8, 0.74, 0.68, 0.6];
+      let lastBlob = null;
+      for (const q of qualities) {
+        const blob = await new Promise((resolve, reject) => canvas.toBlob((b) => b ? resolve(b) : reject(new Error('圖片輸出失敗')), 'image/jpeg', q));
+        lastBlob = blob;
+        if (blob.size <= maxBytes) return blob;
+      }
+      return lastBlob;
+    };
+
+    const shareOrDownloadPosterBlob = async (blob, filename) => {
+      const file = new File([blob], filename, { type:'image/jpeg' });
+      if (navigator.share && navigator.canShare?.({ files:[file] })) {
+        try {
+          await navigator.share({
+            title:'食緒曆靈獸顯形',
+            text:'我在食緒曆孵化出自己的食緒靈獸',
+            files:[file],
+          });
+          return;
+        } catch (err) {
+          if (err?.name === 'AbortError') return;
+        }
+      }
+      downloadBlob(blob, filename);
+    };
+
+    const downloadBlob = (blob, filename) => {
+      const a = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1200);
+    };
+
+    const renderPosterSvgToJpeg = async (svg, filename) => {
       const svgBlob = new Blob([svg], { type:'image/svg+xml;charset=utf-8' });
       const svgUrl = URL.createObjectURL(svgBlob);
       try {
@@ -2454,19 +2495,14 @@
           node.src = svgUrl;
         });
         const canvas = document.createElement('canvas');
-        canvas.width = 1080;
-        canvas.height = 1920;
+        canvas.width = 720;
+        canvas.height = 1280;
         const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#100900';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const blob = await new Promise((resolve, reject) => canvas.toBlob((b) => b ? resolve(b) : reject(new Error('圖片輸出失敗')), 'image/png'));
-        const a = document.createElement('a');
-        const pngUrl = URL.createObjectURL(blob);
-        a.href = pngUrl;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(() => URL.revokeObjectURL(pngUrl), 1200);
+        const blob = await canvasToCompressedJpeg(canvas);
+        await shareOrDownloadPosterBlob(blob, filename);
       } finally {
         URL.revokeObjectURL(svgUrl);
       }
@@ -2482,60 +2518,55 @@
       const count = posterXmlEscape((records?.length || 0).toLocaleString());
       const streak = posterXmlEscape(calcStreak(records).toLocaleString());
       const cycle = posterXmlEscape(cycleNumber || 1);
-      const insightLines = wrapPosterText(hatchType.insight, 16, 3);
-      const filename = `foodmood-${hatchType.code || 'creature'}-${Date.now()}.png`;
+      const insightLines = wrapPosterText(hatchType.insight, 18, 2);
+      const filename = `foodmood-${hatchType.code || 'creature'}-${Date.now()}.jpg`;
       const insightSvg = insightLines.map((line, i) =>
-        `<text x="540" y="${1138 + i * 44}" text-anchor="middle" font-size="30" fill="#d9cfa5" font-family="'Noto Serif TC', serif" letter-spacing="2">${posterXmlEscape(line)}</text>`
+        `<text x="360" y="${905 + i * 28}" text-anchor="middle" font-size="19" fill="#d8c48e" font-family="'Noto Serif TC', serif" letter-spacing="1.2">${posterXmlEscape(line)}</text>`
       ).join('');
       const svg = `
-<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1280" viewBox="0 0 720 1280">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#100900"/>
-      <stop offset="0.48" stop-color="#261806"/>
-      <stop offset="1" stop-color="#080500"/>
+      <stop offset="0" stop-color="#090500"/>
+      <stop offset="0.48" stop-color="#241606"/>
+      <stop offset="1" stop-color="#050300"/>
     </linearGradient>
     <radialGradient id="halo" cx="50%" cy="34%" r="48%">
-      <stop offset="0" stop-color="#d4a843" stop-opacity="0.46"/>
-      <stop offset="0.42" stop-color="#8b5a19" stop-opacity="0.22"/>
+      <stop offset="0" stop-color="#d4a843" stop-opacity="0.5"/>
+      <stop offset="0.38" stop-color="#8b5a19" stop-opacity="0.2"/>
       <stop offset="1" stop-color="#000000" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="jade" cx="50%" cy="50%" r="50%">
-      <stop offset="0" stop-color="#95d3c3" stop-opacity="0.22"/>
-      <stop offset="1" stop-color="#95d3c3" stop-opacity="0"/>
-    </radialGradient>
     <clipPath id="portraitClip">
-      <rect x="245" y="420" width="590" height="690" rx="34"/>
+      <rect x="154" y="278" width="412" height="440" rx="28"/>
     </clipPath>
   </defs>
-  <rect width="1080" height="1920" fill="url(#bg)"/>
-  <circle cx="540" cy="650" r="610" fill="url(#halo)"/>
-  <circle cx="540" cy="790" r="420" fill="url(#jade)"/>
-  <path d="M78 84H242M78 84V248M1002 84H838M1002 84V248M78 1836H242M78 1836V1672M1002 1836H838M1002 1836V1672" fill="none" stroke="#95d3c3" stroke-opacity="0.36" stroke-width="3"/>
-  <rect x="58" y="58" width="964" height="1804" rx="34" fill="none" stroke="#d4a843" stroke-opacity="0.26" stroke-width="2"/>
-  <text x="540" y="145" text-anchor="middle" font-size="62" fill="#95d3c3" font-family="'Noto Serif TC', serif" font-weight="900" letter-spacing="22">食緒曆</text>
-  <text x="540" y="198" text-anchor="middle" font-size="22" fill="#d9cfa5" font-family="'JetBrains Mono', monospace" font-weight="700" letter-spacing="8">FOODMOOD CREATURE ARCHIVE</text>
-  <text x="540" y="294" text-anchor="middle" font-size="28" fill="#d98a5b" font-family="'Noto Serif TC', serif" font-weight="700" letter-spacing="8">第 ${cycle} 輪 · 靈獸顯形</text>
-  <rect x="225" y="398" width="630" height="738" rx="42" fill="#160e04" stroke="#95d3c3" stroke-opacity="0.28" stroke-width="4"/>
-  <rect x="245" y="420" width="590" height="690" rx="34" fill="#211607"/>
-  <image href="${creatureImg}" x="245" y="420" width="590" height="690" preserveAspectRatio="xMidYMid meet" clip-path="url(#portraitClip)"/>
-  <rect x="245" y="420" width="590" height="690" rx="34" fill="none" stroke="#d4a843" stroke-opacity="0.36" stroke-width="3"/>
-  <text x="540" y="1245" text-anchor="middle" font-size="88" fill="#fff8df" font-family="'Noto Serif TC', serif" font-weight="900" letter-spacing="8">${creature}</text>
-  <text x="540" y="1310" text-anchor="middle" font-size="38" fill="#95d3c3" font-family="'Noto Serif TC', serif" font-weight="900" letter-spacing="18">${codeCn}</text>
-  <text x="540" y="1364" text-anchor="middle" font-size="22" fill="#bda267" font-family="'JetBrains Mono', monospace" font-weight="700" letter-spacing="7">${posterXmlEscape(hatchType.code)}</text>
+  <rect width="720" height="1280" fill="url(#bg)"/>
+  <circle cx="360" cy="410" r="430" fill="url(#halo)"/>
+  <path d="M54 54H164M54 54V164M666 54H556M666 54V164M54 1226H164M54 1226V1116M666 1226H556M666 1226V1116" fill="none" stroke="#95d3c3" stroke-opacity="0.42" stroke-width="2"/>
+  <rect x="38" y="38" width="644" height="1204" rx="30" fill="none" stroke="#d4a843" stroke-opacity="0.22" stroke-width="1.5"/>
+  <text x="360" y="104" text-anchor="middle" font-size="46" fill="#9fe1ce" font-family="'Noto Serif TC', serif" font-weight="900" letter-spacing="16">食緒曆</text>
+  <text x="360" y="143" text-anchor="middle" font-size="15" fill="#d9cfa5" font-family="'JetBrains Mono', monospace" font-weight="700" letter-spacing="6">FOODMOOD ARCHIVE</text>
+  <text x="360" y="205" text-anchor="middle" font-size="22" fill="#d98a5b" font-family="'Noto Serif TC', serif" font-weight="800" letter-spacing="5">第 ${cycle} 輪 · 靈獸顯形</text>
+  <rect x="134" y="258" width="452" height="480" rx="34" fill="#100900" fill-opacity="0.9" stroke="#95d3c3" stroke-opacity="0.28" stroke-width="3"/>
+  <rect x="154" y="278" width="412" height="440" rx="28" fill="#211607"/>
+  <image href="${creatureImg}" x="154" y="278" width="412" height="440" preserveAspectRatio="xMidYMid meet" clip-path="url(#portraitClip)"/>
+  <rect x="154" y="278" width="412" height="440" rx="28" fill="none" stroke="#d4a843" stroke-opacity="0.36" stroke-width="2"/>
+  <text x="360" y="770" text-anchor="middle" font-size="58" fill="#fff8df" font-family="'Noto Serif TC', serif" font-weight="900" letter-spacing="6">${creature}</text>
+  <text x="360" y="846" text-anchor="middle" font-size="28" fill="#9fe1ce" font-family="'Noto Serif TC', serif" font-weight="900" letter-spacing="14">${codeCn}</text>
+  <text x="360" y="884" text-anchor="middle" font-size="16" fill="#bda267" font-family="'JetBrains Mono', monospace" font-weight="700" letter-spacing="5">${posterXmlEscape(hatchType.code)}</text>
   ${insightSvg}
-  <rect x="126" y="1484" width="828" height="190" rx="28" fill="#0f0900" fill-opacity="0.72" stroke="#95d3c3" stroke-opacity="0.2" stroke-width="2"/>
-  <text x="540" y="1538" text-anchor="middle" font-size="34" fill="#f7ecd2" font-family="'Noto Serif TC', serif" font-weight="900">修行者 · ${nickname}</text>
-  <text x="260" y="1618" text-anchor="middle" font-size="24" fill="#a8c5bf" font-family="'Noto Serif TC', serif" letter-spacing="4">累積功德</text>
-  <text x="260" y="1664" text-anchor="middle" font-size="42" fill="#d4a843" font-family="'Noto Serif TC', serif" font-weight="900">${merit}</text>
-  <text x="540" y="1618" text-anchor="middle" font-size="24" fill="#a8c5bf" font-family="'Noto Serif TC', serif" letter-spacing="4">食緒紀錄</text>
-  <text x="540" y="1664" text-anchor="middle" font-size="42" fill="#d4a843" font-family="'Noto Serif TC', serif" font-weight="900">${count} 筆</text>
-  <text x="820" y="1618" text-anchor="middle" font-size="24" fill="#a8c5bf" font-family="'Noto Serif TC', serif" letter-spacing="4">連續修行</text>
-  <text x="820" y="1664" text-anchor="middle" font-size="42" fill="#d4a843" font-family="'Noto Serif TC', serif" font-weight="900">${streak} 天</text>
-  <text x="540" y="1770" text-anchor="middle" font-size="30" fill="#fff3d6" font-family="'Noto Serif TC', serif" font-weight="900" letter-spacing="4">記錄十餐，孵化你的食緒靈獸</text>
-  <text x="540" y="1818" text-anchor="middle" font-size="22" fill="#95d3c3" fill-opacity="0.72" font-family="'Noto Serif TC', serif" letter-spacing="6">每一餐，都是一場修行</text>
+  <rect x="84" y="938" width="552" height="145" rx="24" fill="#0b0600" fill-opacity="0.82" stroke="#95d3c3" stroke-opacity="0.22" stroke-width="1.5"/>
+  <text x="360" y="984" text-anchor="middle" font-size="27" fill="#fff2d4" font-family="'Noto Serif TC', serif" font-weight="900">修行者 · ${nickname}</text>
+  <text x="180" y="1035" text-anchor="middle" font-size="15" fill="#a8c5bf" font-family="'Noto Serif TC', serif" letter-spacing="3">累積功德</text>
+  <text x="180" y="1071" text-anchor="middle" font-size="34" fill="#d4a843" font-family="'Noto Serif TC', serif" font-weight="900">${merit}</text>
+  <text x="360" y="1035" text-anchor="middle" font-size="15" fill="#a8c5bf" font-family="'Noto Serif TC', serif" letter-spacing="3">食緒紀錄</text>
+  <text x="360" y="1071" text-anchor="middle" font-size="34" fill="#d4a843" font-family="'Noto Serif TC', serif" font-weight="900">${count} 筆</text>
+  <text x="540" y="1035" text-anchor="middle" font-size="15" fill="#a8c5bf" font-family="'Noto Serif TC', serif" letter-spacing="3">連續修行</text>
+  <text x="540" y="1071" text-anchor="middle" font-size="34" fill="#d4a843" font-family="'Noto Serif TC', serif" font-weight="900">${streak} 天</text>
+  <text x="360" y="1163" text-anchor="middle" font-size="24" fill="#fff3d6" font-family="'Noto Serif TC', serif" font-weight="900" letter-spacing="3">記錄十餐，孵化你的食緒靈獸</text>
+  <text x="360" y="1204" text-anchor="middle" font-size="16" fill="#95d3c3" fill-opacity="0.76" font-family="'Noto Serif TC', serif" letter-spacing="4">每一餐，都是一場修行</text>
 </svg>`;
-      await downloadSvgAsPng(svg, filename);
+      await renderPosterSvgToJpeg(svg, filename);
     };
 
     function HatchCelebrationModal({ hatchType, cycleNumber, loginProfile, records = [], onClose }) {
@@ -2608,7 +2639,7 @@
       );
     }
 
-    function HomeView({ records, loginProfile, mealDrafts = [], onContinueDraft, onReviewFortune }) {
+    function HomeView({ records, loginProfile, mealDrafts = [], onContinueDraft, onReviewFortune, onSharePoster, shareBusy }) {
       const hatch = useMemo(() => getHatchState(records), [records]);
       const displayType = hatch.avatarType || hatch.formingType || MBEI_TYPES.MPLR;
       const isUnlocked = hatch.hasHatched;
@@ -2693,8 +2724,28 @@
                   </div>
                 )}
               </div>
+              {hatch.avatarType && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onSharePoster?.(); }}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  disabled={shareBusy}
+                  aria-label="分享靈獸卡"
+                  title="分享靈獸卡"
+                  style={{
+                    width:38, height:38, borderRadius:'50%',
+                    border:'1px solid rgba(149,211,195,0.32)',
+                    background:'linear-gradient(145deg, rgba(149,211,195,0.13), rgba(212,168,67,0.12))',
+                    color:'var(--jade)', display:'flex', alignItems:'center', justifyContent:'center',
+                    cursor: shareBusy ? 'wait' : 'pointer', opacity: shareBusy ? 0.62 : 1, flexShrink:0,
+                    boxShadow:'0 6px 16px rgba(0,0,0,0.25)',
+                  }}
+                >
+                  <ShareIcon size={16} />
+                </button>
+              )}
               {canOpenCreature && (
-                <span style={{ fontSize:18, color:'rgba(149,211,195,0.35)', flexShrink:0, lineHeight:1, paddingLeft:4 }} aria-hidden="true">›</span>
+                <span style={{ fontSize:18, color:'rgba(149,211,195,0.35)', flexShrink:0, lineHeight:1, paddingLeft:0 }} aria-hidden="true">›</span>
               )}
             </div>
             <div style={{ display:'flex', justifyContent:'space-between', marginTop:16, paddingTop:14, borderTop:'1px solid rgba(149,211,195,0.08)' }}>
@@ -3342,7 +3393,7 @@
       );
     }
 
-    function InsightView({ records = [], loginProfile }) {
+    function InsightView({ records = [], loginProfile, onSharePoster, shareBusy }) {
       const [tab, setTab] = useState('personal');
       const [showEncyclopedia, setShowEncyclopedia] = useState(false);
       const [selectedCreature, setSelectedCreature] = useState(null);
@@ -3600,7 +3651,26 @@
                       </div>
                       <div style={{ flex:1, minWidth:0 }}>
                         <p style={{ fontSize:11, color:'var(--jade)', letterSpacing:'0.2em', fontWeight:700, fontFamily:serif, margin:'0 0 8px' }}>第 {hatch.completedCycles} 輪 · 靈獸顯形</p>
-                        <h3 style={{ fontSize:22, fontFamily:serif, fontWeight:900, color:'var(--cream)', margin:'0 0 8px' }}>{hatch.avatarType.name}</h3>
+                        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, margin:'0 0 8px' }}>
+                          <h3 style={{ fontSize:22, fontFamily:serif, fontWeight:900, color:'var(--cream)', margin:0, lineHeight:1.25 }}>{hatch.avatarType.name}</h3>
+                          <button
+                            type="button"
+                            onClick={() => onSharePoster?.()}
+                            disabled={shareBusy}
+                            aria-label="分享靈獸卡"
+                            title="分享靈獸卡"
+                            style={{
+                              width:36, height:36, borderRadius:'50%',
+                              border:'1px solid rgba(149,211,195,0.32)',
+                              background:'linear-gradient(145deg, rgba(149,211,195,0.13), rgba(212,168,67,0.12))',
+                              color:'var(--jade)', display:'flex', alignItems:'center', justifyContent:'center',
+                              cursor: shareBusy ? 'wait' : 'pointer', opacity: shareBusy ? 0.62 : 1, flexShrink:0,
+                              boxShadow:'0 6px 16px rgba(0,0,0,0.25)',
+                            }}
+                          >
+                            <ShareIcon size={15} />
+                          </button>
+                        </div>
                         <span style={{ fontSize:12, color:'var(--sand)', background:'rgba(200,184,138,0.08)', border:'1px solid rgba(200,184,138,0.15)', borderRadius:20, padding:'3px 12px', fontFamily:serif }}>{hatch.avatarType.creature}</span>
                         <p style={{ fontSize:14, color:'var(--sand)', lineHeight:1.8, marginTop:12, borderLeft:'3px solid rgba(217,138,91,0.5)', paddingLeft:12, fontFamily:serif }}>「{hatch.avatarType.insight}」</p>
                       </div>
@@ -4450,6 +4520,16 @@
     const CHARGE_MIN_MS = 2000;
     const DECREE_REVEAL_MS = 1650;
 
+    const playOneShotAudio = (src, volume = 0.75) => {
+      try {
+        const audio = new Audio(src);
+        audio.volume = volume;
+        audio.preload = 'auto';
+        const p = audio.play();
+        if (p?.catch) p.catch(() => {});
+      } catch {}
+    };
+
     function FortuneSlip({ fortune, onClose, recordData, skipEntryFx = false }) {
       const safe = useMemo(() => normalizeFortuneForDisplay(fortune, recordData), [fortune, recordData]);
       const poemLines = (safe.poem || '')
@@ -4579,6 +4659,7 @@
       }, [onClose, ready]);
 
       React.useEffect(() => {
+        playOneShotAudio(BELL_AUDIO_SRC, 0.78);
         if (reduceFx) {
           setReady(true);
           return undefined;
@@ -4658,8 +4739,48 @@
       const prefetchInFlightKeyRef = React.useRef(null);
       const recordPhotoRef = React.useRef(null);
       const submitGuardRef = React.useRef(false);
+      const bgMusicRef = React.useRef(null);
+      const bgMusicStartedRef = React.useRef(false);
       const [submitError, setSubmitError] = useState('');
       const [formData, setFormData] = useState(makeDefaultFormData);
+
+      React.useEffect(() => {
+        const audio = new Audio(BACKGROUND_MUSIC_SRC);
+        audio.loop = true;
+        audio.volume = 0.28;
+        audio.preload = 'auto';
+        bgMusicRef.current = audio;
+
+        const tryStart = () => {
+          if (bgMusicStartedRef.current) return;
+          const p = audio.play();
+          if (p?.then) {
+            p.then(() => { bgMusicStartedRef.current = true; }).catch(() => {});
+          } else {
+            bgMusicStartedRef.current = true;
+          }
+        };
+        const unlockStart = () => {
+          tryStart();
+          window.removeEventListener('pointerdown', unlockStart);
+          window.removeEventListener('keydown', unlockStart);
+          window.removeEventListener('touchstart', unlockStart);
+        };
+
+        tryStart();
+        window.addEventListener('pointerdown', unlockStart, { once:true });
+        window.addEventListener('keydown', unlockStart, { once:true });
+        window.addEventListener('touchstart', unlockStart, { once:true });
+
+        return () => {
+          window.removeEventListener('pointerdown', unlockStart);
+          window.removeEventListener('keydown', unlockStart);
+          window.removeEventListener('touchstart', unlockStart);
+          audio.pause();
+          audio.src = '';
+          bgMusicRef.current = null;
+        };
+      }, []);
 
       React.useEffect(() => {
         if (!splashDone || !loginProfile?.email) return;
@@ -4946,7 +5067,9 @@
             records,
           });
         } catch (err) {
-          setProfileShareError(err?.message || '分享卡產生失敗，請稍後再試');
+          const msg = err?.message || '分享卡產生失敗，請稍後再試';
+          setProfileShareError(msg);
+          if (!showProfilePopup) window.alert(msg);
         } finally {
           setProfileShareBusy(false);
         }
@@ -5018,9 +5141,9 @@
             <main style={{ flex:1, position:'relative', zIndex:10, paddingBottom:120 }}
               className="scrollbar-hide md:pb-24">
               <div style={{ maxWidth:960, margin:'0 auto', padding:'32px 20px' }} className="md:p-12">
-                {activeTab === 'home' && <HomeView records={records} loginProfile={loginProfile} mealDrafts={mealDrafts} onContinueDraft={continueDraft} onReviewFortune={openFortuneReview} />}
+                {activeTab === 'home' && <HomeView records={records} loginProfile={loginProfile} mealDrafts={mealDrafts} onContinueDraft={continueDraft} onReviewFortune={openFortuneReview} onSharePoster={handleProfileSharePoster} shareBusy={profileShareBusy} />}
                 {activeTab === 'almanac' && <AlmanacView records={records} />}
-                {activeTab === 'insight' && <InsightView records={records} loginProfile={loginProfile} />}
+                {activeTab === 'insight' && <InsightView records={records} loginProfile={loginProfile} onSharePoster={handleProfileSharePoster} shareBusy={profileShareBusy} />}
                 {activeTab === 'profile' && <ProfileView records={records} loginProfile={loginProfile} onLogout={handleLogout} />}
               </div>
             </main>
