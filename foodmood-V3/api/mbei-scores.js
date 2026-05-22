@@ -29,6 +29,14 @@ const HL_BASE = {
   '頭重腦慢': 45, '頭昏腦脹': 45, '腸胃不適': 50, '腸胃不舒服': 50,
 };
 
+const BODY_TIER_HL_SCORE = {
+  1: 50,
+  2: 35,
+  3: 15,
+  4: -10,
+  5: -40,
+};
+
 const BODY_FEELING_LEGACY = {
   '輕盈自在': '清爽有神', '活力充沛': '清爽有神', '清爽無負擔': '清爽有神',
   '暖心飽足': '舒服飽足', '舒服滿足': '舒服飽足', '尚未滿足': '意猶未盡',
@@ -61,6 +69,12 @@ const normalizeBodyFeeling = (label) => {
   return BODY_FEELING_LEGACY[label] || null;
 };
 
+const parseBodyTier = (value) => {
+  if (typeof value === 'number' && value >= 1 && value <= 5) return Math.round(value);
+  const match = String(value || '').match(/(?:第\s*)?([1-5])(?:\s*\/\s*5|\s*類)?$/);
+  return match ? Number(match[1]) : null;
+};
+
 const getFoodInput = (recordData) =>
   String(recordData?.whatFood || recordData?.foodEmoji || '').trim();
 
@@ -89,8 +103,9 @@ function scoreMB(recordData) {
 
 /** 維度3：身體負荷 */
 function scoreHL(recordData) {
+  const tier = parseBodyTier(recordData?.bodyTier ?? recordData?.bodyFeeling);
   const label = normalizeBodyFeeling(recordData?.bodyFeeling);
-  let s = label && HL_BASE[label] != null ? HL_BASE[label] : 0;
+  let s = tier ? BODY_TIER_HL_SCORE[tier] : (label && HL_BASE[label] != null ? HL_BASE[label] : 0);
   const food = getFoodInput(recordData);
   if (s > 0 && /油炸|重甜|起司|炸|薯條|披薩|芝士|奶酪|奶茶|全糖|甜甜圈|蛋糕|洋芋|鹹酥/.test(food)) {
     s += 5;

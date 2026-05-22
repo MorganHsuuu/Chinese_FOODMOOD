@@ -42,6 +42,14 @@ const BODY_FEELING_DESC = {
   4: '強烈不適，消化困難',
 };
 
+const BODY_TIER_DESC = {
+  1: '很不舒服，身體負擔明顯',
+  2: '偏不舒服，有沉重或滯脹感',
+  3: '普通，身體略沉但可接受',
+  4: '偏舒服，飽足且負擔不重',
+  5: '很舒服，清爽有神',
+};
+
 const BODY_FEELING_LABEL_DESC = {
   '意猶未盡': '食量未滿，肚子還空空的',
   '清爽有神': '精神好、身體無負擔',
@@ -56,6 +64,12 @@ const BODY_FEELING_H = {
   '輕盈自在': 0, '活力充沛': 0, '清爽無負擔': 0, '暖心飽足': 1, '舒服滿足': 1,
   '尚未滿足': 0, '吃飽想睡': 2, '昏沉想睡': 2, '昏沉腦鈍': 2,
   '頭重腦慢': 3, '頭昏腦脹': 3, '腸胃不適': 4, '腸胃不舒服': 4,
+};
+
+const parseBodyTier = (value) => {
+  if (typeof value === 'number' && value >= 1 && value <= 5) return Math.round(value);
+  const match = String(value || '').match(/(?:第\s*)?([1-5])(?:\s*\/\s*5|\s*類)?$/);
+  return match ? Number(match[1]) : null;
 };
 
 const { mergeMbeiScores } = require('./mbei-scores');
@@ -98,14 +112,16 @@ function buildFortunePrompt(recordData) {
   const moodText = typeof mood === 'number'
     ? ({ 1: '很糟', 2: '不太好', 3: '普通', 4: '還不錯', 5: '很爽' }[mood] || '普通')
     : (mood || '普通');
+  const bodyTier = parseBodyTier(recordData?.bodyTier ?? bodyFeeling);
   const hLevel = BODY_FEELING_H[bodyFeeling] ?? 1;
-  const bodyDesc = BODY_FEELING_LABEL_DESC[bodyFeeling] || BODY_FEELING_DESC[hLevel] || '';
+  const bodyFeelingText = bodyTier ? `第 ${bodyTier}/5 類` : (bodyFeeling || '普通');
+  const bodyDesc = (bodyTier ? BODY_TIER_DESC[bodyTier] : null) || BODY_FEELING_LABEL_DESC[bodyFeeling] || BODY_FEELING_DESC[hLevel] || '';
 
   return `你是掌管靈獸孵化池的「賽博玄學解籤師」。使用者會輸入最直白的飲食紀錄，你需要「自動推算 MBEI 屬性」、「賜予玄幻菜名」，並生成「能量觀測詩籤」。
 
 ## 本次進食資料
 - 食物：${foodName}
-- 爽度與身體感受：${moodText}、${bodyFeeling}（${bodyDesc}）
+- 爽度與身體感受：${moodText}、${bodyFeelingText}（${bodyDesc}）
 - 情境與執念：${context && String(context).trim() ? String(context).trim() : '（未填）'}
 - 進食時間：${mealTime} ${mealType}
 

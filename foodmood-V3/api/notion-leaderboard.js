@@ -13,6 +13,7 @@ const {
   mbeiCodeFromScores,
   buildHatchSnapshot,
   hatchedCodeFromUserRows,
+  parseCreatureCollection,
 } = require('./notion-hatch');
 
 const COL = {
@@ -25,6 +26,7 @@ const COL = {
   email: process.env.NOTION_COL_EMAIL || 'Email',
   nickname: process.env.NOTION_COL_NICKNAME || '暱稱',
   date: process.env.NOTION_COL_DATE || '日期',
+  creatureCollection: process.env.NOTION_COL_CREATURE_COLLECTION || '靈獸圖鑑',
 };
 
 function readNumber(prop) {
@@ -88,7 +90,15 @@ function parseRow(page) {
     meritTotal: readNumber(p[COL.meritTotal]),
     date: readDate(p[COL.date]) || page.created_time || '',
     code: mbeiCodeFromScores(scores),
+    hatchSnapshot: parseCreatureCollection(readText(p[COL.creatureCollection])),
   };
+}
+
+function latestHatchSnapshot(userRows) {
+  return userRows
+    .map((r) => r.hatchSnapshot)
+    .filter(Boolean)
+    .sort((a, b) => (b.recordCount || 0) - (a.recordCount || 0))[0] || null;
 }
 
 function buildLeaderboards(rows, currentEmail) {
@@ -107,7 +117,8 @@ function buildLeaderboards(rows, currentEmail) {
   for (const [key, userRows] of Object.entries(byUser)) {
     const email = normalizeEmail(userRows[0]?.email);
     const hatchedCode = hatchedCodeFromUserRows(userRows);
-    const recordCount = userRows.length;
+    const savedSnap = latestHatchSnapshot(userRows);
+    const recordCount = Math.max(userRows.length, savedSnap?.recordCount || 0);
     let points = 0;
     let latestMeritTotal = null;
     for (const row of userRows) {
@@ -116,20 +127,21 @@ function buildLeaderboards(rows, currentEmail) {
     }
     if (latestMeritTotal != null) points = latestMeritTotal;
 
-    const hatched = recordCount >= HATCH_RECORDS_REQUIRED;
     const snap = buildHatchSnapshot(
       userRows.map((r) => ({ date: r.date, code: r.code })),
     );
+    const hatchSnap = savedSnap || snap;
+    const hatched = !!hatchSnap.hatched || recordCount >= HATCH_RECORDS_REQUIRED;
     personalMap[key] = {
       email,
       name: userRows.find((r) => r.nickname)?.nickname || email.split('@')[0] || '修行者',
       points,
-      code: hatched ? (hatchedCode || snap.creatureCode || 'MPLR') : null,
+      code: hatched ? (hatchSnap.creatureCode || hatchedCode || snap.creatureCode || 'MPLR') : null,
       recordCount,
       hatched,
-      hatchCycles: snap.hatchCycles,
-      unlockedCodes: snap.unlockedCodes,
-      hatchedCreatures: snap.hatchedCreatures,
+      hatchCycles: hatchSnap.hatchCycles,
+      unlockedCodes: hatchSnap.unlockedCodes,
+      hatchedCreatures: hatchSnap.hatchedCreatures,
     };
   }
 
@@ -144,17 +156,20 @@ function buildLeaderboards(rows, currentEmail) {
 
   const characterMap = {};
   for (const u of Object.values(personalMap)) {
-    if (!u.hatched || !u.code) continue;
-    if (!characterMap[u.code]) {
-      characterMap[u.code] = {
-        code: u.code,
-        name: MBEI_NAMES[u.code] || u.code,
-        userCount: 0,
-        points: 0,
-      };
+    if (!u.hatched) continue;
+    const codes = [...new Set((u.unlockedCodes?.length ? u.unlockedCodes : [u.code]).filter(Boolean))];
+    for (const code of codes) {
+      if (!characterMap[code]) {
+        characterMap[code] = {
+          code,
+          name: MBEI_NAMES[code] || code,
+          userCount: 0,
+          points: 0,
+        };
+      }
+      characterMap[code].userCount += 1;
+      characterMap[code].points += u.points;
     }
-    characterMap[u.code].userCount += 1;
-    characterMap[u.code].points += u.points;
   }
 
   const mbei = Object.values(characterMap)
@@ -176,6 +191,7 @@ module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Cache-Control', 'no-store, max-age=0');
 
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });

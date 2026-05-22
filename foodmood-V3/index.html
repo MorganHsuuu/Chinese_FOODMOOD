@@ -1081,7 +1081,7 @@
       );
     }
 
-    // hLevel: 0=極輕盈 1=舒適 2=略沉 3=沉重 4=強烈不適
+    // hLevel 是舊版身體反應強度：0=極輕盈 1=舒適 2=略沉 3=沉重 4=強烈不適；新版 bodyTier 則維持左差右好。
     /** 上三下三，由左至右：意猶未盡 → 平衡 → 身體反應 */
     const BODY_FEELING_OPTIONS = [
       { label:'意猶未盡', emoji:'🥢', hint:'肚子還空空的', n:false, hLevel:0, group:'unsatisfied' },
@@ -1099,7 +1099,6 @@
       '頭重腦慢': '油膩發脹', '頭昏腦脹': '油膩發脹',
       '腸胃不適': '腸胃作怪', '腸胃不舒服': '腸胃作怪',
     };
-    const BODY_FEELING_DESC = ['身體極輕盈，能量充沛', '身體舒適，無明顯負擔', '身體略沉，有些倦意', '明顯沉重，腦袋混沌', '強烈不適，消化困難'];
     const normalizeBodyFeeling = (label) => {
       if (!label) return null;
       if (BODY_FEELING_OPTIONS.some((o) => o.label === label)) return label;
@@ -1124,29 +1123,35 @@
       5: { label: '很爽', score: 5 },
     };
     const BODY_TIER_META = {
-      1: { label: '很不舒服', feeling: '腸胃作怪' },
-      2: { label: '偏不舒服', feeling: '油膩發脹' },
-      3: { label: '普通', feeling: '舒服飽足' },
-      4: { label: '偏舒服', feeling: '舒服飽足' },
-      5: { label: '很舒服', feeling: '清爽有神' },
+      1: { label: '很不舒服', hlScore: 50 },
+      2: { label: '偏不舒服', hlScore: 35 },
+      3: { label: '普通', hlScore: 15 },
+      4: { label: '偏舒服', hlScore: -10 },
+      5: { label: '很舒服', hlScore: -40 },
     };
 
     const moodPctToTier = (pct) => quintileTierFromPct(pct);
     const moodPctToMeta = (pct) => MOOD_TIER_META[moodPctToTier(pct)] || MOOD_TIER_META[3];
     const bodyPctToTier = (pct) => quintileTierFromPct(pct);
     const bodyPctToMeta = (pct) => BODY_TIER_META[bodyPctToTier(pct)] || BODY_TIER_META[3];
-    const bodyComfortToLabel = (pct) => bodyPctToMeta(pct).feeling;
-    const bodyFeelingToComfort = (label) => {
-      const n = normalizeBodyFeeling(label);
-      const entry = Object.entries(BODY_TIER_META).find(([, m]) => m.feeling === n);
-      if (entry) return tierCenterPct(Number(entry[0]));
-      const legacy = { '意猶未盡': 30, '碳水倒流': 30 };
-      return legacy[n] ?? null;
+    const bodyComfortToLabel = (pct) => bodyPctToTier(pct);
+    const parseBodyTier = (value) => {
+      if (typeof value === 'number' && value >= 1 && value <= 5) return Math.round(value);
+      const m = String(value || '').match(/(?:第\s*)?([1-5])(?:\s*\/\s*5|\s*類)?$/);
+      return m ? Number(m[1]) : null;
     };
-    const getBodyFeelingOption = (label) => {
-      const canon = normalizeBodyFeeling(label);
-      return BODY_FEELING_OPTIONS.find((o) => o.label === canon) || null;
+    const bodyFeelingToComfort = (value) => {
+      const tier = parseBodyTier(value);
+      if (tier) return tierCenterPct(tier);
+      const n = normalizeBodyFeeling(value);
+      const legacyTier = { '腸胃作怪': 1, '油膩發脹': 2, '碳水倒流': 3, '舒服飽足': 4, '意猶未盡': 4, '清爽有神': 5 };
+      return legacyTier[n] ? tierCenterPct(legacyTier[n]) : null;
     };
+    const bodyTierDisplay = (tier) => {
+      const t = parseBodyTier(tier);
+      return t ? `第 ${t}/5 類` : '';
+    };
+    const formatRecordBodyFeeling = (record) => bodyTierDisplay(record?.bodyTier ?? record?.bodyFeeling) || record?.bodyFeeling || '';
     const MOTIVATION_OPTIONS = [
       { label:'情緒驅動', emoji:'💭', desc:'需要安慰、獎勵、排解情緒', mbei:'M' },
       { label:'身體需要', emoji:'💪', desc:'真的餓、補充體力、維持機能', mbei:'B' },
@@ -1169,7 +1174,7 @@
         moodScore: moodMeta ? moodMeta.score : (typeof fd.mood === 'number' ? fd.mood : null),
         bodyComfort: bodyPct,
         bodyTier: bodyMeta ? bodyPctToTier(bodyPct) : null,
-        bodyFeeling: bodyMeta ? bodyMeta.feeling : fd.bodyFeeling,
+        bodyFeeling: bodyMeta ? bodyPctToTier(bodyPct) : parseBodyTier(fd.bodyFeeling),
         bodyLabel: bodyMeta ? bodyMeta.label : fd.bodyFeeling,
       };
     };
@@ -1249,8 +1254,9 @@
       return clampMbeiScore(-s);
     };
     const scoreHLFromRecord = (data) => {
+      const tier = parseBodyTier(data.bodyTier ?? data.bodyFeeling) || (typeof data.bodyComfort === 'number' ? bodyPctToTier(data.bodyComfort) : null);
       const label = normalizeBodyFeeling(data.bodyFeeling) || data.bodyFeeling;
-      let s = HL_BASE_SCORE[label] ?? 0;
+      let s = tier ? BODY_TIER_META[tier].hlScore : (HL_BASE_SCORE[label] ?? 0);
       const food = (data.whatFood || data.foodEmoji || '').trim();
       if (s > 0 && /油炸|重甜|起司|炸|薯條|披薩|芝士|奶酪|奶茶|全糖|甜甜圈|蛋糕|洋芋|鹹酥/.test(food)) s += 5;
       return clampMbeiScore(s);
@@ -1535,7 +1541,7 @@
     const fetchNotionLeaderboard = async (email) => {
       try {
         const q = email ? `?email=${encodeURIComponent(email)}` : '';
-        const res = await fetch(`/api/notion-leaderboard${q}`);
+        const res = await fetch(`/api/notion-leaderboard${q}`, { cache: 'no-store' });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) return { ok: false, error: data.error || `排行榜載入失敗 (${res.status})` };
         return {
@@ -1622,7 +1628,7 @@
     const buildFortuneKey = (data) => {
       const f = feelingsFromForm(data);
       const moodText = f.mood || '';
-      return [data.whatFood?.trim(), data.mealType, moodText, f.bodyFeeling, data.mealTime, (data.context || '').trim()].join('§');
+      return [data.whatFood?.trim(), data.mealType, moodText, f.bodyTier, data.mealTime, (data.context || '').trim()].join('§');
     };
 
     const determineMBEI = (data) => {
@@ -1630,9 +1636,9 @@
       let mbei = '';
       const moodNum = parseMoodToNumber(f.moodScore ?? data.mood);
       mbei += (data.context && data.context.trim()) || moodNum >= 4 ? 'M' : 'B';
-      const bfOpt = getBodyFeelingOption(f.bodyFeeling) || { n: false, hLevel: 1 };
-      mbei += bfOpt.n ? 'N' : 'P';
-      mbei += bfOpt.hLevel >= 2 ? 'H' : 'L';
+      const bodyTier = f.bodyTier || 3;
+      mbei += bodyTier >= 4 ? 'N' : 'P';
+      mbei += bodyTier <= 3 ? 'H' : 'L';
       const hour = parseInt((data.mealTime || '12:00').split(':')[0], 10);
       const isV = data.mealType === '宵夜' ||
         (data.mealType === '早餐' && (hour < 6 || hour >= 10)) ||
@@ -1711,6 +1717,7 @@
     const ZapIcon = ({ size=18 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>;
     const CoffeeIcon = ({ size=12 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/></svg>;
     const CameraIcon = ({ size=20 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>;
+    const ShareIcon = ({ size=18 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.59 13.51 6.83 3.98"/><path d="m15.41 6.51-6.82 3.98"/></svg>;
 
     // ── Small shared components ──
     function SidebarButton({ icon: Icon, label, active, onClick }) {
@@ -2405,9 +2412,148 @@
       );
     }
 
-    function HatchCelebrationModal({ hatchType, cycleNumber, onClose }) {
+    const posterXmlEscape = (value) => String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+
+    const wrapPosterText = (text, maxChars = 15, maxLines = 3) => {
+      const src = String(text || '').replace(/[「」]/g, '').trim();
+      if (!src) return [];
+      const out = [];
+      for (let i = 0; i < src.length && out.length < maxLines; i += maxChars) {
+        let line = src.slice(i, i + maxChars);
+        if (i + maxChars < src.length && out.length === maxLines - 1) line = `${line.slice(0, Math.max(1, maxChars - 1))}…`;
+        out.push(line);
+      }
+      return out;
+    };
+
+    const assetToDataUrl = async (src) => {
+      const url = new URL(src, window.location.href).href;
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) throw new Error('角色圖載入失敗');
+      const blob = await res.blob();
+      return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    };
+
+    const downloadSvgAsPng = async (svg, filename) => {
+      const svgBlob = new Blob([svg], { type:'image/svg+xml;charset=utf-8' });
+      const svgUrl = URL.createObjectURL(svgBlob);
+      try {
+        const img = await new Promise((resolve, reject) => {
+          const node = new Image();
+          node.onload = () => resolve(node);
+          node.onerror = () => reject(new Error('分享卡產生失敗'));
+          node.src = svgUrl;
+        });
+        const canvas = document.createElement('canvas');
+        canvas.width = 1080;
+        canvas.height = 1920;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const blob = await new Promise((resolve, reject) => canvas.toBlob((b) => b ? resolve(b) : reject(new Error('圖片輸出失敗')), 'image/png'));
+        const a = document.createElement('a');
+        const pngUrl = URL.createObjectURL(blob);
+        a.href = pngUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(pngUrl), 1200);
+      } finally {
+        URL.revokeObjectURL(svgUrl);
+      }
+    };
+
+    const saveHatchSharePoster = async ({ hatchType, cycleNumber, loginProfile, records }) => {
+      if (!hatchType) return;
+      const creatureImg = await assetToDataUrl(CREATURE_IMG[hatchType.code] || BEGIN_AVATAR_IMG);
+      const nickname = posterXmlEscape(loginProfile?.nickname || '修行者');
+      const creature = posterXmlEscape(hatchType.creature || '');
+      const codeCn = posterXmlEscape(mbeiCodeToChinese(hatchType.code));
+      const merit = posterXmlEscape(calcMeritTotal(records).toLocaleString());
+      const count = posterXmlEscape((records?.length || 0).toLocaleString());
+      const streak = posterXmlEscape(calcStreak(records).toLocaleString());
+      const cycle = posterXmlEscape(cycleNumber || 1);
+      const insightLines = wrapPosterText(hatchType.insight, 16, 3);
+      const filename = `foodmood-${hatchType.code || 'creature'}-${Date.now()}.png`;
+      const insightSvg = insightLines.map((line, i) =>
+        `<text x="540" y="${1138 + i * 44}" text-anchor="middle" font-size="30" fill="#d9cfa5" font-family="'Noto Serif TC', serif" letter-spacing="2">${posterXmlEscape(line)}</text>`
+      ).join('');
+      const svg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#100900"/>
+      <stop offset="0.48" stop-color="#261806"/>
+      <stop offset="1" stop-color="#080500"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="50%" cy="34%" r="48%">
+      <stop offset="0" stop-color="#d4a843" stop-opacity="0.46"/>
+      <stop offset="0.42" stop-color="#8b5a19" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="jade" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#95d3c3" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#95d3c3" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="portraitClip">
+      <rect x="245" y="420" width="590" height="690" rx="34"/>
+    </clipPath>
+  </defs>
+  <rect width="1080" height="1920" fill="url(#bg)"/>
+  <circle cx="540" cy="650" r="610" fill="url(#halo)"/>
+  <circle cx="540" cy="790" r="420" fill="url(#jade)"/>
+  <path d="M78 84H242M78 84V248M1002 84H838M1002 84V248M78 1836H242M78 1836V1672M1002 1836H838M1002 1836V1672" fill="none" stroke="#95d3c3" stroke-opacity="0.36" stroke-width="3"/>
+  <rect x="58" y="58" width="964" height="1804" rx="34" fill="none" stroke="#d4a843" stroke-opacity="0.26" stroke-width="2"/>
+  <text x="540" y="145" text-anchor="middle" font-size="62" fill="#95d3c3" font-family="'Noto Serif TC', serif" font-weight="900" letter-spacing="22">食緒曆</text>
+  <text x="540" y="198" text-anchor="middle" font-size="22" fill="#d9cfa5" font-family="'JetBrains Mono', monospace" font-weight="700" letter-spacing="8">FOODMOOD CREATURE ARCHIVE</text>
+  <text x="540" y="294" text-anchor="middle" font-size="28" fill="#d98a5b" font-family="'Noto Serif TC', serif" font-weight="700" letter-spacing="8">第 ${cycle} 輪 · 靈獸顯形</text>
+  <rect x="225" y="398" width="630" height="738" rx="42" fill="#160e04" stroke="#95d3c3" stroke-opacity="0.28" stroke-width="4"/>
+  <rect x="245" y="420" width="590" height="690" rx="34" fill="#211607"/>
+  <image href="${creatureImg}" x="245" y="420" width="590" height="690" preserveAspectRatio="xMidYMid meet" clip-path="url(#portraitClip)"/>
+  <rect x="245" y="420" width="590" height="690" rx="34" fill="none" stroke="#d4a843" stroke-opacity="0.36" stroke-width="3"/>
+  <text x="540" y="1245" text-anchor="middle" font-size="88" fill="#fff8df" font-family="'Noto Serif TC', serif" font-weight="900" letter-spacing="8">${creature}</text>
+  <text x="540" y="1310" text-anchor="middle" font-size="38" fill="#95d3c3" font-family="'Noto Serif TC', serif" font-weight="900" letter-spacing="18">${codeCn}</text>
+  <text x="540" y="1364" text-anchor="middle" font-size="22" fill="#bda267" font-family="'JetBrains Mono', monospace" font-weight="700" letter-spacing="7">${posterXmlEscape(hatchType.code)}</text>
+  ${insightSvg}
+  <rect x="126" y="1484" width="828" height="190" rx="28" fill="#0f0900" fill-opacity="0.72" stroke="#95d3c3" stroke-opacity="0.2" stroke-width="2"/>
+  <text x="540" y="1538" text-anchor="middle" font-size="34" fill="#f7ecd2" font-family="'Noto Serif TC', serif" font-weight="900">修行者 · ${nickname}</text>
+  <text x="260" y="1618" text-anchor="middle" font-size="24" fill="#a8c5bf" font-family="'Noto Serif TC', serif" letter-spacing="4">累積功德</text>
+  <text x="260" y="1664" text-anchor="middle" font-size="42" fill="#d4a843" font-family="'Noto Serif TC', serif" font-weight="900">${merit}</text>
+  <text x="540" y="1618" text-anchor="middle" font-size="24" fill="#a8c5bf" font-family="'Noto Serif TC', serif" letter-spacing="4">食緒紀錄</text>
+  <text x="540" y="1664" text-anchor="middle" font-size="42" fill="#d4a843" font-family="'Noto Serif TC', serif" font-weight="900">${count} 筆</text>
+  <text x="820" y="1618" text-anchor="middle" font-size="24" fill="#a8c5bf" font-family="'Noto Serif TC', serif" letter-spacing="4">連續修行</text>
+  <text x="820" y="1664" text-anchor="middle" font-size="42" fill="#d4a843" font-family="'Noto Serif TC', serif" font-weight="900">${streak} 天</text>
+  <text x="540" y="1770" text-anchor="middle" font-size="30" fill="#fff3d6" font-family="'Noto Serif TC', serif" font-weight="900" letter-spacing="4">記錄十餐，孵化你的食緒靈獸</text>
+  <text x="540" y="1818" text-anchor="middle" font-size="22" fill="#95d3c3" fill-opacity="0.72" font-family="'Noto Serif TC', serif" letter-spacing="6">每一餐，都是一場修行</text>
+</svg>`;
+      await downloadSvgAsPng(svg, filename);
+    };
+
+    function HatchCelebrationModal({ hatchType, cycleNumber, loginProfile, records = [], onClose }) {
       if (!hatchType) return null;
       const serif = "'Noto Serif TC',serif";
+      const [shareBusy, setShareBusy] = React.useState(false);
+      const [shareError, setShareError] = React.useState('');
+      const handleSaveShare = async () => {
+        setShareError('');
+        setShareBusy(true);
+        try {
+          await saveHatchSharePoster({ hatchType, cycleNumber, loginProfile, records });
+        } catch (err) {
+          setShareError(err?.message || '分享卡產生失敗，請稍後再試');
+        } finally {
+          setShareBusy(false);
+        }
+      };
       return (
         <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center sm:p-4 record-overlay-veil" onClick={onClose}>
           <div className="record-sacred-flash" aria-hidden="true" style={{ position:'fixed', inset:0, borderRadius:0, pointerEvents:'none' }} />
@@ -2433,6 +2579,26 @@
               <p style={{ fontSize:11, color:'var(--mist)', fontFamily:serif, margin:0, lineHeight:1.6 }}>你的頭像已更新為此靈獸。再記滿 {HATCH_RECORDS_REQUIRED} 次將孵化下一隻。</p>
             </div>
             <div className="result-modal-footer shrink-0 px-5 pb-4 sm:px-8 sm:pb-6">
+              <button
+                type="button"
+                onClick={handleSaveShare}
+                disabled={shareBusy}
+                className="w-full py-3 rounded-[5px] font-bold text-sm mb-2"
+                style={{
+                  background:'linear-gradient(135deg, rgba(149,211,195,0.16) 0%, rgba(212,168,67,0.18) 52%, rgba(149,211,195,0.1) 100%)',
+                  border:'1px solid rgba(149,211,195,0.42)',
+                  color:'var(--jade)',
+                  fontFamily:serif,
+                  letterSpacing:'0.12em',
+                  opacity: shareBusy ? 0.65 : 1,
+                  cursor: shareBusy ? 'wait' : 'pointer',
+                }}
+              >
+                {shareBusy ? '正在煉製分享卡…' : '儲存分享卡'}
+              </button>
+              {shareError && (
+                <p style={{ fontSize:11, color:'var(--blush)', fontFamily:serif, margin:'0 0 8px', lineHeight:1.5 }}>{shareError}</p>
+              )}
               <button type="button" onClick={onClose} className="inject-btn w-full text-white py-3 rounded-[5px] font-bold text-sm" style={{ background:'linear-gradient(135deg,#1a1208 0%,#2d2010 50%,#1a1208 100%)', border:'1px solid rgba(212,168,67,0.35)', fontFamily:serif }}>
                 承接靈獸之力
               </button>
@@ -2626,7 +2792,7 @@
                             </div>
                             <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                               <span style={{ fontSize:12, color: moodColor[r.mood] || 'var(--sand)', background:'rgba(149,211,195,0.07)', border:'1px solid rgba(149,211,195,0.12)', borderRadius:20, padding:'2px 10px' }}>{r.mood}</span>
-                              <span style={{ fontSize:12, color:'var(--sand)', background:'rgba(200,184,138,0.08)', border:'1px solid rgba(200,184,138,0.15)', borderRadius:20, padding:'2px 10px' }}>{r.bodyFeeling}</span>
+                              <span style={{ fontSize:12, color:'var(--sand)', background:'rgba(200,184,138,0.08)', border:'1px solid rgba(200,184,138,0.15)', borderRadius:20, padding:'2px 10px' }}>{formatRecordBodyFeeling(r)}</span>
                               {r.context && <span style={{ fontSize:12, color:'var(--mist)', background:'rgba(168,197,191,0.06)', border:'1px solid rgba(168,197,191,0.1)', borderRadius:20, padding:'2px 10px' }}>{r.context}</span>}
                             </div>
                             {expandedRecordId === r.id && <MBEIBars mbeiCode={r.mbeiCode} mbeiScores={r.mbeiScores || r.fortune?.mbei_scores} />}
@@ -2850,7 +3016,7 @@
                   <div className="flex items-center gap-2 text-xs font-bold text-muted">
                     <span className="text-forest">心情：{r.mood}</span>
                     <span className="text-stroke font-normal">|</span>
-                    <span>{r.bodyFeeling}</span>
+                    <span>{formatRecordBodyFeeling(r)}</span>
                   </div>
                   {r.fortune?.main_title && (
                     <p className="text-xs text-muted/70 font-serif pt-0.5">「{r.fortune.main_title}」</p>
@@ -4139,12 +4305,11 @@
                       : null}
                     onChange={(v) => {
                       const pct = Math.round(v);
-                      const meta = bodyPctToMeta(pct);
                       setFormData((prev) => ({
                         ...prev,
                         bodyComfort: pct,
                         bodyTier: bodyPctToTier(pct),
-                        bodyFeeling: meta.feeling,
+                        bodyFeeling: bodyPctToTier(pct),
                       }));
                     }}
                   />
@@ -4483,6 +4648,8 @@
       const [hatchCelebration, setHatchCelebration] = useState(null);
       const [latestRecord, setLatestRecord] = useState(null);
       const [reviewRecord, setReviewRecord] = useState(null);
+      const [profileShareBusy, setProfileShareBusy] = useState(false);
+      const [profileShareError, setProfileShareError] = useState('');
       const [records, setRecords] = useState(() => {
         const activeEmail = localStorage.getItem(ACTIVE_USER_KEY);
         return activeEmail ? loadUserRecords(activeEmail) : [];
@@ -4507,7 +4674,7 @@
 
       const fortunePayloadFromForm = (data) => {
         const f = feelingsFromForm(data);
-        return { ...data, whatFood: data.whatFood.trim(), mood: f.mood, bodyFeeling: f.bodyFeeling };
+        return { ...data, whatFood: data.whatFood.trim(), mood: f.mood, bodyFeeling: f.bodyFeeling, bodyTier: f.bodyTier };
       };
 
       const scheduleFortunePrefetch = (data) => {
@@ -4766,6 +4933,25 @@
         setReviewRecord(record);
       };
 
+      const handleProfileSharePoster = async () => {
+        const hs = getHatchState(records);
+        if (!hs.avatarType || profileShareBusy) return;
+        setProfileShareError('');
+        setProfileShareBusy(true);
+        try {
+          await saveHatchSharePoster({
+            hatchType: hs.avatarType,
+            cycleNumber: hs.completedCycles,
+            loginProfile,
+            records,
+          });
+        } catch (err) {
+          setProfileShareError(err?.message || '分享卡產生失敗，請稍後再試');
+        } finally {
+          setProfileShareBusy(false);
+        }
+      };
+
       const recordInitialPhase = recordMode === 'continue' ? 'feelings' : recordMode === 'early' ? 'food' : 'all';
 
       if (!splashDone) return <LoginGate onLogin={handleLogin} existingProfile={loginProfile} />;
@@ -4898,6 +5084,8 @@
               <HatchCelebrationModal
                 hatchType={hatchCelebration.type}
                 cycleNumber={hatchCelebration.cycle}
+                loginProfile={loginProfile}
+                records={records}
                 onClose={() => {
                   setHatchCelebration(null);
                   if (latestRecord) {
@@ -4938,7 +5126,7 @@
                     <div style={{ width:44, height:4, borderRadius:2, background:'rgba(149,211,195,0.25)', margin:'0 auto 24px' }} />
 
                     {/* 生物圖 + 基本資訊 */}
-                    <div style={{ display:'flex', gap:20, alignItems:'center', marginBottom:24 }}>
+                    <div style={{ display:'flex', gap:20, alignItems:'center', marginBottom: profileShareError ? 8 : 24 }}>
                       <div style={{ width:80, height:100, borderRadius:8, overflow:'hidden', border:'3px solid rgba(149,211,195,0.25)', background:'var(--paper)', flexShrink:0, boxShadow:'0 4px 16px rgba(0,0,0,0.4)' }}>
                         <HatchPortrait hatchState={hs} />
                       </div>
@@ -4957,7 +5145,34 @@
                           {!hs.avatarType && `${hs.progressInCycle}/${HATCH_RECORDS_REQUIRED} 筆`}
                         </p>
                       </div>
+                      {hs.avatarType && (
+                        <button
+                          type="button"
+                          onClick={handleProfileSharePoster}
+                          disabled={profileShareBusy}
+                          aria-label="儲存分享卡"
+                          title="儲存分享卡"
+                          style={{
+                            width:42, height:42, borderRadius:'50%',
+                            border:'1px solid rgba(149,211,195,0.34)',
+                            background:'linear-gradient(145deg, rgba(149,211,195,0.14), rgba(212,168,67,0.12))',
+                            color:'var(--jade)',
+                            display:'flex', alignItems:'center', justifyContent:'center',
+                            cursor: profileShareBusy ? 'wait' : 'pointer',
+                            opacity: profileShareBusy ? 0.62 : 1,
+                            boxShadow:'0 6px 18px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.05)',
+                            flexShrink:0,
+                          }}
+                        >
+                          <ShareIcon size={17} />
+                        </button>
+                      )}
                     </div>
+                    {profileShareError && (
+                      <p style={{ fontSize:11, color:'var(--blush)', fontFamily:"'Noto Serif TC',serif", margin:'0 0 16px', lineHeight:1.5, textAlign:'center' }}>
+                        {profileShareError}
+                      </p>
+                    )}
 
                     {/* 功德 / 連續 數字 */}
                     <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:24 }}>

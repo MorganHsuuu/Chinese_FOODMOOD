@@ -313,7 +313,7 @@ function buildProperties(record, user, meritTotal, schema, { includeDemographics
   set('time', record.mealTime || record.time);
   set('mealType', record.mealType);
   set('mood', record.moodScore ?? record.mood, { preferNumber: true });
-  set('bodyFeeling', record.bodyFeeling);
+  set('bodyFeeling', record.bodyTier ?? record.bodyFeeling, { preferNumber: true });
   if (record.moodTier != null) set('moodTier', record.moodTier);
   if (record.bodyTier != null) set('bodyTier', record.bodyTier);
   if (record.moodSlider != null) set('moodSlider', record.moodSlider);
