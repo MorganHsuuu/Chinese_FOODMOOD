@@ -157,7 +157,7 @@ function buildLeaderboards(rows, currentEmail) {
   const characterMap = {};
   for (const u of Object.values(personalMap)) {
     if (!u.hatched) continue;
-    const codes = [...new Set((u.unlockedCodes?.length ? u.unlockedCodes : [u.code]).filter(Boolean))];
+    const codes = [...new Set([...(u.unlockedCodes || []), u.code].filter(Boolean))];
     for (const code of codes) {
       if (!characterMap[code]) {
         characterMap[code] = {

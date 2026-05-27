@@ -1060,9 +1060,9 @@
       MNLR:'openspec/asset/png/3.png',  MNLV:'openspec/asset/png/4.png',
       MPHR:'openspec/asset/png/2.png',  MPHV:'openspec/asset/png/1.png',
       MPLR:'openspec/asset/png/5.png',  MPLV:'openspec/asset/png/6.png',
-      BNHR:'openspec/asset/png/11.png', BNHV:'openspec/asset/png/16.png',
-      BNLR:'openspec/asset/png/12.png', BNLV:'openspec/asset/png/15.png',
-      BPHR:'openspec/asset/png/13.png', BPHV:'openspec/asset/png/10.png',
+      BNHR:'openspec/asset/png/11.png', BNHV:'openspec/asset/png/13.png',
+      BNLR:'openspec/asset/png/16.png', BNLV:'openspec/asset/png/15.png',
+      BPHR:'openspec/asset/png/12.png', BPHV:'openspec/asset/png/10.png',
       BPLR:'openspec/asset/png/14.png', BPLV:'openspec/asset/png/9.png',
     };
     const BEGIN_AVATAR_IMG = 'openspec/asset/png/begin1.png';
@@ -3964,15 +3964,28 @@
       }, [notionPersonal, loginProfile, records, hatch, latestType.code]);
 
       const mbeiLeaderboard = useMemo(() => {
-        return notionMbei
+        const rows = [...notionMbei];
+        const localCode = hatch.hasHatched ? hatch.avatarType?.code : null;
+        if (localCode && !rows.some((u) => u.code === localCode)) {
+          rows.push({
+            code: localCode,
+            name: MBEI_TYPES[localCode]?.creature || localCode,
+            userCount: 1,
+            points: calcMeritTotal(records),
+            scoreLabel: '修行者人數',
+            isUser: true,
+          });
+        }
+        return rows
           .filter((u) => (u.userCount || u.points || 0) > 0)
+          .sort((a, b) => (b.userCount || 0) - (a.userCount || 0) || (b.points || 0) - (a.points || 0))
           .map((u, i) => ({
             ...u,
             rank: i + 1,
             name: MBEI_TYPES[u.code]?.creature || u.name,
             scoreLabel: u.scoreLabel || '修行者人數',
           }));
-      }, [notionMbei]);
+      }, [notionMbei, hatch.hasHatched, hatch.avatarType?.code, records]);
 
       const board = rankTab === 'personal' ? personalLeaderboard : mbeiLeaderboard;
 
