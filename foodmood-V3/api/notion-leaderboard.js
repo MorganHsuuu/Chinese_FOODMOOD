@@ -203,10 +203,23 @@ function buildLeaderboards(rows, currentEmail) {
           name: MBEI_NAMES[code] || code,
           userCount: 0,
           points: 0,
+          users: [],
         };
       }
       characterMap[code].userCount += 1;
       characterMap[code].points += u.points;
+      characterMap[code].users.push({
+        email: u.email,
+        name: u.name,
+        points: u.points,
+        code: u.code,
+        hatched: u.hatched,
+        recordCount: u.recordCount,
+        hatchCycles: u.hatchCycles,
+        isCurrent: u.code === code,
+        isUser: current && u.email === current,
+        recentMeals: u.recentMeals,
+      });
     }
   }
 

@@ -2095,7 +2095,7 @@
                 <XIcon size={18} />
               </button>
             </div>
-            <div className="overflow-y-auto max-h-[calc(min(92dvh,640px)-76px)] px-5 py-4 pb-[max(20px,env(safe-area-inset-bottom))] space-y-4 scrollbar-hide">
+            <div className="overflow-y-auto max-h-[calc(min(92dvh,640px)-76px)] px-5 pt-4 pb-[calc(96px+env(safe-area-inset-bottom))] sm:pb-5 space-y-4 scrollbar-hide">
               <div className="rounded-xl border border-jade/20 bg-black/25 p-4 flex gap-4 items-center">
                 <div style={{ width:82, height:104, borderRadius:8, overflow:'hidden', flexShrink:0, border:'1px solid rgba(149,211,195,0.24)', background:'rgba(255,255,255,0.04)' }}>
                   <img src={creature ? CREATURE_IMG[creature.code] : BEGIN_AVATAR_IMG} alt={creature?.creature || '靈獸待孵化'} style={{ width:'100%', height:'100%', objectFit:'contain', display:'block', padding:6 }} />
@@ -2142,6 +2142,99 @@
                   </div>
                 )) : (
                   <div className="rounded-lg border border-white/10 bg-black/20 px-3 py-4 text-center text-[12px] text-muted" style={{ fontFamily:serif }}>還沒有可顯示的餐食紀錄</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function LeaderboardCharacterModal({ character, onClose, onSelectUser }) {
+      if (!character?.code) return null;
+      const serif = "'Noto Serif TC',serif";
+      const creature = MBEI_TYPES[character.code];
+      const users = [...(character.users || [])]
+        .sort((a, b) => (b.isCurrent ? 1 : 0) - (a.isCurrent ? 1 : 0) || (b.points || 0) - (a.points || 0));
+      const codeCn = mbeiCodeToChinese(character.code);
+
+      React.useEffect(() => {
+        const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+      }, [onClose]);
+
+      return (
+        <div className="fixed inset-0 z-[205] flex items-end sm:items-center justify-center p-0 sm:p-6" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="leaderboard-character-title">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" aria-hidden="true" />
+          <div
+            className="relative z-10 w-full sm:max-w-[26rem] max-h-[min(92dvh,640px)] overflow-hidden rounded-t-[18px] sm:rounded-[10px] border border-stroke/25 shadow-2xl"
+            style={{ background:'rgba(21,13,0,0.98)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sm:hidden flex justify-center pt-2.5" aria-hidden="true">
+              <div className="w-9 h-1 rounded-full bg-white/25" />
+            </div>
+            <div className="flex items-start gap-3 px-5 py-4 border-b border-white/10">
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-black tracking-[0.24em] m-0 mb-1" style={{ color:'var(--jade)', fontFamily:serif }}>角色修行者</p>
+                <h3 id="leaderboard-character-title" className="text-xl font-serif font-black text-[var(--cream)] m-0 leading-tight">{creature?.creature || character.name}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="關閉"
+                className="shrink-0 w-10 h-10 rounded-full bg-white/10 border border-white/15 text-[var(--cream)] flex items-center justify-center hover:bg-white/15 active:scale-95 transition-transform"
+              >
+                <XIcon size={18} />
+              </button>
+            </div>
+            <div className="overflow-y-auto max-h-[calc(min(92dvh,640px)-76px)] px-5 pt-4 pb-[calc(96px+env(safe-area-inset-bottom))] sm:pb-5 space-y-4 scrollbar-hide">
+              <div className="rounded-xl border border-jade/20 bg-black/25 p-4 flex gap-4 items-center">
+                <div style={{ width:82, height:104, borderRadius:8, overflow:'hidden', flexShrink:0, border:'1px solid rgba(149,211,195,0.24)', background:'rgba(255,255,255,0.04)' }}>
+                  <img src={CREATURE_IMG[character.code] || BEGIN_AVATAR_IMG} alt={creature?.creature || character.name} style={{ width:'100%', height:'100%', objectFit:'contain', display:'block', padding:6 }} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p title={character.code} style={{ fontSize:11, color:'var(--jade)', fontFamily:serif, fontWeight:900, letterSpacing:'0.18em', margin:'0 0 6px' }}>{codeCn}</p>
+                  <h4 className="text-lg font-serif font-black text-[var(--cream)] m-0">{creature?.name?.split(' ')[0] || character.name}</h4>
+                  <p className="text-[12px] leading-[1.55] m-0 mt-2" style={{ color:'var(--sand)', fontFamily:serif }}>
+                    {creature?.insight || '曾在修行者的食緒中顯形。'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-center">
+                  <p className="text-lg font-serif font-black text-[var(--cream)] m-0">{character.userCount || users.length || 0}</p>
+                  <p className="text-[9px] font-black text-muted tracking-widest m-0">修行者</p>
+                </div>
+                <div className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-center">
+                  <p className="text-lg font-serif font-black text-[var(--cream)] m-0">{character.points || 0}</p>
+                  <p className="text-[9px] font-black text-muted tracking-widest m-0">累積功德</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-[11px] font-black tracking-[0.2em] m-0" style={{ color:'var(--mist)', fontFamily:serif }}>曾經顯形於</p>
+                {users.length > 0 ? users.map((u, idx) => (
+                  <button
+                    key={`${u.email || u.name}-${idx}`}
+                    type="button"
+                    onClick={() => onSelectUser?.(u)}
+                    className="w-full text-left rounded-lg border border-white/10 bg-black/20 px-3 py-3 hover:bg-white/[0.04] transition-colors"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[15px] font-black text-[var(--cream)] m-0 truncate" style={{ fontFamily:serif }}>{u.name || '修行者'}</p>
+                        <p className="text-[10px] text-muted m-0 mt-1">{u.recordCount || 0} 筆紀錄 · {u.points || 0} 功德</p>
+                      </div>
+                      <span className={cn("shrink-0 text-[10px] font-black rounded-full px-2 py-1 border", u.isCurrent ? "border-jade/30 text-jade bg-jade/10" : "border-white/10 text-muted bg-white/[0.04]")}>
+                        {u.isCurrent ? '現役' : '曾經'}
+                      </span>
+                    </div>
+                  </button>
+                )) : (
+                  <div className="rounded-lg border border-white/10 bg-black/20 px-3 py-4 text-center text-[12px] text-muted" style={{ fontFamily:serif }}>尚未取得修行者清單</div>
                 )}
               </div>
             </div>
@@ -4013,6 +4106,7 @@
       const [notionMbei, setNotionMbei] = useState([]);
       const [notionUserProfile, setNotionUserProfile] = useState(null);
       const [selectedLeaderboardUser, setSelectedLeaderboardUser] = useState(null);
+      const [selectedLeaderboardCharacter, setSelectedLeaderboardCharacter] = useState(null);
 
       React.useEffect(() => {
         let cancelled = false;
@@ -4095,15 +4189,39 @@
           notionUserProfile?.code,
         ].filter(Boolean));
         const localPts = calcMeritTotal(records);
+        const localUserForCharacter = {
+          name: loginProfile?.nickname || '修行者',
+          email: normalizeEmail(loginProfile?.email || ''),
+          points: localPts,
+          code: hatch.avatarType?.code || null,
+          hatched: hatch.hasHatched,
+          recordCount: records.length,
+          hatchCycles: hatch.completedCycles || 0,
+          isCurrent: false,
+          isUser: true,
+          recentMeals: records.slice(0, 3).map((r) => ({
+            food: r.whatFood,
+            mood: r.mood,
+            bodyFeeling: r.bodyTier ?? r.bodyFeeling,
+            mealType: r.mealType,
+            date: r.date,
+            time: r.time || r.mealTime,
+          })),
+        };
         for (const code of localCodes) {
           if (notionCodes.has(code)) continue;
           const idx = rows.findIndex((u) => u.code === code);
           if (idx >= 0) {
+            const users = rows[idx].users || [];
             rows[idx] = {
               ...rows[idx],
               userCount: (rows[idx].userCount || 0) + 1,
               points: (rows[idx].points || 0) + localPts,
               isUser: true,
+              users: [
+                ...users,
+                { ...localUserForCharacter, isCurrent: localUserForCharacter.code === code },
+              ],
             };
           } else {
             rows.push({
@@ -4113,6 +4231,9 @@
               points: localPts,
               scoreLabel: '修行者人數',
               isUser: true,
+              users: [
+                { ...localUserForCharacter, isCurrent: localUserForCharacter.code === code },
+              ],
             });
           }
         }
@@ -4162,12 +4283,10 @@
                       ? BEGIN_AVATAR_IMG
                       : (CREATURE_IMG[user.code] || BEGIN_AVATAR_IMG);
                     const canOpenUser = rankTab === 'personal';
-                    const canOpenCreature = rankTab === 'mbei'
-                      ? !!MBEI_TYPES[user.code]
-                      : !!(user.hatched && user.code && MBEI_TYPES[user.code]);
-                    const canOpenRow = canOpenUser || canOpenCreature;
+                    const canOpenCharacter = rankTab === 'mbei' && !!MBEI_TYPES[user.code];
+                    const canOpenRow = canOpenUser || canOpenCharacter;
                     return (
-                    <div key={`${rankTab}-${user.rank}-${user.name}-${user.code || 'pending'}`} onClick={() => { if (canOpenUser) setSelectedLeaderboardUser(user); else if (canOpenCreature) setSelectedCreature(MBEI_TYPES[user.code]); }} style={{ cursor: canOpenRow ? 'pointer' : 'default' }} className={cn("flex items-center justify-between p-6 md:p-8 border-b border-parchment last:border-0 transition-colors", user.isUser ? "bg-clay/10 hover:bg-clay/15" : "hover:bg-parchment/30")}>
+                    <div key={`${rankTab}-${user.rank}-${user.name}-${user.code || 'pending'}`} onClick={() => { if (canOpenUser) setSelectedLeaderboardUser(user); else if (canOpenCharacter) setSelectedLeaderboardCharacter(user); }} style={{ cursor: canOpenRow ? 'pointer' : 'default' }} className={cn("flex items-center justify-between p-6 md:p-8 border-b border-parchment last:border-0 transition-colors", user.isUser ? "bg-clay/10 hover:bg-clay/15" : "hover:bg-parchment/30")}>
                       <div className="flex items-center gap-6">
                         <span className={cn("w-8 text-center font-serif font-black text-lg md:text-xl", user.rank===1?"text-amber":user.rank===2?"text-muted":user.rank===3?"text-clay":"text-stroke")}>{user.rank}</span>
                         <div style={{ width:44, height:55, borderRadius:5, overflow:'hidden', flexShrink:0, border:'1px solid rgba(234,228,217,0.5)', background:'var(--paper)' }}>
@@ -4213,6 +4332,16 @@
             <LeaderboardUserModal
               user={selectedLeaderboardUser}
               onClose={() => setSelectedLeaderboardUser(null)}
+            />
+          )}
+          {selectedLeaderboardCharacter && (
+            <LeaderboardCharacterModal
+              character={selectedLeaderboardCharacter}
+              onClose={() => setSelectedLeaderboardCharacter(null)}
+              onSelectUser={(u) => {
+                setSelectedLeaderboardCharacter(null);
+                setSelectedLeaderboardUser(u);
+              }}
             />
           )}
         </div>
