@@ -17,6 +17,11 @@ const {
 } = require('./notion-hatch');
 
 const COL = {
+  title: process.env.NOTION_TITLE_PROPERTY || 'WhatFood',
+  time: process.env.NOTION_COL_TIME || '時間',
+  mealType: process.env.NOTION_COL_MEAL_TYPE || '餐別',
+  mood: process.env.NOTION_COL_MOOD || '爽度',
+  bodyFeeling: process.env.NOTION_COL_BODY || '身體感受',
   merit: process.env.NOTION_COL_MERIT || '功德',
   meritTotal: process.env.NOTION_COL_MERIT_TOTAL || '功德總數',
   mb: process.env.NOTION_COL_MB || 'MB',
@@ -46,6 +51,12 @@ function readText(prop) {
 function readDate(prop) {
   if (!prop || prop.type !== 'date' || !prop.date?.start) return '';
   return prop.date.start;
+}
+
+function readNumberOrText(prop) {
+  const n = readNumber(prop);
+  if (n != null) return n;
+  return readText(prop);
 }
 
 function normalizeEmail(email) {
@@ -86,6 +97,11 @@ function parseRow(page) {
   return {
     email: readText(p[COL.email]),
     nickname: readText(p[COL.nickname]),
+    food: readText(p[COL.title]),
+    mealType: readText(p[COL.mealType]),
+    time: readText(p[COL.time]),
+    mood: readNumberOrText(p[COL.mood]),
+    bodyFeeling: readNumberOrText(p[COL.bodyFeeling]),
     merit: readNumber(p[COL.merit]) || 0,
     meritTotal: readNumber(p[COL.meritTotal]),
     date: readDate(p[COL.date]) || page.created_time || '',
@@ -99,6 +115,27 @@ function latestHatchSnapshot(userRows) {
     .map((r) => r.hatchSnapshot)
     .filter(Boolean)
     .sort((a, b) => (b.recordCount || 0) - (a.recordCount || 0))[0] || null;
+}
+
+function rowTimeValue(row) {
+  const d = row.date || '';
+  const t = row.time || '00:00';
+  const n = Date.parse(`${String(d).slice(0, 10)}T${String(t).slice(0, 5) || '00:00'}`);
+  return Number.isNaN(n) ? 0 : n;
+}
+
+function recentMealsFromRows(userRows) {
+  return [...userRows]
+    .sort((a, b) => rowTimeValue(b) - rowTimeValue(a))
+    .slice(0, 3)
+    .map((row) => ({
+      food: row.food || '未命名餐點',
+      mood: row.mood,
+      bodyFeeling: row.bodyFeeling,
+      mealType: row.mealType || '',
+      date: row.date || '',
+      time: row.time || '',
+    }));
 }
 
 function buildLeaderboards(rows, currentEmail) {
@@ -142,6 +179,7 @@ function buildLeaderboards(rows, currentEmail) {
       hatchCycles: hatchSnap.hatchCycles,
       unlockedCodes: hatchSnap.unlockedCodes,
       hatchedCreatures: hatchSnap.hatchedCreatures,
+      recentMeals: recentMealsFromRows(userRows),
     };
   }
 
