@@ -2053,15 +2053,17 @@
       const creature = user.hatched && user.code ? MBEI_TYPES[user.code] : null;
       const codeCn = creature ? mbeiCodeToChinese(creature.code) : '尚未顯形';
       const meals = user.recentMeals || [];
-      const moodLabel = (mood) => {
-        if (mood == null || mood === '') return '未記';
-        const n = typeof mood === 'number' ? mood : Number(mood);
-        return Number.isNaN(n) ? String(mood) : `${MOOD_TIER_META[n]?.label || mood} · ${n}/5`;
+      const mealTraceTitle = (meal) => {
+        const typeMap = { 早餐:'晨食一記', 午餐:'午食一記', 晚餐:'暮食一記', 點心:'間食一記', 宵夜:'夜食一記' };
+        return typeMap[meal?.mealType] || '食緒一記';
       };
-      const bodyLabel = (body) => {
-        if (body == null || body === '') return '未記';
-        const label = bodyTierLabel(body);
-        return label ? `${label} · ${parseBodyTier(body)}/5` : String(body);
+      const mealTraceVerse = (meal) => {
+        const food = String(meal?.food || '').trim();
+        if (/湯|粥|麵|鍋|飲|茶|咖啡|豆漿|牛奶/.test(food)) return '湯氣入卷，留下一段溫潤流動的食修痕跡。';
+        if (/炸|薯|雞排|漢堡|披薩|蛋糕|甜|餅|麵包/.test(food)) return '香氣落印，像一枚濃烈而明亮的小籤。';
+        if (/菜|沙拉|水果|芒果|青菜|地瓜葉|蔬/.test(food)) return '草木之氣入冊，留下一道清潤的食緒紋理。';
+        if (/飯|便當|麵|肉|蛋|雞|牛|豬|魚|鵝/.test(food)) return '穀肉成章，為這一日添上一筆踏實的食修。';
+        return '此餐已入食緒簿，留下只有修行者知道的微光。';
       };
 
       React.useEffect(() => {
@@ -2125,23 +2127,22 @@
               </div>
 
               <div className="space-y-2">
-                <p className="text-[11px] font-black tracking-[0.2em] m-0" style={{ color:'var(--mist)', fontFamily:serif }}>最近三餐</p>
+                <p className="text-[11px] font-black tracking-[0.2em] m-0" style={{ color:'var(--mist)', fontFamily:serif }}>近三道食緒</p>
                 {meals.length > 0 ? meals.map((meal, idx) => (
                   <div key={`${meal.date}-${meal.time}-${idx}`} className="rounded-lg border border-white/10 bg-black/20 px-3 py-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-[15px] font-black text-[var(--cream)] m-0 truncate" style={{ fontFamily:serif }}>{meal.food || '未命名餐點'}</p>
-                        <p className="text-[10px] text-muted m-0 mt-1">{[meal.date, meal.time, meal.mealType].filter(Boolean).join(' · ')}</p>
+                        <p className="text-[10px] text-muted m-0 mt-1">{[mealTraceTitle(meal), meal.date].filter(Boolean).join(' · ')}</p>
                       </div>
                       <span className="shrink-0 text-[10px] font-black rounded-full px-2 py-1 border border-jade/20 text-jade bg-jade/10">#{idx + 1}</span>
                     </div>
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      <span className="text-[11px] rounded-full px-2.5 py-1 border border-jade/20 bg-jade/10 text-jade">心情：{moodLabel(meal.mood)}</span>
-                      <span className="text-[11px] rounded-full px-2.5 py-1 border border-amber/20 bg-amber/10 text-[var(--sand)]">身體：{bodyLabel(meal.bodyFeeling)}</span>
-                    </div>
+                    <p className="text-[12px] leading-[1.7] m-0 mt-3" style={{ color:'var(--sand)', fontFamily:serif }}>
+                      食修小籤：{mealTraceVerse(meal)}
+                    </p>
                   </div>
                 )) : (
-                  <div className="rounded-lg border border-white/10 bg-black/20 px-3 py-4 text-center text-[12px] text-muted" style={{ fontFamily:serif }}>還沒有可顯示的餐食紀錄</div>
+                  <div className="rounded-lg border border-white/10 bg-black/20 px-3 py-4 text-center text-[12px] text-muted" style={{ fontFamily:serif }}>尚無可翻閱的食緒片段</div>
                 )}
               </div>
             </div>
@@ -4268,7 +4269,7 @@
                   </div>
                   <p className="mt-2 text-[11px] font-semibold text-muted/70 tracking-wide" style={{ fontFamily: "'Noto Serif TC', serif" }}>
                     {rankTab === 'personal'
-                      ? '點擊修行者，看看朋友最近吃了什麼、食緒如何。'
+                      ? '點擊修行者，翻閱朋友近期留下的食緒片段。'
                       : '點擊靈獸，看看牠曾在哪些修行者身上顯形。'}
                   </p>
                 </div>
