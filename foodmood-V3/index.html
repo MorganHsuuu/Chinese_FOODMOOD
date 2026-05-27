@@ -3908,6 +3908,7 @@
       const [lbFetchedAt, setLbFetchedAt] = useState(null);
       const [notionPersonal, setNotionPersonal] = useState([]);
       const [notionMbei, setNotionMbei] = useState([]);
+      const [notionUserProfile, setNotionUserProfile] = useState(null);
 
       React.useEffect(() => {
         let cancelled = false;
@@ -3918,11 +3919,13 @@
           if (res.ok) {
             setNotionPersonal(res.personal);
             setNotionMbei(res.mbei);
+            setNotionUserProfile(res.userProfile);
             setLbFetchedAt(res.fetchedAt);
           } else {
             setLbError(res.error || '無法載入排行榜');
             setNotionPersonal([]);
             setNotionMbei([]);
+            setNotionUserProfile(null);
           }
           setLbLoading(false);
         });
@@ -3965,16 +3968,33 @@
 
       const mbeiLeaderboard = useMemo(() => {
         const rows = [...notionMbei];
-        const localCode = hatch.hasHatched ? hatch.avatarType?.code : null;
-        if (localCode && !rows.some((u) => u.code === localCode)) {
-          rows.push({
-            code: localCode,
-            name: MBEI_TYPES[localCode]?.creature || localCode,
-            userCount: 1,
-            points: calcMeritTotal(records),
-            scoreLabel: '修行者人數',
-            isUser: true,
-          });
+        const localCodes = hatch.hasHatched ? [...(hatch.unlockedCodes || [])] : [];
+        const notionCodes = new Set([
+          ...(notionUserProfile?.unlockedCodes || []),
+          ...(notionUserProfile?.hatchedCreatures || []).map((h) => h.code),
+          notionUserProfile?.code,
+        ].filter(Boolean));
+        const localPts = calcMeritTotal(records);
+        for (const code of localCodes) {
+          if (notionCodes.has(code)) continue;
+          const idx = rows.findIndex((u) => u.code === code);
+          if (idx >= 0) {
+            rows[idx] = {
+              ...rows[idx],
+              userCount: (rows[idx].userCount || 0) + 1,
+              points: (rows[idx].points || 0) + localPts,
+              isUser: true,
+            };
+          } else {
+            rows.push({
+              code,
+              name: MBEI_TYPES[code]?.creature || code,
+              userCount: 1,
+              points: localPts,
+              scoreLabel: '修行者人數',
+              isUser: true,
+            });
+          }
         }
         return rows
           .filter((u) => (u.userCount || u.points || 0) > 0)
@@ -3985,7 +4005,7 @@
             name: MBEI_TYPES[u.code]?.creature || u.name,
             scoreLabel: u.scoreLabel || '修行者人數',
           }));
-      }, [notionMbei, hatch.hasHatched, hatch.avatarType?.code, records]);
+      }, [notionMbei, notionUserProfile, hatch.hasHatched, hatch.unlockedCodes, records]);
 
       const board = rankTab === 'personal' ? personalLeaderboard : mbeiLeaderboard;
 
