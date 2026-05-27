@@ -4266,6 +4266,11 @@
                     <button onClick={() => setRankTab('personal')} className={cn("flex-1 px-5 py-2.5 rounded-xl text-xs font-black tracking-widest border-2 transition-all", rankTab==='personal' ? "border-jade text-jade bg-jade/10" : "border-stroke text-muted bg-transparent")}>個人榜單</button>
                     <button onClick={() => setRankTab('mbei')} className={cn("flex-1 px-5 py-2.5 rounded-xl text-xs font-black tracking-widest border-2 transition-all", rankTab==='mbei' ? "border-jade text-jade bg-jade/10" : "border-stroke text-muted bg-transparent")}>角色排行榜</button>
                   </div>
+                  <p className="mt-2 text-[11px] font-semibold text-muted/70 tracking-wide" style={{ fontFamily: "'Noto Serif TC', serif" }}>
+                    {rankTab === 'personal'
+                      ? '點擊修行者，看看朋友最近吃了什麼、食緒如何。'
+                      : '點擊靈獸，看看牠曾在哪些修行者身上顯形。'}
+                  </p>
                 </div>
                 {lbError && (
                   <p className="px-2 text-sm text-clay font-semibold" style={{ fontFamily: "'Noto Serif TC', serif" }}>{lbError}</p>
