@@ -1506,11 +1506,15 @@
     const loadMealDrafts = () => { try { const r = localStorage.getItem(DRAFTS_KEY); return r ? JSON.parse(r) : []; } catch { return []; } };
     const saveMealDrafts = (drafts) => localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts.slice(0, MAX_DRAFTS)));
     const getRecordFood = (r) => (r?.whatFood || r?.foodEmoji || '這一餐').trim() || '這一餐';
+    const formatDateInput = (date = new Date()) => {
+      const d = date instanceof Date && !Number.isNaN(date.getTime()) ? date : new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
     const makeDefaultFormData = () => {
       const now = new Date();
       const hh = String(now.getHours()).padStart(2,'0');
       const mm = String(now.getMinutes()).padStart(2,'0');
-      return { mealType:'午餐', mood:null, moodSlider:null, bodyComfort:null, bodyFeeling:null, whatFood:'', mealTime:`${hh}:${mm}`, context:'' };
+      return { mealType:'午餐', mood:null, moodSlider:null, bodyComfort:null, bodyFeeling:null, whatFood:'', mealDate:formatDateInput(now), mealTime:`${hh}:${mm}`, context:'' };
     };
 
     const isFeelingsComplete = (fd) => {
@@ -1574,6 +1578,72 @@
     const IMAGE_MAX_EDGE = 1024;
     const IMAGE_JPEG_QUALITY = 0.82;
 
+    const parseExifDateValue = (value) => {
+      const m = String(value || '').trim().match(/^(\d{4}):(\d{2}):(\d{2})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
+      if (!m) return null;
+      const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]), Number(m[6] || 0));
+      return Number.isNaN(d.getTime()) ? null : d;
+    };
+
+    const parseExifDateFromArrayBuffer = (buffer) => {
+      const view = new DataView(buffer);
+      if (view.byteLength < 12 || view.getUint16(0) !== 0xffd8) return null;
+      let offset = 2;
+      while (offset + 4 < view.byteLength) {
+        if (view.getUint8(offset) !== 0xff) break;
+        const marker = view.getUint8(offset + 1);
+        const size = view.getUint16(offset + 2, false);
+        if (marker === 0xe1 && offset + 4 + size <= view.byteLength) {
+          const exifStart = offset + 4;
+          const header = String.fromCharCode(...new Uint8Array(buffer, exifStart, 6));
+          if (header !== 'Exif\0\0') return null;
+          const tiff = exifStart + 6;
+          const little = view.getUint16(tiff, false) === 0x4949;
+          const get16 = (pos) => view.getUint16(pos, little);
+          const get32 = (pos) => view.getUint32(pos, little);
+          const readAscii = (pos, count) => {
+            if (pos < 0 || pos + count > view.byteLength) return '';
+            return String.fromCharCode(...new Uint8Array(buffer, pos, count)).replace(/\0+$/, '');
+          };
+          const readIfd = (ifdOffset) => {
+            const pos = tiff + ifdOffset;
+            if (pos < 0 || pos + 2 > view.byteLength) return {};
+            const entries = get16(pos);
+            const out = {};
+            for (let i = 0; i < entries; i += 1) {
+              const entry = pos + 2 + i * 12;
+              if (entry + 12 > view.byteLength) break;
+              const tag = get16(entry);
+              const type = get16(entry + 2);
+              const count = get32(entry + 4);
+              const rawValue = get32(entry + 8);
+              const valueOffset = count <= 4 ? entry + 8 : tiff + rawValue;
+              out[tag] = { type, count, rawValue, valueOffset };
+            }
+            return out;
+          };
+          const root = readIfd(get32(tiff + 4));
+          const exifIfd = root[0x8769]?.rawValue ? readIfd(root[0x8769].rawValue) : {};
+          const dateEntry = exifIfd[0x9003] || exifIfd[0x9004] || root[0x0132];
+          if (!dateEntry || dateEntry.type !== 2) return null;
+          return parseExifDateValue(readAscii(dateEntry.valueOffset, dateEntry.count));
+        }
+        offset += 2 + size;
+      }
+      return null;
+    };
+
+    const readPhotoTakenAt = async (file) => {
+      if (!file) return new Date();
+      if (/jpe?g/i.test(file.type || file.name || '')) {
+        try {
+          const exifDate = parseExifDateFromArrayBuffer(await file.arrayBuffer());
+          if (exifDate) return exifDate;
+        } catch {}
+      }
+      return file.lastModified > 0 ? new Date(file.lastModified) : new Date();
+    };
+
     const compressImageFile = (file) => new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => {
@@ -1634,7 +1704,7 @@
     const buildFortuneKey = (data) => {
       const f = feelingsFromForm(data);
       const moodText = f.mood || '';
-      return [data.whatFood?.trim(), data.mealType, moodText, f.bodyTier, data.mealTime, (data.context || '').trim()].join('§');
+      return [data.whatFood?.trim(), data.mealType, moodText, f.bodyTier, data.mealDate, data.mealTime, (data.context || '').trim()].join('§');
     };
 
     const determineMBEI = (data) => {
@@ -4436,7 +4506,7 @@
                     {d.photoPreviewUrl && <img src={d.photoPreviewUrl} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />}
                     <div className="flex-1 min-w-0">
                       <p style={{ fontSize:14, fontWeight:700, color:'var(--cream)', margin:0, fontFamily:serif }}>{d.whatFood || '未命名餐點'}</p>
-                      <p style={{ fontSize:11, color:'var(--mist)', margin:'2px 0 0' }}>{d.mealType} · {d.mealTime}</p>
+                      <p style={{ fontSize:11, color:'var(--mist)', margin:'2px 0 0' }}>{[d.mealDate, d.mealType, d.mealTime].filter(Boolean).join(' · ')}</p>
                     </div>
                     <button type="button" onClick={() => onContinueDraft(d.id)}
                       style={{ padding:'8px 12px', borderRadius:8, background:'var(--ink)', color:'white', fontSize:12, fontWeight:700, border:'none', cursor:'pointer' }}>繼續</button>
@@ -4479,7 +4549,7 @@
         if (!showFeelingsSection || !foodConfirmed || !formData.whatFood?.trim() || !isFeelingsComplete(formData)) return;
         const t = setTimeout(() => onSchedulePrefetch?.(formData), 1500);
         return () => clearTimeout(t);
-      }, [showFeelingsSection, foodConfirmed, formData.whatFood, formData.mealType, formData.moodSlider, formData.bodyComfort, formData.mealTime, formData.context]);
+      }, [showFeelingsSection, foodConfirmed, formData.whatFood, formData.mealType, formData.moodSlider, formData.bodyComfort, formData.mealDate, formData.mealTime, formData.context]);
 
       React.useEffect(() => () => onClearPrefetch?.(), []);
 
@@ -4495,8 +4565,9 @@
         if (recordMode === 'continue' && formData.whatFood?.trim()) setFoodConfirmed(true);
       }, [recordMode, formData.whatFood]);
 
-      const applyPhotoMealTime = (file) => {
-        const t = file.lastModified > 0 ? new Date(file.lastModified) : new Date();
+      const applyPhotoDateTime = async (file) => {
+        const t = await readPhotoTakenAt(file);
+        setField('mealDate', formatDateInput(t));
         const hh = String(t.getHours()).padStart(2, '0');
         const mm = String(t.getMinutes()).padStart(2, '0');
         setField('mealTime', `${hh}:${mm}`);
@@ -4506,7 +4577,7 @@
         const file = e.target.files?.[0];
         e.target.value = '';
         if (!file) return;
-        applyPhotoMealTime(file);
+        await applyPhotoDateTime(file);
         setRecognizeError('');
         setRecognizePhase('compressing');
         try {
@@ -4628,7 +4699,7 @@
                   <div className="flex-1 min-w-0">
                     <p style={{ fontSize:10, color:'var(--jade)', margin:'0 0 5px', letterSpacing:'0.14em', fontWeight:700, opacity:0.9 }}>本餐食物</p>
                     <p style={{ fontSize:20, fontWeight:900, color:'var(--cream)', margin:0, fontFamily:serif, lineHeight:1.35, letterSpacing:'0.03em' }}>{formData.whatFood}</p>
-                    <p style={{ fontSize:12, color:'var(--sand)', margin:'5px 0 0', opacity:0.88 }}>{formData.mealType} · {formData.mealTime}</p>
+                    <p style={{ fontSize:12, color:'var(--sand)', margin:'5px 0 0', opacity:0.88 }}>{formData.mealDate} · {formData.mealType} · {formData.mealTime}</p>
                   </div>
                   {(recordMode === 'early' || recordMode === 'continue') && (
                     <button type="button" onClick={() => setPhase('food')} className="text-xs font-bold text-jade/80 underline shrink-0 hover:text-jade">修改食物</button>
@@ -4676,8 +4747,17 @@
                   <p className="mt-2 text-sm text-clay font-semibold">{recognizeError}</p>
                 )}
               </RecordSection>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 min-w-0">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 min-w-0">
                 <RecordSection title="餐別"><PillSelector options={['早餐','午餐','晚餐','宵夜',{ label:'點心/飲料', value:'點心' }]} value={formData.mealType} onChange={v => setField('mealType', v)} /></RecordSection>
+                <RecordSection title="哪一天吃這餐">
+                  <input
+                    type="date"
+                    value={formData.mealDate || formatDateInput()}
+                    onChange={e => setField('mealDate', e.target.value || formatDateInput())}
+                    className="w-full rounded-[1.5rem] border-2 border-stroke bg-white px-4 py-4 text-base font-semibold text-ink focus:outline-none focus:border-ink/30"
+                  />
+                  <p className="mt-2 text-[11px] text-muted font-semibold" style={{ fontFamily:serif }}>預設今日；上傳照片會嘗試帶入拍攝日期。</p>
+                </RecordSection>
                 <RecordSection title="幾點吃這餐">
                   <MealTimeField value={formData.mealTime} onChange={v => setField('mealTime', v)} />
                 </RecordSection>
@@ -5242,6 +5322,7 @@
           bodyTier: d.bodyTier ?? (draftBodyComfort != null ? bodyPctToTier(draftBodyComfort) : null),
           bodyFeeling: d.bodyFeeling || (draftBodyComfort != null ? bodyComfortToLabel(draftBodyComfort) : null),
           whatFood: d.whatFood || '',
+          mealDate: d.mealDate || d.date || makeDefaultFormData().mealDate,
           mealTime: d.mealTime || makeDefaultFormData().mealTime,
           context: d.context || '',
         });
@@ -5265,6 +5346,7 @@
           id,
           whatFood: fd.whatFood.trim(),
           mealType: fd.mealType,
+          mealDate: fd.mealDate || formatDateInput(),
           mealTime: fd.mealTime,
           mood: fd.mood,
           moodSlider: fd.moodSlider,
@@ -5322,8 +5404,7 @@
           const mbeiCode = aiFortune?.calculated_mbei || mbeiCodeFromScores(mbeiScores) || determineMBEI(formData);
           const meritEarned = aiFortune?.meritEarned ?? calcMeritFromContext(formData.context);
           const feel = feelingsFromForm(formData);
-          const now = new Date();
-          const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+          const dateStr = formData.mealDate || formatDateInput();
           const mealPhoto = recordPhotoRef.current;
           const newRecord = {
             id: Date.now().toString(),
