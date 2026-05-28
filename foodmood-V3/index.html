@@ -2646,6 +2646,26 @@
       });
     };
 
+    const createPosterPortraitDataUrl = async (srcDataUrl) => {
+      const img = await new Promise((resolve, reject) => {
+        const node = new Image();
+        node.onload = () => resolve(node);
+        node.onerror = () => reject(new Error('角色圖解碼失敗'));
+        node.src = srcDataUrl;
+      });
+      const canvas = document.createElement('canvas');
+      canvas.width = 422;
+      canvas.height = 456;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#100900';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const scale = Math.max(canvas.width / img.naturalWidth, canvas.height / img.naturalHeight);
+      const w = img.naturalWidth * scale;
+      const h = img.naturalHeight * scale;
+      ctx.drawImage(img, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
+      return canvas.toDataURL('image/jpeg', 0.9);
+    };
+
     const canvasToCompressedJpeg = async (canvas, maxBytes = 950 * 1024) => {
       const qualities = [0.86, 0.8, 0.74, 0.68, 0.6];
       let lastBlob = null;
@@ -2710,7 +2730,8 @@
 
     const createHatchSharePoster = async ({ hatchType, cycleNumber, loginProfile, records }) => {
       if (!hatchType) return;
-      const creatureImg = await assetToDataUrl(CREATURE_IMG[hatchType.code] || BEGIN_AVATAR_IMG);
+      const rawCreatureImg = await assetToDataUrl(CREATURE_IMG[hatchType.code] || BEGIN_AVATAR_IMG);
+      const creatureImg = await createPosterPortraitDataUrl(rawCreatureImg);
       const nickname = posterXmlEscape(loginProfile?.nickname || '修行者');
       const creatureName = hatchType.creature || '';
       const codeCnText = mbeiCodeToChinese(hatchType.code);
@@ -2728,7 +2749,7 @@
         `<text x="360" y="${898 + i * 27}" text-anchor="middle" font-size="18" fill="#d8c48e" font-family="'Noto Serif TC', serif" letter-spacing="0.35">${posterXmlEscape(line)}</text>`
       ).join('');
       const svg = `
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1280" viewBox="0 0 720 1280">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="720" height="1280" viewBox="0 0 720 1280">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#090500"/>
@@ -2740,7 +2761,6 @@
       <stop offset="0.38" stop-color="#8b5a19" stop-opacity="0.2"/>
       <stop offset="1" stop-color="#000000" stop-opacity="0"/>
     </radialGradient>
-    <clipPath id="portraitClip"><rect x="149" y="270" width="422" height="456" rx="28"/></clipPath>
   </defs>
   <rect width="720" height="1280" fill="url(#bg)"/>
   <circle cx="360" cy="410" r="430" fill="url(#halo)"/>
@@ -2750,7 +2770,7 @@
   <text x="360" y="143" text-anchor="middle" font-size="14" fill="#d9cfa5" font-family="'JetBrains Mono', monospace" font-weight="700" letter-spacing="4">FOODMOOD ARCHIVE</text>
   <text x="360" y="205" text-anchor="middle" font-size="21" fill="#d98a5b" font-family="'Noto Serif TC', serif" font-weight="800" letter-spacing="3">第 ${cycle} 輪 · 靈獸顯形</text>
   <rect x="132" y="253" width="456" height="490" rx="34" fill="none" stroke="#95d3c3" stroke-opacity="0.34" stroke-width="3"/>
-  <image href="${creatureImg}" x="149" y="270" width="422" height="456" preserveAspectRatio="xMidYMid slice" clip-path="url(#portraitClip)"/>
+  <image href="${creatureImg}" xlink:href="${creatureImg}" x="149" y="270" width="422" height="456" preserveAspectRatio="none"/>
   <rect x="149" y="270" width="422" height="456" rx="28" fill="none" stroke="#d4a843" stroke-opacity="0.38" stroke-width="2"/>
   <text x="360" y="822" text-anchor="middle" font-size="54" fill="#fff8df" font-family="'Noto Serif TC', serif" font-weight="900" letter-spacing="2">${creature}</text>
   <text x="360" y="862" text-anchor="middle" font-size="27" fill="#9fe1ce" font-family="'Noto Serif TC', serif" font-weight="900" letter-spacing="7">${codeCn}</text>
