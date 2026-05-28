@@ -4747,20 +4747,26 @@
                   <p className="mt-2 text-sm text-clay font-semibold">{recognizeError}</p>
                 )}
               </RecordSection>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 min-w-0">
-                <RecordSection title="餐別"><PillSelector options={['早餐','午餐','晚餐','宵夜',{ label:'點心/飲料', value:'點心' }]} value={formData.mealType} onChange={v => setField('mealType', v)} /></RecordSection>
-                <RecordSection title="哪一天吃這餐">
-                  <input
-                    type="date"
-                    value={formData.mealDate || formatDateInput()}
-                    onChange={e => setField('mealDate', e.target.value || formatDateInput())}
-                    className="w-full rounded-[1.5rem] border-2 border-stroke bg-white px-4 py-4 text-base font-semibold text-ink focus:outline-none focus:border-ink/30"
-                  />
-                  <p className="mt-2 text-[11px] text-muted font-semibold" style={{ fontFamily:serif }}>預設今日；上傳照片會嘗試帶入拍攝日期。</p>
-                </RecordSection>
-                <RecordSection title="幾點吃這餐">
-                  <MealTimeField value={formData.mealTime} onChange={v => setField('mealTime', v)} />
-                </RecordSection>
+              <div className="flex flex-wrap items-start gap-6 md:gap-8 min-w-0">
+                <div className="w-full md:flex-1 md:min-w-[260px]">
+                  <RecordSection title="餐別"><PillSelector options={['早餐','午餐','晚餐','宵夜',{ label:'點心/飲料', value:'點心' }]} value={formData.mealType} onChange={v => setField('mealType', v)} /></RecordSection>
+                </div>
+                <div className="w-full sm:w-auto sm:min-w-[190px] sm:max-w-[220px]">
+                  <RecordSection title="哪一天吃這餐">
+                    <input
+                      type="date"
+                      value={formData.mealDate || formatDateInput()}
+                      onChange={e => setField('mealDate', e.target.value || formatDateInput())}
+                      className="w-full rounded-[1.5rem] border-2 border-stroke bg-white px-4 py-4 text-base font-semibold text-ink focus:outline-none focus:border-ink/30"
+                    />
+                    <p className="mt-2 text-[11px] text-muted font-semibold" style={{ fontFamily:serif }}>預設今日；照片會帶入拍攝日期。</p>
+                  </RecordSection>
+                </div>
+                <div className="w-full sm:w-auto sm:min-w-[210px]">
+                  <RecordSection title="幾點吃這餐">
+                    <MealTimeField value={formData.mealTime} onChange={v => setField('mealTime', v)} />
+                  </RecordSection>
+                </div>
               </div>
               </>
               )}
