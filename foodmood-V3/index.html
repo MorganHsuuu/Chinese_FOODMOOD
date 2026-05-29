@@ -1459,6 +1459,7 @@
       return `guest_${rand}${t}@foodmood.local`;
     };
     const isGuestEmail = (email) => /^guest_[a-z0-9]+@foodmood\.local$/i.test(String(email || ''));
+    const normalizeNickname = (name) => String(name || '').trim();
     const DRAFTS_KEY = 'foodmood_meal_drafts';
     const recordsStorageKey = (email) => `foodmood_records_${normalizeEmail(email)}`;
     const loadUserRecords = (email) => {
@@ -1467,6 +1468,13 @@
         const r = localStorage.getItem(recordsStorageKey(email));
         return r ? JSON.parse(r) : [];
       } catch { return []; }
+    };
+    const findGuestProfileByNickname = (nickname) => {
+      const n = normalizeNickname(nickname);
+      if (!n) return null;
+      return Object.values(loadProfiles())
+        .filter((p) => normalizeNickname(p?.nickname) === n && isGuestEmail(p?.email))
+        .sort((a, b) => loadUserRecords(b.email).length - loadUserRecords(a.email).length)[0] || null;
     };
     const stripRecordForStorage = (record) => {
       if (!record || typeof record !== 'object') return record;
@@ -5373,10 +5381,14 @@
       };
 
       const handleLogin = (profile) => {
-        const normalized = normalizeEmail(profile.email);
+        const existingGuest = isGuestEmail(profile.email)
+          ? findGuestProfileByNickname(profile.nickname)
+          : null;
+        const normalized = normalizeEmail(existingGuest?.email || profile.email);
         const profiles = loadProfiles();
-        const prev = profiles[normalized];
+        const prev = profiles[normalized] || existingGuest;
         profiles[normalized] = {
+          ...prev,
           ...profile,
           email: normalized,
           notionDemographicsSynced: prev?.notionDemographicsSynced || false,
