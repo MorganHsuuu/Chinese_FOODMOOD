@@ -4348,6 +4348,9 @@
       }, [notionMbei, notionUserProfile, hatch.hasHatched, hatch.unlockedCodes, records]);
 
       const board = rankTab === 'personal' ? personalLeaderboard : mbeiLeaderboard;
+      const openInsightArchive = () => {
+        window.open('foodmood-insights.html', '_blank', 'noopener,noreferrer');
+      };
 
       return (
         <div className="space-y-12 fade-in">
@@ -4355,7 +4358,16 @@
             <div className="space-y-10">
               <section className="space-y-6">
                 <div className="flex items-center justify-between px-2">
-                  <div className="flex items-center gap-3"><AwardIcon size={22} className="text-clay" /><h3 className="text-2xl font-serif font-black tracking-tighter text-ink">食修功德排行榜</h3></div>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={openInsightArchive}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openInsightArchive(); }}
+                    className="flex items-center gap-3 cursor-pointer select-none"
+                    title="開啟食緒資料卷"
+                  >
+                    <AwardIcon size={22} className="text-clay" /><h3 className="text-2xl font-serif font-black tracking-tighter text-ink">食修功德排行榜</h3>
+                  </div>
                   <span className="text-[10px] font-black text-muted uppercase tracking-widest opacity-60">
                     {lbLoading ? '載入中…' : lbFetchedAt ? `更新於 ${formatLeaderboardTime(lbFetchedAt)}` : ''}
                   </span>
