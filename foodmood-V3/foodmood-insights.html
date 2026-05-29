@@ -108,6 +108,88 @@
       border:1px solid rgba(149,211,195,.25);
     }
     .viz-label { color:var(--muted); font-size:10px; font-weight:900; letter-spacing:.12em; }
+    .axis-lab { margin-top:18px; display:grid; gap:18px; }
+    .axis-card {
+      border:1px solid rgba(149,211,195,.16);
+      background:rgba(36,25,13,.78);
+      border-radius:22px;
+      padding:22px;
+      overflow:hidden;
+    }
+    .axis-head { display:flex; justify-content:space-between; gap:18px; align-items:flex-start; margin-bottom:16px; }
+    .axis-head h2 { margin:0; font-size:24px; letter-spacing:-.04em; }
+    .axis-head p { margin:4px 0 0; color:var(--muted); font-size:13px; max-width:660px; }
+    .spectrum {
+      position:relative;
+      min-height:280px;
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:18px;
+      background:linear-gradient(90deg, rgba(217,138,91,.13), rgba(149,211,195,.11));
+      overflow:hidden;
+      padding:56px 18px 20px;
+    }
+    .spectrum:before {
+      content:"";
+      position:absolute;
+      left:22px; right:22px; top:34px;
+      height:2px;
+      background:linear-gradient(90deg, var(--clay), rgba(255,255,255,.18), var(--jade));
+    }
+    .pole { position:absolute; top:12px; font-size:12px; font-weight:900; letter-spacing:.18em; color:var(--muted); }
+    .pole.left { left:18px; color:var(--clay); }
+    .pole.right { right:18px; color:var(--jade); }
+    .axis-photo {
+      position:absolute;
+      left:calc(var(--pos) * 1%);
+      top:calc(60px + var(--row) * 90px);
+      transform:translateX(-50%);
+      width:112px;
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:14px;
+      overflow:hidden;
+      background:#0b0600;
+    }
+    .axis-photo img { width:100%; height:76px; object-fit:cover; display:block; }
+    .axis-photo span { display:block; padding:7px 8px; font-size:11px; font-weight:900; color:var(--cream); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .axis-photo small { display:block; margin-top:1px; color:var(--muted); font-size:10px; font-weight:700; }
+    .timeline {
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:18px;
+      padding:18px;
+      background:rgba(0,0,0,.2);
+    }
+    .time-row {
+      display:grid;
+      grid-template-columns:54px 1fr;
+      gap:12px;
+      align-items:center;
+      margin:12px 0;
+    }
+    .time-row b { color:var(--sand); font-size:12px; }
+    .time-line { position:relative; height:34px; border-bottom:1px solid rgba(149,211,195,.18); }
+    .time-dot {
+      position:absolute;
+      left:calc(var(--t) / 1440 * 100%);
+      top:50%;
+      width:10px;
+      height:10px;
+      border-radius:50%;
+      background:var(--amber);
+      transform:translate(-50%, -50%);
+      opacity:.72;
+    }
+    .time-scale { display:grid; grid-template-columns:repeat(5, 1fr); color:var(--muted); font-size:10px; margin-left:66px; }
+    .source-grid { display:grid; grid-template-columns:repeat(5, 1fr); gap:10px; }
+    .source-card {
+      min-height:130px;
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:16px;
+      background:rgba(0,0,0,.22);
+      padding:12px;
+    }
+    .source-card b { display:block; color:var(--cream); margin-bottom:8px; }
+    .source-card span { display:block; height:8px; border-radius:999px; margin:8px 0; background:linear-gradient(90deg,var(--clay),var(--jade)); width:var(--w); }
+    .source-card small { color:var(--muted); font-size:11px; }
     .panel {
       border:1px solid rgba(149,211,195,.16);
       background:rgba(36,25,13,.78);
@@ -215,6 +297,11 @@
       .grid { grid-template-columns:1fr; }
       .question-grid { grid-template-columns:1fr; }
       .q-card { min-height:0; }
+      .axis-head { display:block; }
+      .spectrum { min-height:330px; }
+      .axis-photo { width:96px; }
+      .axis-photo img { height:66px; }
+      .source-grid { grid-template-columns:1fr; }
       .role-main { grid-template-columns:1fr; }
       .photo-wall { grid-template-columns:repeat(2, 1fr); }
       .matrix-wrap { height:360px; }
@@ -300,6 +387,78 @@
       </article>
     </section>
 
+    <section class="axis-lab" aria-label="四軸食緒觀測台">
+      <article class="axis-card">
+        <div class="axis-head">
+          <div>
+            <p class="eyebrow">AXIS 01 · 野 / 煉</p>
+            <h2>食物來源光譜</h2>
+          </div>
+          <p>這條軸最適合用照片看：左側是加工、手搖、甜點；右側是水果、蛋、較原型的餐食。照片不是道德評分，而是食物來源與處理程度。</p>
+        </div>
+        <div class="spectrum" id="npSpectrum">
+          <span class="pole left">加工／煉</span>
+          <span class="pole right">原型／野</span>
+        </div>
+      </article>
+
+      <article class="axis-card">
+        <div class="axis-head">
+          <div>
+            <p class="eyebrow">AXIS 02 · 曆 / 幻</p>
+            <h2>24 小時食緒時鐘</h2>
+          </div>
+          <p>規律不適合用照片判讀，而要看時間點。每個點是一筆紀錄，早餐、午餐、晚餐越集中越像「曆」，點心與宵夜越飄移越像「幻」。</p>
+        </div>
+        <div class="timeline" id="timeTimeline"></div>
+      </article>
+
+      <article class="axis-card">
+        <div class="axis-head">
+          <div>
+            <p class="eyebrow">AXIS 03 · 靈 / 煞</p>
+            <h2>食後身體餘韻</h2>
+          </div>
+          <p>這條軸看的是吃完後留下的身體感受：同樣是餐食，有些留下清爽餘韻，有些留下厚重食痕。</p>
+        </div>
+        <div class="spectrum" id="hlSpectrum">
+          <span class="pole left">輕盈／靈</span>
+          <span class="pole right">負擔／煞</span>
+        </div>
+      </article>
+
+      <article class="axis-card">
+        <div class="axis-head">
+          <div>
+            <p class="eyebrow">AXIS 04 · 魂 / 魄</p>
+            <h2>食緒動機地圖</h2>
+          </div>
+          <p>這條軸比較接近動機：為心情而食，或為身體而食。照片下方用世界觀語言包裝，不直接揭露太私人的情緒。</p>
+        </div>
+        <div class="spectrum" id="mbSpectrum">
+          <span class="pole left">心情／魂</span>
+          <span class="pole right">身體／魄</span>
+        </div>
+      </article>
+
+      <article class="axis-card">
+        <div class="axis-head">
+          <div>
+            <p class="eyebrow">SOURCE · 下一步資料欄位</p>
+            <h2>食物來源 × 四軸雷達</h2>
+          </div>
+          <p>目前資料可用食物名稱粗略推估來源；若之後新增「自煮、外食、便利商店、外送、手搖飲」欄位，這裡就能變成更準確的來源地圖。</p>
+        </div>
+        <div class="source-grid">
+          <div class="source-card"><b>自煮</b><span style="--w:82%"></span><small>較容易靠近原型、規律與身體需求。</small></div>
+          <div class="source-card"><b>外食</b><span style="--w:64%"></span><small>正餐量最大，落點介於補給與負擔之間。</small></div>
+          <div class="source-card"><b>便利商店</b><span style="--w:48%"></span><small>容易形成加工但低負擔的快速補給。</small></div>
+          <div class="source-card"><b>外送</b><span style="--w:58%"></span><small>可能偏向厚重、加工與時間波動。</small></div>
+          <div class="source-card"><b>手搖飲</b><span style="--w:36%"></span><small>常出現在點心時段，適合觀察情緒性進食。</small></div>
+        </div>
+      </article>
+    </section>
+
     <section class="grid">
       <article class="panel">
         <h2>當康為什麼最多？</h2>
@@ -326,14 +485,14 @@
 
     <section class="grid">
       <article class="panel">
-        <h2>當康食物影像牆</h2>
-        <p class="sub">取曾孵化當康使用者的真實餐照。若圖片來源失效，卡片會自動淡出。</p>
+        <h2>當康型餐食影像牆</h2>
+        <p class="sub">只放單筆紀錄本身落在 BNHR／當康型的真實餐照，避免把「當康使用者吃過」誤讀成「食物本身是當康」。</p>
         <div class="photo-wall" id="photoWall"></div>
       </article>
 
       <article class="panel">
-        <h2>當康食物關鍵字</h2>
-        <p class="sub">當康族群裡常出現的食物，比較像「穩定補給」而非單一口味。</p>
+        <h2>當康型食物關鍵字</h2>
+        <p class="sub">目前真正落在當康型且有照片的餐食較少，文字統計仍可看出穩定補給的方向。</p>
         <div class="food-list" id="foodList"></div>
       </article>
     </section>
@@ -387,15 +546,45 @@
       mealCounts:[["午餐",109],["晚餐",69],["點心",40],["早餐",37],["宵夜",12],["未填",5]],
       topFoods:[["雞肉飯",12],["火鍋",6],["菠蘿麵包",5],["便當",4],["芒果",3],["巧克力飲料",2],["鐵板麵跟紅茶",2],["麻醬麵",2],["冰淇淋",2],["茶葉蛋",2],["水蜜桃",2],["牛奶麥片",2]],
       photos:[
-        {food:"巧克力飲料", meal:"點心", nick:"地瓜比Ya地瓜葉", url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1780022085953-27p77x-D2fTETYhsi6IbsJCKFF9hfhbugOWuV.jpgahttps://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1780022085953-27p77x-D2fTETYhsi6IbsJCKFF9hfhbugOWuV.jpg"},
-        {food:"肉鬆飯糰", meal:"早餐", nick:"地瓜比Ya地瓜葉", url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1780022036228-6of6on-sVrJXmWIU6jlObplHq9XWQhPcwom1v.jpgahttps://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1780022036228-6of6on-sVrJXmWIU6jlObplHq9XWQhPcwom1v.jpg"},
-        {food:"鮮乳", meal:"點心", nick:"Morgan", url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1779975925172-ndai46-uGjD6f46zK4Zlxxe0YYI07fBBPhQGz.jpgahttps://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1779975925172-ndai46-uGjD6f46zK4Zlxxe0YYI07fBBPhQGz.jpg"},
-        {food:"意大利海鮮麵", meal:"午餐", nick:"地瓜比Ya地瓜葉", url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1779969064458-t5wtgf-EWO87sWW9AhydBkYmRSpxQDYUljGrp.jpgahttps://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1779969064458-t5wtgf-EWO87sWW9AhydBkYmRSpxQDYUljGrp.jpg"},
-        {food:"鹹水菜", meal:"晚餐", nick:"地瓜比Ya地瓜葉", url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1779969036472-799jbu-zF0hVWxKs7bPom2hsrUf0IHqdzJg5S.jpgahttps://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1779969036472-799jbu-zF0hVWxKs7bPom2hsrUf0IHqdzJg5S.jpg"},
-        {food:"蛋撻", meal:"點心", nick:"Morgan", url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1779964251618-72bxri-qnQJAP2EyjwcEwPzFGq0ak4ly3OQYq.jpgahttps://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1779964251618-72bxri-qnQJAP2EyjwcEwPzFGq0ak4ly3OQYq.jpg"},
-        {food:"比薩", meal:"午餐", nick:"Morgan", url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1779947479248-acoylp-cFaF7VZ05CBOp3LJgNkb4hSbX2NDR0.jpgahttps://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1779947479248-acoylp-cFaF7VZ05CBOp3LJgNkb4hSbX2NDR0.jpg"},
-        {food:"芒果", meal:"早餐", nick:"地瓜比Ya地瓜葉", url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1779932964252-maqqxq-Zu2BFnkZrGdPF7PW6ZpO5dKwPLoMdy.jpgahttps://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1779932964252-maqqxq-Zu2BFnkZrGdPF7PW6ZpO5dKwPLoMdy.jpg"}
-      ]
+        {food:"雞肉飯", meal:"午餐", nick:"Josh", url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1780009356544-vq7i4l-6TVlZ4nh8AM6V4tdo7GHKplrrWTxgt.jpg"},
+        {food:"雞肉飯", meal:"晚餐", nick:"青", url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1779969176378-g4pd0s-yzX0lpANhmO7yIktEd1hyaLZFxrhYq.jpg"}
+      ],
+      axisPhotos:{
+        np:[
+          {food:"巧克力飲料", note:"加工甜飲", pos:10, row:0, url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1780022085953-27p77x-D2fTETYhsi6IbsJCKFF9hfhbugOWuV.jpg"},
+          {food:"冰淇淋", note:"點心慰藉", pos:18, row:1, url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1779963436608-55sdge-xiKI4bQdoTBZPJfVQLHylSRUsatQ7K.jpg"},
+          {food:"鮮奶茶", note:"手搖波動", pos:30, row:0, url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1779932871753-e7yqpp-JJj2FbIT1bVHw521TjRjNHfcIfpg45.jpg"},
+          {food:"天婦羅烏龍麵", note:"半加工正餐", pos:42, row:1, url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1780008793597-yak9pu-h452tNpnO335HTSjiCpmY9HvSaabi6.jpg"},
+          {food:"肉鬆飯糰", note:"便利補給", pos:64, row:0, url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1780022036228-6of6on-sVrJXmWIU6jlObplHq9XWQhPcwom1v.jpg"},
+          {food:"雞蛋", note:"原型食材", pos:76, row:1, url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1779853735602-kqbexj-1FEwOVgboSFwWdN933mdBuf0GhVhHD.jpg"},
+          {food:"水蜜桃", note:"鮮果入曆", pos:84, row:0, url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1779867293841-pnb2ra-nrJiQBri7ecNMloT3HO4RXLi2Ir0Wo.jpg"},
+          {food:"芒果", note:"原型甜息", pos:84, row:1, url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1779932964252-maqqxq-Zu2BFnkZrGdPF7PW6ZpO5dKwPLoMdy.jpg"}
+        ],
+        hl:[
+          {food:"白湯雞麵", note:"清爽餘韻", pos:10, row:0, url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1780009622347-mkmq05-tTWWZOZ1AJDdkeq4GNJiV93NFVikml.jpg"},
+          {food:"雞絲涼拌菜", note:"輕身補給", pos:18, row:1, url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1780009450603-vl6iq2-GKkRudaUJ7Q1zQbvzgbRpYOUD1eGQv.jpg"},
+          {food:"飯糰跟豆漿", note:"穩定落胃", pos:30, row:0, url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1780008901719-h4lx5e-tAaZYgQ1UTw385rALUtpOJpsoJdDWb.jpg"},
+          {food:"嘴邊肉湯", note:"夜間暖補", pos:42, row:1, url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1779990416509-9jtebd-8SexOtPW3esT4E2yAewFHSjyGftOiw.jpg"},
+          {food:"火鍋", note:"厚重食痕", pos:70, row:0, url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1779851783100-lhrk5q-WJeuPMnRjPWMKqdvf5noJybLdJXp6h.jpg"},
+          {food:"萊斯洋芋片", note:"煞氣零嘴", pos:80, row:1, url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1779612462340-66ee3y-nJZjOIuR3oIxQHN7saG7jaKEiNO4bD.jpg"},
+          {food:"擊敗湯拉麵", note:"濃湯負荷", pos:84, row:0, url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1779684640506-qu57am-3BSckK6Zdgr3uzuT92GkVixW4RVTyQ.jpg"}
+        ],
+        mb:[
+          {food:"鐵板麵跟紅茶", note:"魂緒牽引", pos:12, row:0, url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1780009271006-2e82fp-hniyciXvbiQwr66qNwyRF8HS707yyU.jpg"},
+          {food:"意大利海鮮麵", note:"心情正餐", pos:24, row:1, url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1779969064458-t5wtgf-EWO87sWW9AhydBkYmRSpxQDYUljGrp.jpg"},
+          {food:"飯糰跟豆漿", note:"安定心緒", pos:36, row:0, url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1780008901719-h4lx5e-tAaZYgQ1UTw385rALUtpOJpsoJdDWb.jpg"},
+          {food:"蛋花湯", note:"身體補氣", pos:66, row:1, url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1780009110820-4b9naq-GkHDaa4LNoDoERMbQ0VrdH9Z8XGPHZ.jpg"},
+          {food:"牛肉飯", note:"魄體補給", pos:78, row:0, url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1780009548829-iwiacf-TfYFBdXws8MP8SjEbPsrzmmLbKIfWQ.jpg"},
+          {food:"能量飲料", note:"借力提神", pos:84, row:1, url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1779429280195-xst4dg-O0rBi1PI9oLtICAMrlWX5yUqQtsAFh.jpg"}
+        ]
+      },
+      timeDots:{
+        早餐:[240,405,462,465,470,520,578,587,596],
+        午餐:[623,647,690,699,736,748,763,783,806,826,998],
+        晚餐:[680,683,686,900,986,1048,1070,1096,1120,1186,1304],
+        點心:[48,578,587,632,647,701,826,958,1068,1096,1304],
+        宵夜:[9,11,25,94,998,1140,1225,1234]
+      }
     };
 
     const codeInfo = {
@@ -407,6 +596,18 @@
       const idx = String(url).lastIndexOf("https://");
       return idx > 0 ? String(url).slice(idx) : url;
     };
+    const renderSpectrum = (id, items) => {
+      const host = document.getElementById(id);
+      host.insertAdjacentHTML("beforeend", items.map(p =>
+        `<figure class="axis-photo" style="--pos:${p.pos};--row:${p.row}"><img src="${cleanUrl(p.url)}" alt="${p.food}" loading="lazy" onerror="this.closest('figure').style.display='none'"><span>${p.food}<small>${p.note}</small></span></figure>`
+      ).join(""));
+    };
+    renderSpectrum("npSpectrum", data.axisPhotos.np);
+    renderSpectrum("hlSpectrum", data.axisPhotos.hl);
+    renderSpectrum("mbSpectrum", data.axisPhotos.mb);
+    document.getElementById("timeTimeline").innerHTML = Object.entries(data.timeDots).map(([meal, dots]) =>
+      `<div class="time-row"><b>${meal}</b><div class="time-line">${dots.map(t => `<i class="time-dot" style="--t:${t}"></i>`).join("")}</div></div>`
+    ).join("") + `<div class="time-scale"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>`;
     const maxRole = Math.max(...data.roleData.map(d => d.count));
     document.getElementById("stats").innerHTML = [
       [`${data.totalRows}`, "食緒紀錄"],
