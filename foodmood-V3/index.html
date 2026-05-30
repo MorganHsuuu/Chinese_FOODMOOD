@@ -4236,23 +4236,26 @@
         const code = hatch.avatarType?.code || latestType.code;
         const idx = rows.findIndex((r) => normalizeEmail(r.email || '') === key);
         if (idx >= 0) {
+          const serverRecordCount = rows[idx].recordCount || 0;
+          const localAhead = records.length > serverRecordCount;
+          const localMeals = records.slice(0, 3).map((r) => ({
+            food: r.whatFood,
+            mood: r.mood,
+            bodyFeeling: r.bodyTier ?? r.bodyFeeling,
+            mealType: r.mealType,
+            date: r.date,
+            time: r.time || r.mealTime,
+          }));
           rows[idx] = {
             ...rows[idx],
             isUser: true,
             name: rows[idx].name || loginProfile?.nickname || '修行者',
-            points: Math.max(rows[idx].points || 0, localPts),
-            recordCount: Math.max(rows[idx].recordCount || 0, records.length),
-            hatched: hatch.hasHatched || !!rows[idx].hatched,
-            code: hatch.hasHatched ? code : null,
+            points: localAhead ? Math.max(rows[idx].points || 0, localPts) : (rows[idx].points || 0),
+            recordCount: localAhead ? Math.max(serverRecordCount, records.length) : serverRecordCount,
+            hatched: !!rows[idx].hatched || (localAhead && hatch.hasHatched),
+            code: localAhead && hatch.hasHatched ? code : (rows[idx].code || null),
             scoreLabel: '累積功德',
-            recentMeals: records.slice(0, 3).map((r) => ({
-              food: r.whatFood,
-              mood: r.mood,
-              bodyFeeling: r.bodyTier ?? r.bodyFeeling,
-              mealType: r.mealType,
-              date: r.date,
-              time: r.time || r.mealTime,
-            })),
+            recentMeals: localAhead ? localMeals : (rows[idx].recentMeals || localMeals),
           };
         } else if (loginProfile?.nickname || localPts > 0) {
           rows.push({
@@ -4281,7 +4284,8 @@
 
       const mbeiLeaderboard = useMemo(() => {
         const rows = [...notionMbei];
-        const localCodes = hatch.hasHatched ? [...(hatch.unlockedCodes || [])] : [];
+        const localAhead = hatch.hasHatched && records.length > (notionUserProfile?.recordCount || 0);
+        const localCodes = localAhead ? [...(hatch.unlockedCodes || [])] : [];
         const notionCodes = new Set([
           ...(notionUserProfile?.unlockedCodes || []),
           ...(notionUserProfile?.hatchedCreatures || []).map((h) => h.code),
@@ -4345,7 +4349,7 @@
             name: MBEI_TYPES[u.code]?.creature || u.name,
             scoreLabel: u.scoreLabel || '修行者人數',
           }));
-      }, [notionMbei, notionUserProfile, hatch.hasHatched, hatch.unlockedCodes, records]);
+      }, [notionMbei, notionUserProfile, hatch.hasHatched, hatch.unlockedCodes, hatch.avatarType?.code, hatch.completedCycles, loginProfile, records]);
 
       const board = rankTab === 'personal' ? personalLeaderboard : mbeiLeaderboard;
       const openInsightArchive = () => {

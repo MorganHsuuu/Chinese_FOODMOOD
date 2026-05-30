@@ -59,7 +59,7 @@
     .stat strong { display:block; font-size:28px; line-height:1; color:var(--cream); }
     .stat span { display:block; margin-top:8px; color:var(--muted); font-size:12px; font-weight:900; letter-spacing:.12em; }
     .grid { display:grid; grid-template-columns:1.1fr .9fr; gap:18px; margin-top:18px; }
-    .question-grid { display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:12px; margin-top:18px; }
+    .question-grid { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:12px; margin-top:18px; }
     .q-card {
       min-height:330px;
       border:1px solid rgba(149,211,195,.16);
@@ -74,6 +74,7 @@
     .q-card b { color:var(--jade); font-size:12px; letter-spacing:.16em; }
     .q-card h3 { margin:0; color:var(--cream); font-size:17px; line-height:1.35; letter-spacing:-.03em; }
     .q-card p { margin:0; color:var(--sand); font-size:12px; }
+    .q-card.is-wide { grid-column:span 2; }
     .q-viz {
       min-height:112px;
       border:1px solid rgba(255,255,255,.08);
@@ -92,11 +93,180 @@
     .scatter:before { left:0; right:0; top:55%; height:1px; }
     .scatter:after { left:48%; top:0; bottom:0; width:1px; }
     .bubble { position:absolute; left:var(--x); top:var(--y); width:var(--s); height:var(--s); border-radius:50%; background:rgba(217,138,91,.36); border:1px solid rgba(212,168,67,.48); transform:translate(-50%, -50%); }
+    .contrast-list { width:100%; display:grid; grid-template-columns:1fr 1fr; gap:10px; align-self:stretch; }
+    .contrast-col {
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:12px;
+      padding:10px;
+      background:rgba(255,255,255,.035);
+    }
+    .contrast-col strong { display:block; margin-bottom:7px; color:var(--cream); font-size:12px; letter-spacing:.04em; }
+    .contrast-col span { display:inline-flex; margin:0 5px 6px 0; padding:4px 8px; border-radius:999px; color:var(--cream); background:rgba(149,211,195,.09); border:1px solid rgba(149,211,195,.14); font-size:11px; font-weight:800; }
+    .contrast-col.is-heavy span { background:rgba(217,138,91,.1); border-color:rgba(217,138,91,.2); }
+    .meter-list { width:100%; display:grid; gap:8px; align-self:stretch; }
+    .meter-row {
+      display:grid;
+      grid-template-columns:88px 1fr;
+      gap:10px;
+      align-items:center;
+      padding:8px 10px;
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:12px;
+      background:rgba(255,255,255,.035);
+    }
+    .meter-row.is-low { border-color:rgba(217,138,91,.2); background:rgba(217,138,91,.06); }
+    .meter-food { min-width:0; color:var(--cream); font-size:12px; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .meter-stack { display:grid; gap:6px; }
+    .meter-line { display:grid; grid-template-columns:34px 1fr 24px; gap:7px; align-items:center; color:var(--muted); font-size:10px; font-weight:900; }
+    .meter-track {
+      position:relative;
+      height:8px;
+      border-radius:999px;
+      background:rgba(255,255,255,.08);
+      overflow:visible;
+    }
+    .meter-fill { width:calc(var(--v) * 20%); height:100%; border-radius:999px; background:linear-gradient(90deg, var(--clay), var(--amber)); }
+    .meter-line.is-body .meter-fill { background:linear-gradient(90deg, var(--clay), var(--jade)); }
+    .meter-track:after {
+      content:"";
+      position:absolute;
+      left:calc(var(--v) * 20%);
+      top:50%;
+      width:12px;
+      height:12px;
+      border-radius:50%;
+      transform:translate(-50%, -50%);
+      background:var(--cream);
+      box-shadow:0 0 0 3px rgba(255,244,216,.12);
+    }
+    .mood-body-plane {
+      position:relative;
+      width:100%;
+      height:310px;
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:16px;
+      overflow:hidden;
+      background:
+        linear-gradient(90deg, rgba(217,138,91,.18), rgba(149,211,195,.12)),
+        radial-gradient(circle at 82% 18%, rgba(149,211,195,.18), transparent 34%),
+        radial-gradient(circle at 18% 78%, rgba(217,138,91,.13), transparent 36%);
+    }
+    .mood-body-plane:before, .mood-body-plane:after {
+      content:"";
+      position:absolute;
+      background:rgba(255,244,216,.18);
+      pointer-events:none;
+    }
+    .mood-body-plane:before { left:50%; top:0; bottom:0; width:1px; }
+    .mood-body-plane:after { top:50%; left:0; right:0; height:1px; }
+    .quad-label {
+      position:absolute;
+      z-index:1;
+      color:rgba(255,244,216,.54);
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:.06em;
+    }
+    .quad-label.lt { left:12px; top:10px; }
+    .quad-label.rt { right:12px; top:10px; color:rgba(149,211,195,.72); }
+    .quad-label.lb { left:12px; bottom:10px; color:rgba(217,138,91,.72); }
+    .quad-label.rb { right:12px; bottom:10px; }
+    .axis-name {
+      position:absolute;
+      z-index:1;
+      color:var(--muted);
+      font-size:10px;
+      font-weight:900;
+      letter-spacing:.16em;
+    }
+    .axis-name.x { left:50%; bottom:8px; transform:translateX(-50%); }
+    .axis-name.y { left:8px; top:50%; transform:translateY(-50%) rotate(-90deg); transform-origin:center; }
+    .axis-end {
+      position:absolute;
+      z-index:3;
+      padding:3px 7px;
+      border-radius:999px;
+      background:rgba(16,9,0,.72);
+      border:1px solid rgba(255,244,216,.12);
+      color:var(--sand);
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:.08em;
+      pointer-events:none;
+    }
+    .axis-end.left { left:14px; top:50%; transform:translateY(-50%); color:var(--clay); }
+    .axis-end.right { right:14px; top:50%; transform:translateY(-50%); color:var(--jade); }
+    .axis-end.top { top:12px; left:50%; transform:translateX(-50%); color:var(--jade); }
+    .axis-end.bottom { bottom:12px; left:50%; transform:translateX(-50%); color:var(--clay); }
+    .food-point {
+      position:absolute;
+      left:calc(var(--x) * 1%);
+      top:calc(var(--y) * 1%);
+      transform:translate(-50%, -50%);
+      z-index:2;
+      display:inline-flex;
+      align-items:center;
+      gap:5px;
+      max-width:138px;
+      padding:5px 8px;
+      border-radius:999px;
+      border:1px solid rgba(255,244,216,.18);
+      background:rgba(16,9,0,.78);
+      color:var(--cream);
+      font-size:11px;
+      font-weight:900;
+      white-space:nowrap;
+      box-shadow:0 8px 20px rgba(0,0,0,.18);
+      font-family:inherit;
+      cursor:pointer;
+    }
+    .food-point:hover, .food-point:focus-visible {
+      border-color:rgba(149,211,195,.55);
+      outline:none;
+      box-shadow:0 0 0 3px rgba(149,211,195,.12), 0 10px 24px rgba(0,0,0,.22);
+    }
+    .food-point:before {
+      content:"";
+      width:calc(6px + var(--s) * 2px);
+      height:calc(6px + var(--s) * 2px);
+      border-radius:50%;
+      background:linear-gradient(135deg, var(--clay), var(--jade));
+      flex:0 0 auto;
+    }
+    .story-modal {
+      position:fixed;
+      inset:0;
+      z-index:50;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      background:rgba(7,4,0,.72);
+      backdrop-filter:blur(8px);
+    }
+    .story-modal.is-open { display:flex; }
+    .story-dialog {
+      width:min(440px, 100%);
+      border:1px solid rgba(149,211,195,.22);
+      border-radius:22px;
+      background:linear-gradient(180deg, rgba(36,25,13,.98), rgba(16,9,0,.98));
+      box-shadow:0 24px 80px rgba(0,0,0,.45);
+      padding:20px;
+    }
+    .story-dialog b { color:var(--jade); font-size:12px; letter-spacing:.18em; }
+    .story-dialog h3 { margin:8px 0 10px; font-size:24px; line-height:1.2; }
+    .story-dialog p { margin:0; color:var(--sand); font-size:15px; }
+    .story-meta { display:flex; flex-wrap:wrap; gap:8px; margin:14px 0; }
+    .story-meta span { padding:5px 9px; border-radius:999px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08); color:var(--mist); font-size:12px; font-weight:900; }
+    .story-close { width:100%; margin-top:18px; border:1px solid rgba(149,211,195,.3); border-radius:999px; background:rgba(149,211,195,.1); color:var(--jade); padding:10px 14px; font-family:inherit; font-weight:900; cursor:pointer; }
     .mini-bars { width:100%; display:grid; gap:7px; }
     .mini-bars span { display:grid; grid-template-columns:42px 1fr 24px; gap:7px; align-items:center; color:var(--mist); font-size:11px; }
     .mini-bars i { height:8px; width:calc(var(--v) * 1%); border-radius:999px; display:block; background:linear-gradient(90deg,var(--clay),var(--amber)); }
     .clock { width:112px; height:112px; border-radius:50%; border:1px solid rgba(149,211,195,.3); position:relative; background:radial-gradient(circle, rgba(149,211,195,.12), transparent 55%); }
     .clock i { position:absolute; width:13px; height:13px; border-radius:50%; background:var(--amber); left:calc(50% + var(--x)); top:calc(50% + var(--y)); transform:translate(-50%, -50%); opacity:var(--o); }
+    .branch-clock { width:132px; height:132px; position:relative; border-radius:50%; border:1px solid rgba(149,211,195,.28); background:radial-gradient(circle, rgba(149,211,195,.14), transparent 56%); }
+    .branch-clock i { position:absolute; width:10px; height:10px; border-radius:50%; background:var(--amber); left:calc(50% + var(--x)); top:calc(50% + var(--y)); transform:translate(-50%, -50%); opacity:var(--o); }
+    .branch { position:absolute; left:50%; top:50%; transform:translate(-50%, -50%) rotate(var(--r)) translateY(-58px) rotate(calc(-1 * var(--r))); color:var(--muted); font-size:10px; font-weight:900; }
     .radar {
       width:112px; height:112px;
       background:
@@ -179,6 +349,8 @@
       opacity:.72;
     }
     .time-scale { display:grid; grid-template-columns:repeat(5, 1fr); color:var(--muted); font-size:10px; margin-left:66px; }
+    .time-branches { display:grid; grid-template-columns:repeat(12, 1fr); gap:4px; margin-left:66px; margin-top:10px; color:var(--muted); font-size:10px; text-align:center; }
+    .time-branches span { border-top:1px solid rgba(149,211,195,.14); padding-top:5px; }
     .source-grid { display:grid; grid-template-columns:repeat(5, 1fr); gap:10px; }
     .source-card {
       min-height:130px;
@@ -297,6 +469,11 @@
       .grid { grid-template-columns:1fr; }
       .question-grid { grid-template-columns:1fr; }
       .q-card { min-height:0; }
+      .q-card.is-wide { grid-column:auto; }
+      .contrast-list { grid-template-columns:1fr; }
+      .meter-row { grid-template-columns:1fr; }
+      .mood-body-plane { height:360px; }
+      .food-point { max-width:112px; font-size:10px; padding:4px 7px; }
       .axis-head { display:block; }
       .spectrum { min-height:330px; }
       .axis-photo { width:96px; }
@@ -320,36 +497,29 @@
       <div class="stats" id="stats"></div>
     </section>
 
-    <section class="question-grid" aria-label="五道食緒提問">
-      <article class="q-card">
+    <section class="question-grid" aria-label="兩道食緒觀察">
+      <article class="q-card is-wide">
         <b>QUESTION 01</b>
-        <h3>大家最常在什麼情緒下吃東西？</h3>
+        <h3>心情與身體感受會把食物推到哪個象限？</h3>
         <div class="q-viz">
-          <div class="heat" aria-label="情緒熱力圖">
-            <i style="--a:1"></i><i style="--a:2"></i><i style="--a:3"></i><i style="--a:5"></i><i style="--a:4"></i>
-            <i style="--a:1"></i><i style="--a:2"></i><i style="--a:4"></i><i style="--a:5"></i><i style="--a:5"></i>
-            <i style="--a:1"></i><i style="--a:3"></i><i style="--a:4"></i><i style="--a:5"></i><i style="--a:4"></i>
+          <div class="mood-body-plane" id="moodBodyQuadrant">
+            <span class="quad-label lt">心情低 × 身體舒服</span>
+            <span class="quad-label rt">心情好 × 身體舒服</span>
+            <span class="quad-label lb">心情低 × 身體不舒服</span>
+            <span class="quad-label rb">心情好 × 身體不舒服</span>
+            <span class="axis-name x">心情不好 ←→ 心情好</span>
+            <span class="axis-name y">身體不舒服 ←→ 身體舒服</span>
+            <span class="axis-end left">心情不好</span>
+            <span class="axis-end right">心情好</span>
+            <span class="axis-end top">身體舒服</span>
+            <span class="axis-end bottom">身體不舒服</span>
           </div>
         </div>
-        <p><span class="viz-label">情緒熱力圖 / 餐前情緒分布</span><br>目前資料偏向高爽度與情緒軸，飲食常不是單純飢餓，也包含獎勵、安慰與想吃的瞬間。</p>
+        <p><span class="viz-label">X 軸心情 / Y 軸身體感受</span><br>右上是吃得開心也舒服；右下是當下開心但身體回饋低；左側則保留較低心情下的餐食狀態。</p>
       </article>
 
       <article class="q-card">
         <b>QUESTION 02</b>
-        <h3>哪些食物吃的當下開心，但吃完後負擔變高？</h3>
-        <div class="q-viz">
-          <div class="scatter" aria-label="快樂負擔座標">
-            <span class="bubble" style="--x:78%;--y:24%;--s:32px"></span>
-            <span class="bubble" style="--x:66%;--y:38%;--s:22px"></span>
-            <span class="bubble" style="--x:84%;--y:58%;--s:18px"></span>
-            <span class="bubble" style="--x:38%;--y:68%;--s:16px"></span>
-          </div>
-        </div>
-        <p><span class="viz-label">食後落差圖 / 快樂—負擔座標</span><br>甜點、炸物、火鍋、飲料很適合被標成「短暫療癒」，但部分紀錄會落到高負擔區。</p>
-      </article>
-
-      <article class="q-card">
-        <b>QUESTION 03</b>
         <h3>大家最容易孵化成哪一類靈獸？</h3>
         <div class="q-viz">
           <div class="mini-bars" aria-label="靈獸角色比例">
@@ -362,29 +532,6 @@
         <p><span class="viz-label">靈獸圖鑑分布 / 十六型比例</span><br>當康最多，代表群體常落在「身體需求、原型、厚實、規律」的日常補給型。</p>
       </article>
 
-      <article class="q-card">
-        <b>QUESTION 04</b>
-        <h3>一天中哪個時間最容易出現情緒性進食？</h3>
-        <div class="q-viz">
-          <div class="clock" aria-label="24 小時食緒時鐘">
-            <i style="--x:0px;--y:-44px;--o:.45"></i>
-            <i style="--x:42px;--y:-8px;--o:.95"></i>
-            <i style="--x:20px;--y:38px;--o:.85"></i>
-            <i style="--x:-34px;--y:30px;--o:.55"></i>
-            <i style="--x:-46px;--y:-8px;--o:.35"></i>
-          </div>
-        </div>
-        <p><span class="viz-label">24 小時食緒時鐘 / 餐次時間軸</span><br>午餐量最大，但點心、宵夜與晚餐更值得追壓力、犒賞、安慰等情緒性進食訊號。</p>
-      </article>
-
-      <article class="q-card">
-        <b>QUESTION 05</b>
-        <h3>不同食物來源會讓人變成什麼食緒狀態？</h3>
-        <div class="q-viz">
-          <div class="radar" aria-label="食物來源四軸雷達"></div>
-        </div>
-        <p><span class="viz-label">食物來源 × 四軸雷達圖</span><br>下一步可加來源欄位，比較自煮、外食、便利商店、外送、手搖飲如何推動煉、幻、煞、曆。</p>
-      </article>
     </section>
 
     <section class="axis-lab" aria-label="四軸食緒觀測台">
@@ -528,6 +675,16 @@
     <footer>資料來源：Chinese_MoodFood Notion 公開資料庫快照 · 本頁為本地端靜態分析頁</footer>
   </main>
 
+  <div class="story-modal" id="storyModal" aria-hidden="true">
+    <div class="story-dialog" role="dialog" aria-modal="true" aria-labelledby="storyTitle">
+      <b>匿名食緒片段</b>
+      <h3 id="storyTitle"></h3>
+      <p id="storyText"></p>
+      <div class="story-meta" id="storyMeta"></div>
+      <button class="story-close" type="button" id="storyClose">關閉</button>
+    </div>
+  </div>
+
   <script>
     const data = {
       totalRows:272,
@@ -548,6 +705,22 @@
       photos:[
         {food:"雞肉飯", meal:"午餐", nick:"Josh", url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1780009356544-vq7i4l-6TVlZ4nh8AM6V4tdo7GHKplrrWTxgt.jpg"},
         {food:"雞肉飯", meal:"晚餐", nick:"青", url:"https://es7qp3t2ryopqxnz.public.blob.vercel-storage.com/meal-1779969176378-g4pd0s-yzX0lpANhmO7yIktEd1hyaLZFxrhYq.jpg"}
+      ],
+      moodBodyQuadrant:[
+        {food:"芒果", x:80, y:16, count:2, mood:5, body:5, meal:"早餐", time:"09:48", story:"今年第一顆芒果，很甜很讚。"},
+        {food:"茶葉蛋", x:87, y:24, count:2, mood:5, body:5, meal:"早餐", time:"09:47", story:"全家的茶葉蛋比 7-11 的好吃。"},
+        {food:"麻醬麵", x:66, y:34, count:2, mood:4, body:4, meal:"晚餐", time:"18:36", story:"寫了一整天的論文，終於要吃飯了。"},
+        {food:"菠蘿麵包", x:72, y:44, count:2, mood:4, body:4, meal:"早餐", time:"10:10", story:"早餐墊胃，是一個先讓身體穩下來的選擇。"},
+        {food:"沙拉", x:15, y:16, count:1, mood:2, body:4, meal:"午餐", time:"13:42", story:"太晚吃、還在趕工，食物偏乾，但身體回饋仍算輕。"},
+        {food:"水果茶", x:24, y:31, count:1, mood:1, body:4, meal:"點心", time:"13:46", story:"沒有很好喝，但天氣熱，喝點涼的仍有一點安撫。"},
+        {food:"牛肉飯", x:36, y:36, count:1, mood:2, body:4, meal:"午餐", time:"12:37", story:"出公差吃的便當，偏健康但味道清淡，心情被影響了一些。"},
+        {food:"牛肉麵", x:82, y:68, count:1, mood:5, body:2, meal:"午餐", time:"13:03", story:"發表完跟同學去聚餐，像是犒賞自己，但份量有點多。"},
+        {food:"披薩", x:88, y:76, count:1, mood:5, body:2, meal:"晚餐", time:"17:38", story:"提案後的慶功宴，情緒很亮，但身體回饋偏重。"},
+        {food:"換乘戀愛", x:76, y:84, count:1, mood:5, body:1, meal:"午餐", time:"11:45", story:"沒事不要吃回頭草。"},
+        {food:"鮮乳", x:66, y:82, count:1, mood:4, body:1, meal:"點心", time:"21:44", story:"剛上完課需要一點補給，但喝太多飲料，胃有點怪。"},
+        {food:"鐵板麵跟紅茶", x:34, y:68, count:1, mood:2, body:2, meal:"早餐", time:"09:56", story:"心血來潮吃早餐，吃完覺得油膩。"},
+        {food:"拉麵", x:18, y:84, count:1, mood:2, body:2, meal:"晚餐", time:"19:46", story:"有一點脹氣，價格也讓心情低了一些。"},
+        {food:"火鍋", x:32, y:86, count:1, mood:2, body:1, meal:"晚餐", time:"11:32", story:"這次的火鍋體驗不太好，吃完身體也不太舒服。"}
       ],
       axisPhotos:{
         np:[
@@ -602,12 +775,45 @@
         `<figure class="axis-photo" style="--pos:${p.pos};--row:${p.row}"><img src="${cleanUrl(p.url)}" alt="${p.food}" loading="lazy" onerror="this.closest('figure').style.display='none'"><span>${p.food}<small>${p.note}</small></span></figure>`
       ).join(""));
     };
+    const moodBodyQuadrant = document.getElementById("moodBodyQuadrant");
+    moodBodyQuadrant.insertAdjacentHTML("beforeend", data.moodBodyQuadrant.map(item => {
+      const x = item.x;
+      const y = item.y;
+      return `<button class="food-point" type="button" data-food="${item.food}" style="--x:${x};--y:${y};--s:${item.count}">${item.food}${item.count > 1 ? ` ×${item.count}` : ""}</button>`;
+    }).join(""));
+    const storyModal = document.getElementById("storyModal");
+    const storyTitle = document.getElementById("storyTitle");
+    const storyText = document.getElementById("storyText");
+    const storyMeta = document.getElementById("storyMeta");
+    const closeStory = () => {
+      storyModal.classList.remove("is-open");
+      storyModal.setAttribute("aria-hidden", "true");
+    };
+    moodBodyQuadrant.addEventListener("click", event => {
+      const target = event.target.closest(".food-point");
+      if (!target) return;
+      const item = data.moodBodyQuadrant.find(row => row.food === target.dataset.food);
+      if (!item) return;
+      storyTitle.textContent = item.food;
+      storyText.textContent = item.story;
+      storyMeta.innerHTML = [`${item.meal} · ${item.time}`, `心情 ${item.mood}`, `身體 ${item.body}`].map(text => `<span>${text}</span>`).join("");
+      storyModal.classList.add("is-open");
+      storyModal.setAttribute("aria-hidden", "false");
+    });
+    document.getElementById("storyClose").addEventListener("click", closeStory);
+    storyModal.addEventListener("click", event => {
+      if (event.target === storyModal) closeStory();
+    });
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") closeStory();
+    });
     renderSpectrum("npSpectrum", data.axisPhotos.np);
     renderSpectrum("hlSpectrum", data.axisPhotos.hl);
     renderSpectrum("mbSpectrum", data.axisPhotos.mb);
     document.getElementById("timeTimeline").innerHTML = Object.entries(data.timeDots).map(([meal, dots]) =>
       `<div class="time-row"><b>${meal}</b><div class="time-line">${dots.map(t => `<i class="time-dot" style="--t:${t}"></i>`).join("")}</div></div>`
-    ).join("") + `<div class="time-scale"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>`;
+    ).join("") + `<div class="time-scale"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
+      <div class="time-branches"><span>子<br>23-01</span><span>丑<br>01-03</span><span>寅<br>03-05</span><span>卯<br>05-07</span><span>辰<br>07-09</span><span>巳<br>09-11</span><span>午<br>11-13</span><span>未<br>13-15</span><span>申<br>15-17</span><span>酉<br>17-19</span><span>戌<br>19-21</span><span>亥<br>21-23</span></div>`;
     const maxRole = Math.max(...data.roleData.map(d => d.count));
     document.getElementById("stats").innerHTML = [
       [`${data.totalRows}`, "食緒紀錄"],
