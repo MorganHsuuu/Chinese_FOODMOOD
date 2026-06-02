@@ -114,6 +114,14 @@ async function queryAllPages(apiKey, databaseId) {
   return pages;
 }
 
+// 測試／佔位用的食痕，不應汙染分析頁統計（象限、四軸、餐次、影像壁等）
+// 僅排除明確的測試字串；保留「未命名餐食」等仍帶有效心情/身體資料的紀錄
+const TEST_FOOD_RE = /^(test\d*|測試\d*|tset|123+|abc|aaa+|xxx+|placeholder|demo)$/i;
+function isTestRow(row) {
+  const food = String(row?.food || '').trim();
+  return TEST_FOOD_RE.test(food);
+}
+
 function parseRow(page) {
   const p = page.properties || {};
   const scores = {
@@ -283,7 +291,7 @@ module.exports = async (req, res) => {
 
   try {
     const pages = await queryAllPages(apiKey, databaseId);
-    const rows = pages.map(parseRow);
+    const rows = pages.map(parseRow).filter((r) => !isTestRow(r));
     return res.status(200).json({ ok: true, ...summarizeRows(rows) });
   } catch (err) {
     console.error(err);
