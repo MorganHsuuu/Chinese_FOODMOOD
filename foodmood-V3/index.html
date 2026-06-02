@@ -1227,6 +1227,19 @@
       MBEI_AXES.forEach(({ key }) => { out[key] = clampMbeiScore(raw?.[key]); });
       return out;
     };
+    /**
+     * 取得單筆紀錄用於孵化判定的 MBEI 代碼。
+     * 必須與後端 notion-leaderboard.js 的 parseRow（mbeiCodeFromScores(MB/NP/HL/RV)）完全一致，
+     * 否則「自己手機」與「別人手機」會因取碼方式不同而顯示不同角色。
+     * 因此優先以四軸分數重算（與寫入 Notion 的欄位同源），分數缺失時才退回 mbeiCode。
+     */
+    const hatchCodeOfRecord = (r) => {
+      if (r && r.mbeiScores) {
+        const c = mbeiCodeFromScores(normalizeMbeiScores(r.mbeiScores));
+        if (c) return c;
+      }
+      return (r && r.mbeiCode) || 'MPLR';
+    };
     const EMOTION_CONTEXT_RE = /壓力|加班|失戀|孤單|犒賞|解饞|難過|想哭|焦慮|煩躁|空虛|寂寞|報復|紓壓|紓解|療癒|安慰|情緒|崩潰|委屈|煩|累|倦|爆吃|暴食|心情|煩悶|煩心/;
     const HL_BASE_SCORE = {
       '清爽有神': -40, '意猶未盡': -20, '舒服飽足': 0, '碳水倒流': 25, '油膩發脹': 45, '腸胃作怪': 50,
@@ -1347,13 +1360,19 @@
     const dominantTypeFromRecords = (batch) => {
       if (!batch?.length) return null;
       const freq = {};
-      batch.forEach(r => { freq[r.mbeiCode] = (freq[r.mbeiCode] || 0) + 1; });
-      const topCode = Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0] || 'MPLR';
+      batch.forEach(r => { const c = hatchCodeOfRecord(r); freq[c] = (freq[c] || 0) + 1; });
+      // tiebreak 與後端 dominantCodeFromBatch 一致：次數相同時取字典序最小的代碼
+      const topCode = Object.entries(freq).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] || 'MPLR';
       return MBEI_TYPES[topCode] || MBEI_TYPES.MPLR;
     };
 
     const getHatchState = (records = []) => {
-      const sortedAsc = [...records].sort((a, b) => new Date(a.date) - new Date(b.date));
+      // 排序需與後端 sortUserRowsChronologically 完全一致：先日期字串、再代碼字典序
+      const sortedAsc = [...records].sort((a, b) => {
+        const d = String(a.date || '').localeCompare(String(b.date || ''));
+        if (d !== 0) return d;
+        return String(hatchCodeOfRecord(a)).localeCompare(String(hatchCodeOfRecord(b)));
+      });
       const total = sortedAsc.length;
       const completedCycles = Math.floor(total / HATCH_RECORDS_REQUIRED);
       const progressInCycle = total % HATCH_RECORDS_REQUIRED;
@@ -1418,8 +1437,17 @@
         if (!mergedHatched.some((x) => x.cycle === h.cycle)) mergedHatched.push(h);
       });
       mergedHatched.sort((a, b) => a.cycle - b.cycle);
+      // 單一真相來源：Notion 已同步（其紀錄數 >= 本地）且已孵化時，當前靈獸以 Notion 為準，
+      // 確保「自己手機」與「別人手機」看到的角色一致；只有本地超前（剛孵化未同步）才用本地。
+      const notionSynced = (notionProfile.recordCount || 0) >= (hatch.total || 0);
+      const notionCode = notionProfile.code || notionProfile.creatureCode;
+      const authoritativeType = notionSynced && notionProfile.hatched && notionCode && MBEI_TYPES[notionCode]
+        ? MBEI_TYPES[notionCode]
+        : hatch.avatarType;
       return {
         ...hatch,
+        avatarType: authoritativeType,
+        displayType: authoritativeType || hatch.formingType || MBEI_TYPES.MPLR,
         unlockedCodes: merged,
         hatchedCreatures: mergedHatched.length ? mergedHatched : hatch.hatchedCreatures,
         notionRecordCount: notionProfile.recordCount,
@@ -2971,8 +2999,8 @@
       );
     }
 
-    function HomeView({ records, loginProfile, mealDrafts = [], onContinueDraft, onReviewFortune, onSharePoster, shareBusy }) {
-      const hatch = useMemo(() => getHatchState(records), [records]);
+    function HomeView({ records, loginProfile, notionProfile, mealDrafts = [], onContinueDraft, onReviewFortune, onSharePoster, shareBusy }) {
+      const hatch = useMemo(() => mergeHatchWithNotion(getHatchState(records), notionProfile), [records, notionProfile]);
       const displayType = hatch.avatarType || hatch.formingType || MBEI_TYPES.MPLR;
       const isUnlocked = hatch.hasHatched;
       const card = { background:'#252016', border:'1px solid #3a3020', borderRadius:5, padding:'28px 24px', position:'relative', boxShadow:'0 8px 30px rgba(135,123,115,0.08)' };
@@ -4194,8 +4222,6 @@
     }
 
     function ProfileView({ records, loginProfile, onLogout }) {
-      const hatch = useMemo(() => getHatchState(records), [records]);
-      const latestType = hatch.avatarType || hatch.formingType || (records[0] ? MBEI_TYPES[records[0].mbeiCode] : MBEI_TYPES['MPLR']);
       const [selectedCreature, setSelectedCreature] = useState(null);
       const [rankTab, setRankTab] = useState('personal');
       const [lbLoading, setLbLoading] = useState(true);
@@ -4206,6 +4232,12 @@
       const [notionUserProfile, setNotionUserProfile] = useState(null);
       const [selectedLeaderboardUser, setSelectedLeaderboardUser] = useState(null);
       const [selectedLeaderboardCharacter, setSelectedLeaderboardCharacter] = useState(null);
+      // 與孵化頁同樣以 Notion 為單一真相：已同步且已孵化時，頭像角色採 Notion 角色碼
+      const hatch = useMemo(
+        () => mergeHatchWithNotion(getHatchState(records), notionUserProfile),
+        [records, notionUserProfile],
+      );
+      const latestType = hatch.avatarType || hatch.formingType || (records[0] ? MBEI_TYPES[records[0].mbeiCode] : MBEI_TYPES['MPLR']);
 
       React.useEffect(() => {
         let cancelled = false;
@@ -5201,6 +5233,7 @@
         const activeEmail = localStorage.getItem(ACTIVE_USER_KEY);
         return activeEmail ? loadUserRecords(activeEmail) : [];
       });
+      const [notionProfile, setNotionProfile] = useState(null);
       const fortunePrefetchRef = React.useRef({ key: null, promise: null, result: null });
       const prefetchInFlightKeyRef = React.useRef(null);
       const recordPhotoRef = React.useRef(null);
@@ -5209,6 +5242,16 @@
       const bgMusicStartedRef = React.useRef(false);
       const [submitError, setSubmitError] = useState('');
       const [formData, setFormData] = useState(makeDefaultFormData);
+
+      // App 層讀取 Notion 個人檔，讓手機快速檢視彈窗的角色與排行榜為同一真相
+      React.useEffect(() => {
+        if (!loginProfile?.email) { setNotionProfile(null); return; }
+        let cancelled = false;
+        fetchNotionLeaderboard(loginProfile.email).then((res) => {
+          if (!cancelled && res.ok) setNotionProfile(res.userProfile);
+        });
+        return () => { cancelled = true; };
+      }, [loginProfile?.email, records.length]);
 
       React.useEffect(() => {
         const audio = new Audio(BACKGROUND_MUSIC_SRC);
@@ -5526,7 +5569,7 @@
       };
 
       const handleProfileSharePoster = async () => {
-        const hs = getHatchState(records);
+        const hs = mergeHatchWithNotion(getHatchState(records), notionProfile);
         if (!hs.avatarType || profileShareBusy) return;
         setProfileShareError('');
         setProfileShareBusy(true);
@@ -5637,7 +5680,7 @@
             <main style={{ flex:1, position:'relative', zIndex:10, paddingBottom:120 }}
               className="scrollbar-hide md:pb-24">
               <div style={{ maxWidth:960, margin:'0 auto', padding:'32px 20px' }} className="md:p-12">
-                {activeTab === 'home' && <HomeView records={records} loginProfile={loginProfile} mealDrafts={mealDrafts} onContinueDraft={continueDraft} onReviewFortune={openFortuneReview} onSharePoster={handleProfileSharePoster} shareBusy={profileShareBusy} />}
+                {activeTab === 'home' && <HomeView records={records} loginProfile={loginProfile} notionProfile={notionProfile} mealDrafts={mealDrafts} onContinueDraft={continueDraft} onReviewFortune={openFortuneReview} onSharePoster={handleProfileSharePoster} shareBusy={profileShareBusy} />}
                 {activeTab === 'almanac' && <AlmanacView records={records} />}
                 {activeTab === 'insight' && <InsightView records={records} loginProfile={loginProfile} onSharePoster={handleProfileSharePoster} shareBusy={profileShareBusy} />}
                 {activeTab === 'profile' && <ProfileView records={records} loginProfile={loginProfile} onLogout={handleLogout} />}
@@ -5733,7 +5776,7 @@
 
             {/* 個人資料彈跳popup（手機） */}
             {showProfilePopup && (() => {
-              const hs = getHatchState(records);
+              const hs = mergeHatchWithNotion(getHatchState(records), notionProfile);
               const latestType = hs.avatarType || hs.formingType || (records[0] ? MBEI_TYPES[records[0].mbeiCode] : MBEI_TYPES['MPLR']);
               return (
                 <div className="md:hidden" style={{ position:'fixed', inset:0, zIndex:100, display:'flex', flexDirection:'column', justifyContent:'flex-end' }}>

@@ -169,11 +169,13 @@ function buildLeaderboards(rows, currentEmail) {
     );
     const hatchSnap = savedSnap || snap;
     const hatched = !!hatchSnap.hatched || recordCount >= HATCH_RECORDS_REQUIRED;
+    // 當前靈獸以「即時重算」為單一真相（與前端 getHatchState 同演算法），
+    // 避免歷史寫入的 stale cur 與前端不同步；stale cur 僅在重算不可得時作後備。
     personalMap[key] = {
       email,
       name: userRows.find((r) => r.nickname)?.nickname || email.split('@')[0] || '修行者',
       points,
-      code: hatched ? (hatchSnap.creatureCode || hatchedCode || snap.creatureCode || 'MPLR') : null,
+      code: hatched ? (hatchedCode || snap.creatureCode || hatchSnap.creatureCode || 'MPLR') : null,
       recordCount,
       hatched,
       hatchCycles: hatchSnap.hatchCycles,
