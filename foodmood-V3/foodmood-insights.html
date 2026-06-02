@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>食緒曆 · 靈獸資料洞察</title>
+  <title>食緒曆 · 食緒山海經</title>
   <style>
     :root {
       --night:#100900;
@@ -491,16 +491,16 @@
 <body>
   <main class="page">
     <section class="hero">
-      <p class="eyebrow">FOODMOOD LOCAL ANALYSIS</p>
-      <h1>食緒靈獸資料卷</h1>
-      <p class="lead">這是一份用目前 Notion 公開資料做成的本地視覺化快照。重點放在「當康形像的人都吃什麼」、角色多寡原因、以及四軸象限如何形成不同靈獸。</p>
+      <p class="eyebrow">FOODMOOD SHAN HAI ARCHIVE</p>
+      <h1>食緒山海經</h1>
+      <p class="lead">高維觀測者翻閱人間餐食殘卷，將每一次想吃、飽足、療癒與負擔，編入食緒山海經。此卷會隨新紀錄顯影，觀察靈獸如何在人群胃口與心緒之間遷徙。</p>
       <div class="stats" id="stats"></div>
     </section>
 
     <section class="question-grid" aria-label="兩道食緒觀察">
       <article class="q-card is-wide">
-        <b>QUESTION 01</b>
-        <h3>心情與身體感受會把食物推到哪個象限？</h3>
+        <b>觀測壹 · 心身象限</b>
+        <h3>一口食物，會把人推向哪片心身地貌？</h3>
         <div class="q-viz">
           <div class="mood-body-plane" id="moodBodyQuadrant">
             <span class="quad-label lt">心情低 × 身體舒服</span>
@@ -515,12 +515,12 @@
             <span class="axis-end bottom">身體不舒服</span>
           </div>
         </div>
-        <p><span class="viz-label">X 軸心情 / Y 軸身體感受</span><br>右上是吃得開心也舒服；右下是當下開心但身體回饋低；左側則保留較低心情下的餐食狀態。</p>
+        <p><span class="viz-label">心緒為東西，身感為南北</span><br>右上為甘澤之地，右下為短爽之谷；左側則記下低潮時仍被食物托住，或一起墜落的片刻。</p>
       </article>
 
       <article class="q-card">
-        <b>QUESTION 02</b>
-        <h3>大家最容易孵化成哪一類靈獸？</h3>
+        <b>觀測貳 · 靈獸顯形</b>
+        <h3>哪些靈獸最常在人間餐桌上現身？</h3>
         <div class="q-viz">
           <div class="mini-bars" aria-label="靈獸角色比例">
             <span><b>當康</b><i style="--v:100"></i><em>6</em></span>
@@ -529,7 +529,7 @@
             <span><b>夔</b><i style="--v:33"></i><em>2</em></span>
           </div>
         </div>
-        <p><span class="viz-label">靈獸圖鑑分布 / 十六型比例</span><br>當康最多，代表群體常落在「身體需求、原型、厚實、規律」的日常補給型。</p>
+        <p><span class="viz-label">十六獸顯形譜</span><br>每滿十道食痕，便有一獸自胃口與心緒的縫隙中浮現。</p>
       </article>
 
     </section>
@@ -539,9 +539,9 @@
         <div class="axis-head">
           <div>
             <p class="eyebrow">AXIS 01 · 野 / 煉</p>
-            <h2>食物來源光譜</h2>
+            <h2>野炁與煉痕</h2>
           </div>
-          <p>這條軸最適合用照片看：左側是加工、手搖、甜點；右側是水果、蛋、較原型的餐食。照片不是道德評分，而是食物來源與處理程度。</p>
+          <p>高維眼中，食物不分善惡，只看它離原形有多遠。果肉、蛋與清湯帶野炁；甜飲、酥皮與速成之物留煉痕。</p>
         </div>
         <div class="spectrum" id="npSpectrum">
           <span class="pole left">加工／煉</span>
@@ -553,9 +553,9 @@
         <div class="axis-head">
           <div>
             <p class="eyebrow">AXIS 02 · 曆 / 幻</p>
-            <h2>24 小時食緒時鐘</h2>
+            <h2>人間進食星盤</h2>
           </div>
-          <p>規律不適合用照片判讀，而要看時間點。每個點是一筆紀錄，早餐、午餐、晚餐越集中越像「曆」，點心與宵夜越飄移越像「幻」。</p>
+          <p>餐食若依日月而行，便近於曆；若在疲憊、犒賞、深夜忽然現身，便生幻。點點皆是人間胃口的星象。</p>
         </div>
         <div class="timeline" id="timeTimeline"></div>
       </article>
@@ -564,9 +564,9 @@
         <div class="axis-head">
           <div>
             <p class="eyebrow">AXIS 03 · 靈 / 煞</p>
-            <h2>食後身體餘韻</h2>
+            <h2>食後餘炁</h2>
           </div>
-          <p>這條軸看的是吃完後留下的身體感受：同樣是餐食，有些留下清爽餘韻，有些留下厚重食痕。</p>
+          <p>入口之後仍有餘波。清爽者為靈，沉滯者為煞；同是飽腹，有的讓身體鬆開，有的讓身體記下一筆負重。</p>
         </div>
         <div class="spectrum" id="hlSpectrum">
           <span class="pole left">輕盈／靈</span>
@@ -578,9 +578,9 @@
         <div class="axis-head">
           <div>
             <p class="eyebrow">AXIS 04 · 魂 / 魄</p>
-            <h2>食緒動機地圖</h2>
+            <h2>魂食與魄需</h2>
           </div>
-          <p>這條軸比較接近動機：為心情而食，或為身體而食。照片下方用世界觀語言包裝，不直接揭露太私人的情緒。</p>
+          <p>有些食物召喚魂，為安慰、慶祝與一瞬間的亮；有些食物回應魄，為補給、穩住與身體的召令。</p>
         </div>
         <div class="spectrum" id="mbSpectrum">
           <span class="pole left">心情／魂</span>
@@ -591,10 +591,10 @@
       <article class="axis-card">
         <div class="axis-head">
           <div>
-            <p class="eyebrow">SOURCE · 下一步資料欄位</p>
-            <h2>食物來源 × 四軸雷達</h2>
+            <p class="eyebrow">SOURCE · 高維補遺</p>
+            <h2>食物來處的未解圖騰</h2>
           </div>
-          <p>目前資料可用食物名稱粗略推估來源；若之後新增「自煮、外食、便利商店、外送、手搖飲」欄位，這裡就能變成更準確的來源地圖。</p>
+          <p>若日後卷中記下「自煮、外食、便利商店、外送、手搖飲」，高維觀測者便能追蹤食物從何處入世，又如何推動四軸變形。</p>
         </div>
         <div class="source-grid">
           <div class="source-card"><b>自煮</b><span style="--w:82%"></span><small>較容易靠近原型、規律與身體需求。</small></div>
@@ -608,8 +608,8 @@
 
     <section class="grid">
       <article class="panel">
-        <h2>當康為什麼最多？</h2>
-        <p class="sub">當康代表身體需求、原型食、厚實、規律。資料裡它是目前最常見的孵化靈獸。</p>
+        <h2>當康為何群聚？</h2>
+        <p class="sub">當康常由補給、飯麵、厚實與日常節律召來。牠不是健康神諭，而是人間「先吃飽再說」的獸形。</p>
         <div class="role-main">
           <div class="creature"><img src="openspec/asset/png/11.png" alt="當康"></div>
           <div>
@@ -620,34 +620,34 @@
       </article>
 
       <article class="panel">
-        <h2>看到的三個 insight</h2>
-        <p class="sub">用目前 272 筆資料推估，這些是最有產品敘事感的觀察。</p>
+        <h2>卷中三則異象</h2>
+        <p class="sub">高維觀測者暫錄三筆食緒天象，待新食痕出現時，卷文亦會改寫。</p>
         <div class="insight-list">
-          <div class="insight">當康多，不代表大家吃得「最健康」，而是很多紀錄落在穩定吃飽、午晚餐、飯麵肉類這種身體補給場景。</div>
-          <div class="insight">少見角色像夢貘、精衛，通常需要更特定的組合，例如低負擔加工、流動節奏，出現條件比當康更窄。</div>
-          <div class="insight">整體資料平均偏情緒軸，但 NP 與 HL 接近中線，代表使用者不是單純健康/不健康，而是在「想吃」與「身體需求」之間擺盪。</div>
+          <div class="insight">當康多，並非人間最清修，而是多數食痕落在「穩住身體、填滿日常」的補給河道。</div>
+          <div class="insight">夢貘、精衛等稀獸，需要更偏門的氣候才現身：低負擔加工、漂移節奏、或一段不尋常的食緒組合。</div>
+          <div class="insight">人類並非只在健康與放縱之間二分，而是不斷在想吃、該吃、吃完舒服與吃完沉重之間擺渡。</div>
         </div>
       </article>
     </section>
 
     <section class="grid">
       <article class="panel">
-        <h2>當康型餐食影像牆</h2>
-        <p class="sub">只放單筆紀錄本身落在 BNHR／當康型的真實餐照，避免把「當康使用者吃過」誤讀成「食物本身是當康」。</p>
+        <h2>當康食痕影像壁</h2>
+        <p class="sub">此處只收錄單筆食痕本身召來當康的餐影，像標本，不像傳聞。</p>
         <div class="photo-wall" id="photoWall"></div>
       </article>
 
       <article class="panel">
-        <h2>當康型食物關鍵字</h2>
-        <p class="sub">目前真正落在當康型且有照片的餐食較少，文字統計仍可看出穩定補給的方向。</p>
+        <h2>當康召喚詞</h2>
+        <p class="sub">高頻食名像咒語，反覆出現時，便透露哪類餐食最易引獸入卷。</p>
         <div class="food-list" id="foodList"></div>
       </article>
     </section>
 
     <section class="grid">
       <article class="panel">
-        <h2>角色象限圖</h2>
-        <p class="sub">橫軸：加工 ←→ 原型；縱軸：情緒 ←→ 身體。圓越大代表曾孵化人數越多。</p>
+        <h2>靈獸棲地圖</h2>
+        <p class="sub">橫看野煉，縱看魂魄。圓越大，表示越多修行者曾在此棲地孵出同獸。</p>
         <div class="matrix-wrap" id="matrix">
           <span class="axis top">身體</span>
           <span class="axis bottom">情緒</span>
@@ -657,22 +657,22 @@
       </article>
 
       <article class="panel">
-        <h2>角色排行榜解讀</h2>
-        <p class="sub">角色多寡不是人氣投票，而是資料路徑的結果。</p>
+        <h2>顯形排行注</h2>
+        <p class="sub">多寡不是人氣，而是某種食緒路徑在人間反覆生成。</p>
         <div class="rank-table" id="rankTable"></div>
       </article>
     </section>
 
     <section class="panel" style="margin-top:18px">
-      <h2>餐次與全體食物熱區</h2>
-      <p class="sub">午餐是主戰場，代表這個產品最容易捕捉到「日常正餐」而不是只有情緒性進食。</p>
+      <h2>餐時熱區</h2>
+      <p class="sub">日中、黃昏、深夜，各有不同胃口潮汐。此處記下人間在哪些時刻最常留下食痕。</p>
       <div class="grid" style="margin-top:0">
         <div class="bars" id="mealBars"></div>
         <div class="food-list" id="topFoods"></div>
       </div>
     </section>
 
-    <footer>資料來源：Chinese_MoodFood Notion 公開資料庫快照 · 本頁為本地端靜態分析頁</footer>
+    <footer>食緒山海經會嘗試讀取最新 Notion 食痕；若高維通道暫閉，則顯示卷中備援殘頁。</footer>
   </main>
 
   <div class="story-modal" id="storyModal" aria-hidden="true">
@@ -686,7 +686,7 @@
   </div>
 
   <script>
-    const data = {
+    const fallbackData = {
       totalRows:272,
       userCount:31,
       dateRange:["2026-05-13","2026-05-29"],
@@ -761,26 +761,24 @@
     };
 
     const codeInfo = {
-      BNHR:{x:78,y:28,label:"當康"}, BPHR:{x:24,y:28,label:"混沌"}, BNLV:{x:78,y:70,label:"夫諸"},
-      BNLR:{x:78,y:36,label:"夔"}, BPHV:{x:24,y:70,label:"魃"}, BPLR:{x:26,y:40,label:"精衛"},
-      MPLV:{x:24,y:82,label:"夢貘"}
+      MNHR:{x:78,y:28,label:"玄武"}, MNHV:{x:78,y:18,label:"麒麟"}, MNLR:{x:78,y:38,label:"白澤"}, MNLV:{x:78,y:82,label:"九尾"},
+      MPHR:{x:24,y:28,label:"金烏"}, MPHV:{x:24,y:18,label:"饕餮"}, MPLR:{x:24,y:38,label:"織女"}, MPLV:{x:24,y:82,label:"夢貘"},
+      BNHR:{x:78,y:28,label:"當康"}, BNHV:{x:78,y:70,label:"朱厭"}, BNLR:{x:78,y:36,label:"夔"}, BNLV:{x:78,y:70,label:"夫諸"},
+      BPHR:{x:24,y:28,label:"混沌"}, BPHV:{x:24,y:70,label:"魃"}, BPLR:{x:26,y:40,label:"精衛"}, BPLV:{x:24,y:82,label:"影"}
     };
     const cleanUrl = url => {
       const idx = String(url).lastIndexOf("https://");
       return idx > 0 ? String(url).slice(idx) : url;
     };
+    let activeData = fallbackData;
     const renderSpectrum = (id, items) => {
       const host = document.getElementById(id);
-      host.insertAdjacentHTML("beforeend", items.map(p =>
+      host.querySelectorAll(".axis-photo").forEach((node) => node.remove());
+      host.insertAdjacentHTML("beforeend", (items || []).map(p =>
         `<figure class="axis-photo" style="--pos:${p.pos};--row:${p.row}"><img src="${cleanUrl(p.url)}" alt="${p.food}" loading="lazy" onerror="this.closest('figure').style.display='none'"><span>${p.food}<small>${p.note}</small></span></figure>`
       ).join(""));
     };
     const moodBodyQuadrant = document.getElementById("moodBodyQuadrant");
-    moodBodyQuadrant.insertAdjacentHTML("beforeend", data.moodBodyQuadrant.map(item => {
-      const x = item.x;
-      const y = item.y;
-      return `<button class="food-point" type="button" data-food="${item.food}" style="--x:${x};--y:${y};--s:${item.count}">${item.food}${item.count > 1 ? ` ×${item.count}` : ""}</button>`;
-    }).join(""));
     const storyModal = document.getElementById("storyModal");
     const storyTitle = document.getElementById("storyTitle");
     const storyText = document.getElementById("storyText");
@@ -792,7 +790,7 @@
     moodBodyQuadrant.addEventListener("click", event => {
       const target = event.target.closest(".food-point");
       if (!target) return;
-      const item = data.moodBodyQuadrant.find(row => row.food === target.dataset.food);
+      const item = activeData.moodBodyQuadrant.find(row => row.food === target.dataset.food);
       if (!item) return;
       storyTitle.textContent = item.food;
       storyText.textContent = item.story;
@@ -807,49 +805,78 @@
     document.addEventListener("keydown", event => {
       if (event.key === "Escape") closeStory();
     });
-    renderSpectrum("npSpectrum", data.axisPhotos.np);
-    renderSpectrum("hlSpectrum", data.axisPhotos.hl);
-    renderSpectrum("mbSpectrum", data.axisPhotos.mb);
-    document.getElementById("timeTimeline").innerHTML = Object.entries(data.timeDots).map(([meal, dots]) =>
-      `<div class="time-row"><b>${meal}</b><div class="time-line">${dots.map(t => `<i class="time-dot" style="--t:${t}"></i>`).join("")}</div></div>`
-    ).join("") + `<div class="time-scale"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
-      <div class="time-branches"><span>子<br>23-01</span><span>丑<br>01-03</span><span>寅<br>03-05</span><span>卯<br>05-07</span><span>辰<br>07-09</span><span>巳<br>09-11</span><span>午<br>11-13</span><span>未<br>13-15</span><span>申<br>15-17</span><span>酉<br>17-19</span><span>戌<br>19-21</span><span>亥<br>21-23</span></div>`;
-    const maxRole = Math.max(...data.roleData.map(d => d.count));
-    document.getElementById("stats").innerHTML = [
-      [`${data.totalRows}`, "食緒紀錄"],
-      [`${data.userCount}`, "修行者"],
-      [`${data.dateRange[0].slice(5).replace("-", "/")}–${data.dateRange[1].slice(5).replace("-", "/")}`, "資料區間"],
-      [`${data.roleData[0].name}`, "最多顯形"]
-    ].map(([a,b]) => `<div class="stat"><strong>${a}</strong><span>${b}</span></div>`).join("");
-    document.getElementById("roleBars").innerHTML = data.roleData.map(r =>
-      `<div class="bar-row"><b>${r.name}</b><div class="bar-track"><div class="bar-fill" style="--v:${Math.round(r.count/maxRole*100)}"></div></div><span>${r.count}人</span></div>`
-    ).join("");
-    document.getElementById("dangkangFoods").innerHTML = data.roleData[0].foods.map(([f,n]) => `<span class="chip">${f} × ${n}</span>`).join("");
-    document.getElementById("foodList").innerHTML = data.roleData[0].foods.map(([f,n]) => `<span class="food">${f}<small> ${n}</small></span>`).join("");
-    document.getElementById("mealBars").innerHTML = data.mealCounts.map(([m,n]) => {
-      const max = data.mealCounts[0][1];
-      return `<div class="bar-row"><b>${m}</b><div class="bar-track"><div class="bar-fill" style="--v:${Math.round(n/max*100)}"></div></div><span>${n}</span></div>`;
-    }).join("");
-    document.getElementById("topFoods").innerHTML = data.topFoods.map(([f,n]) => `<span class="food">${f} ${n}</span>`).join("");
-    document.getElementById("photoWall").innerHTML = data.photos.map(p =>
-      `<figure class="photo"><img src="${cleanUrl(p.url)}" alt="${p.food}" loading="lazy" onerror="this.closest('figure').style.display='none'"><figcaption>${p.food}<br><small>${p.nick} · ${p.meal}</small></figcaption></figure>`
-    ).join("");
-    document.getElementById("rankTable").innerHTML = data.roleData.map((r,i) => {
-      const reason = i === 0 ? "正餐、飯麵肉類、穩定補給最容易落入此型。" : r.count <= 1 ? "條件較窄，需要更特殊的四軸組合才會顯形。" : "有明確族群，但食物型態比當康更分散。";
-      return `<div class="rank"><b>#${i+1}</b><div><b>${r.name}</b><br><span>${reason}</span></div><strong>${r.count}人</strong></div>`;
-    }).join("");
-    const matrix = document.getElementById("matrix");
-    data.roleData.forEach(r => {
-      const info = codeInfo[r.code];
-      if (!info) return;
-      const el = document.createElement("div");
-      el.className = "dot";
-      el.style.setProperty("--x", info.x);
-      el.style.setProperty("--y", info.y);
-      el.style.setProperty("--s", r.count);
-      el.innerHTML = `${r.name[0]}<small>${r.name} ${r.count}</small>`;
-      matrix.appendChild(el);
+    const mergeInsights = (base, fresh) => ({
+      ...base,
+      ...fresh,
+      axisPhotos: { ...base.axisPhotos, ...(fresh.axisPhotos || {}) },
+      roleData: fresh.roleData?.length ? fresh.roleData : base.roleData,
+      mealCounts: fresh.mealCounts?.length ? fresh.mealCounts : base.mealCounts,
+      topFoods: fresh.topFoods?.length ? fresh.topFoods : base.topFoods,
+      photos: fresh.photos?.length ? fresh.photos : base.photos,
+      moodBodyQuadrant: fresh.moodBodyQuadrant?.length ? fresh.moodBodyQuadrant : base.moodBodyQuadrant,
+      timeDots: fresh.timeDots || base.timeDots,
     });
+    const renderInsights = (nextData) => {
+      activeData = mergeInsights(fallbackData, nextData || {});
+      const data = activeData;
+      closeStory();
+      moodBodyQuadrant.querySelectorAll(".food-point").forEach((node) => node.remove());
+      moodBodyQuadrant.insertAdjacentHTML("beforeend", (data.moodBodyQuadrant || []).map(item => {
+        const x = item.x;
+        const y = item.y;
+        return `<button class="food-point" type="button" data-food="${item.food}" style="--x:${x};--y:${y};--s:${item.count || 1}">${item.food}${item.count > 1 ? ` ×${item.count}` : ""}</button>`;
+      }).join(""));
+      renderSpectrum("npSpectrum", data.axisPhotos.np);
+      renderSpectrum("hlSpectrum", data.axisPhotos.hl);
+      renderSpectrum("mbSpectrum", data.axisPhotos.mb);
+      document.getElementById("timeTimeline").innerHTML = Object.entries(data.timeDots || {}).map(([meal, dots]) =>
+        `<div class="time-row"><b>${meal}</b><div class="time-line">${(dots || []).map(t => `<i class="time-dot" style="--t:${t}"></i>`).join("")}</div></div>`
+      ).join("") + `<div class="time-scale"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
+        <div class="time-branches"><span>子<br>23-01</span><span>丑<br>01-03</span><span>寅<br>03-05</span><span>卯<br>05-07</span><span>辰<br>07-09</span><span>巳<br>09-11</span><span>午<br>11-13</span><span>未<br>13-15</span><span>申<br>15-17</span><span>酉<br>17-19</span><span>戌<br>19-21</span><span>亥<br>21-23</span></div>`;
+      const maxRole = Math.max(1, ...data.roleData.map(d => d.count));
+      const topRole = data.roleData[0] || { name: "未顯形", foods: [] };
+      document.getElementById("stats").innerHTML = [
+        [`${data.totalRows}`, "人間食痕"],
+        [`${data.userCount}`, "被觀測者"],
+        [`${(data.dateRange[0] || "").slice(5).replace("-", "/")}–${(data.dateRange[1] || "").slice(5).replace("-", "/")}`, "卷中時域"],
+        [`${topRole.name}`, "最常顯形"]
+      ].map(([a,b]) => `<div class="stat"><strong>${a || "—"}</strong><span>${b}</span></div>`).join("");
+      document.getElementById("roleBars").innerHTML = data.roleData.map(r =>
+        `<div class="bar-row"><b>${r.name}</b><div class="bar-track"><div class="bar-fill" style="--v:${Math.round(r.count/maxRole*100)}"></div></div><span>${r.count}人</span></div>`
+      ).join("");
+      document.getElementById("dangkangFoods").innerHTML = (topRole.foods || []).map(([f,n]) => `<span class="chip">${f} × ${n}</span>`).join("");
+      document.getElementById("foodList").innerHTML = (topRole.foods || []).map(([f,n]) => `<span class="food">${f}<small> ${n}</small></span>`).join("");
+      document.getElementById("mealBars").innerHTML = data.mealCounts.map(([m,n]) => {
+        const max = data.mealCounts[0]?.[1] || 1;
+        return `<div class="bar-row"><b>${m}</b><div class="bar-track"><div class="bar-fill" style="--v:${Math.round(n/max*100)}"></div></div><span>${n}</span></div>`;
+      }).join("");
+      document.getElementById("topFoods").innerHTML = data.topFoods.map(([f,n]) => `<span class="food">${f} ${n}</span>`).join("");
+      document.getElementById("photoWall").innerHTML = data.photos.map(p =>
+        `<figure class="photo"><img src="${cleanUrl(p.url)}" alt="${p.food}" loading="lazy" onerror="this.closest('figure').style.display='none'"><figcaption>${p.food}<br><small>${p.nick || "匿名修行者"} · ${p.meal || "未記餐次"}</small></figcaption></figure>`
+      ).join("");
+      document.getElementById("rankTable").innerHTML = data.roleData.map((r,i) => {
+        const reason = i === 0 ? "此獸頻繁顯形，表示此類食緒路徑在人間最易聚集。" : r.count <= 1 ? "此獸稀少，需更特殊的四軸氣候才會現身。" : "已有穩定族群，但食痕分布仍比首位靈獸更分散。";
+        return `<div class="rank"><b>#${i+1}</b><div><b>${r.name}</b><br><span>${reason}</span></div><strong>${r.count}人</strong></div>`;
+      }).join("");
+      const matrix = document.getElementById("matrix");
+      matrix.querySelectorAll(".dot").forEach((node) => node.remove());
+      data.roleData.forEach(r => {
+        const info = codeInfo[r.code];
+        if (!info) return;
+        const el = document.createElement("div");
+        el.className = "dot";
+        el.style.setProperty("--x", info.x);
+        el.style.setProperty("--y", info.y);
+        el.style.setProperty("--s", r.count);
+        el.innerHTML = `${r.name[0]}<small>${r.name} ${r.count}</small>`;
+        matrix.appendChild(el);
+      });
+    };
+    renderInsights(fallbackData);
+    fetch("/api/notion-insights", { cache: "no-store" })
+      .then((res) => res.ok ? res.json() : Promise.reject(new Error(`洞察卷讀取失敗 ${res.status}`)))
+      .then((fresh) => renderInsights(fresh))
+      .catch((err) => console.warn("[食緒洞察]", err.message));
   </script>
 </body>
 </html>
