@@ -457,7 +457,10 @@
       color:var(--cream);
       font-size:12px;
       font-weight:900;
+      overflow:hidden;
+      box-shadow:0 6px 14px rgba(0,0,0,.28);
     }
+    .dot img { width:100%; height:100%; object-fit:cover; display:block; border-radius:50%; }
     .dot small { position:absolute; top:100%; margin-top:4px; white-space:nowrap; color:var(--sand); font-size:11px; }
     .insight-list { display:grid; gap:12px; }
     .insight {
@@ -477,6 +480,17 @@
     }
     .rank b { color:var(--cream); }
     .rank span { color:var(--muted); font-size:12px; }
+    .rank-main { display:grid; grid-template-columns:44px 1fr; gap:10px; align-items:center; }
+    .rank-avatar {
+      width:44px;
+      height:44px;
+      border-radius:50%;
+      object-fit:cover;
+      border:1px solid rgba(149,211,195,.34);
+      background:#0b0600;
+      box-shadow:0 5px 12px rgba(0,0,0,.24);
+      display:block;
+    }
     .food-list { display:flex; flex-wrap:wrap; gap:8px; }
     .food { color:var(--cream); background:rgba(255,255,255,.055); border:1px solid rgba(255,255,255,.08); border-radius:999px; padding:6px 10px; font-size:12px; }
     footer { margin-top:24px; color:var(--muted); font-size:12px; text-align:center; }
@@ -778,6 +792,18 @@
       BNHR:{x:78,y:28,label:"當康"}, BNHV:{x:78,y:70,label:"朱厭"}, BNLR:{x:78,y:36,label:"夔"}, BNLV:{x:78,y:70,label:"夫諸"},
       BPHR:{x:24,y:28,label:"混沌"}, BPHV:{x:24,y:70,label:"魃"}, BPLR:{x:26,y:40,label:"精衛"}, BPLV:{x:24,y:82,label:"影"}
     };
+    const CREATURE_IMG = {
+      MNHR:"openspec/asset/png/7.png",  MNHV:"openspec/asset/png/8.png",
+      MNLR:"openspec/asset/png/3.png",  MNLV:"openspec/asset/png/4.png",
+      MPHR:"openspec/asset/png/2.png",  MPHV:"openspec/asset/png/1.png",
+      MPLR:"openspec/asset/png/5.png",  MPLV:"openspec/asset/png/6.png",
+      BNHR:"openspec/asset/png/11.png", BNHV:"openspec/asset/png/13.png",
+      BNLR:"openspec/asset/png/16.png", BNLV:"openspec/asset/png/15.png",
+      BPHR:"openspec/asset/png/12.png", BPHV:"openspec/asset/png/10.png",
+      BPLR:"openspec/asset/png/14.png", BPLV:"openspec/asset/png/9.png"
+    };
+    const BEGIN_AVATAR_IMG = "openspec/asset/png/begin1.png";
+    const creatureImage = (code) => CREATURE_IMG[code] || BEGIN_AVATAR_IMG;
     const cleanUrl = url => {
       const idx = String(url).lastIndexOf("https://");
       return idx > 0 ? String(url).slice(idx) : url;
@@ -881,7 +907,7 @@
       ).join("");
       document.getElementById("rankTable").innerHTML = data.roleData.map((r,i) => {
         const reason = i === 0 ? "此獸頻繁顯形，表示此類食緒路徑在人間最易聚集。" : r.count <= 1 ? "此獸稀少，需更特殊的四軸氣候才會現身。" : "已有穩定族群，但食痕分布仍比首位靈獸更分散。";
-        return `<div class="rank"><b>#${i+1}</b><div><b>${r.name}</b><br><span>${reason}</span></div><strong>${r.count}人</strong></div>`;
+        return `<div class="rank"><b>#${i+1}</b><div class="rank-main"><img class="rank-avatar" src="${creatureImage(r.code)}" alt="${r.name}" loading="lazy"><div><b>${r.name}</b><br><span>${reason}</span></div></div><strong>${r.count}人</strong></div>`;
       }).join("");
       const matrix = document.getElementById("matrix");
       matrix.querySelectorAll(".dot").forEach((node) => node.remove());
@@ -893,7 +919,7 @@
         el.style.setProperty("--x", info.x);
         el.style.setProperty("--y", info.y);
         el.style.setProperty("--s", r.count);
-        el.innerHTML = `${r.name[0]}<small>${r.name} ${r.count}</small>`;
+        el.innerHTML = `<img src="${creatureImage(r.code)}" alt="${r.name}" loading="lazy"><small>${r.name} ${r.count}</small>`;
         matrix.appendChild(el);
       });
     };
